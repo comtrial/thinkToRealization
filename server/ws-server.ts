@@ -4,7 +4,9 @@ import { URL } from "url";
 import { PtyManager } from "./terminal/pty-manager";
 import { CaptureManager } from "./terminal/capture-manager";
 import { sessionManager } from "./session/session-manager";
+import { fileWatcher } from "./file-watcher/file-watcher";
 import { eventBus } from "./events/event-bus";
+import { prisma } from "../src/lib/prisma";
 
 const WS_PORT = 3001;
 const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -69,10 +71,11 @@ eventBus.on("pty:data", ({ sessionId, data }) => {
   captureManager.append(sessionId, data);
 });
 
-// PTY exit -> end session + broadcast
+// PTY exit -> end session + stop file watcher + broadcast
 eventBus.on("pty:exit", async ({ sessionId, exitCode }) => {
   const nodeId = ptyManager.getNodeIdBySession(sessionId);
   captureManager.stop(sessionId);
+  fileWatcher.unwatch(sessionId);
 
   if (nodeId) {
     broadcastToNode(nodeId, {
@@ -124,7 +127,7 @@ eventBus.on(
   }
 );
 
-// File changed
+// File changed -> broadcast file count update
 eventBus.on("file:changed", ({ sessionId, filePath, changeType }) => {
   const nodeId = ptyManager.getNodeIdBySession(sessionId);
   if (nodeId) {
@@ -140,8 +143,56 @@ const heartbeatInterval = setInterval(() => {
   broadcastToAll({ type: "heartbeat" });
 }, HEARTBEAT_INTERVAL_MS);
 
+// --- Helper: get current session state for reconnection ---
+async function getSessionState(nodeId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const session = await prisma.session.findFirst({
+      where: { nodeId, status: "active" },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        fileChangeCount: true,
+        startedAt: true,
+      },
+    });
+    if (!session) return null;
+    return {
+      sessionId: session.id,
+      title: session.title,
+      status: session.status,
+      fileChangeCount: session.fileChangeCount,
+      startedAt: session.startedAt.toISOString(),
+      hasPty: ptyManager.has(nodeId),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// --- Helper: start file watcher for a session ---
+async function startFileWatcherForSession(sessionId: string, nodeId: string): Promise<void> {
+  try {
+    const node = await prisma.node.findUnique({
+      where: { id: nodeId },
+      select: { projectId: true },
+    });
+    if (!node) return;
+
+    const project = await prisma.project.findUnique({
+      where: { id: node.projectId },
+      select: { projectDir: true },
+    });
+    if (!project?.projectDir) return;
+
+    fileWatcher.watch(project.projectDir, sessionId, nodeId);
+  } catch (err) {
+    console.error("[ws-server] Failed to start file watcher:", err);
+  }
+}
+
 // --- Connection handler ---
-wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
   const url = new URL(req.url || "/", `http://localhost:${WS_PORT}`);
   const nodeId = url.searchParams.get("nodeId");
 
@@ -161,6 +212,15 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     nodeClients.set(nodeId, new Set());
   }
   nodeClients.get(nodeId)!.add(ws);
+
+  // Send current session state on reconnection
+  const sessionState = await getSessionState(nodeId);
+  if (sessionState) {
+    sendJson(ws, {
+      type: "session:started",
+      payload: { nodeId, ...sessionState },
+    });
+  }
 
   // Handle client messages
   ws.on("message", async (raw: Buffer | string) => {
@@ -193,6 +253,9 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
             const cwd = msg.payload?.cwd;
             ptyManager.create(nodeId, sessionId, cols, rows, cwd);
             captureManager.start(sessionId);
+
+            // Start file watcher
+            await startFileWatcherForSession(sessionId, nodeId);
           } catch (err: unknown) {
             const message =
               err instanceof Error ? err.message : "Failed to start session";
@@ -209,6 +272,7 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
           if (sessionInfo) {
             const markDone = msg.payload?.markDone ?? false;
             ptyManager.kill(nodeId);
+            fileWatcher.unwatch(sessionInfo.sessionId);
             try {
               await sessionManager.endSession(
                 sessionInfo.sessionId,
@@ -240,6 +304,9 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
             const cwd = msg.payload?.cwd;
             ptyManager.create(nodeId, sessionId, cols, rows, cwd);
             captureManager.start(sessionId);
+
+            // Start file watcher
+            await startFileWatcherForSession(sessionId, nodeId);
           } catch (err: unknown) {
             const message =
               err instanceof Error ? err.message : "Failed to resume session";
@@ -296,6 +363,7 @@ async function shutdown() {
   console.log("[ws-server] Shutting down...");
   clearInterval(heartbeatInterval);
   captureManager.dispose();
+  fileWatcher.dispose();
   ptyManager.dispose();
   eventBus.removeAllListeners();
   wss.close(() => {

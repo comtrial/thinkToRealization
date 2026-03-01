@@ -1,31 +1,14 @@
 import { NextRequest } from "next/server";
 import { promises as fs } from "fs";
+import path from "path";
 import { prisma } from "@/lib/prisma";
-import { successResponse, notFound, errorResponse } from "@/lib/api-response";
+import { successResponse, notFound } from "@/lib/api-response";
 import { handlePrismaError } from "@/lib/prisma-error";
-import type { SessionMessage } from "@/lib/types/api";
+import { parseSessionLog } from "@/lib/log-parser";
 
 type Params = { params: Promise<{ id: string }> };
 
-function parseSessionLog(raw: string): SessionMessage[] {
-  const messages: SessionMessage[] = [];
-  const sections = raw.split(/^## (Human|Assistant):/m);
-  let index = 0;
-  for (let i = 1; i < sections.length; i += 2) {
-    const role = sections[i].toLowerCase() === "human" ? "user" : "assistant";
-    const content = (sections[i + 1] || "").trim();
-    if (content) {
-      messages.push({
-        role: role as "user" | "assistant",
-        content,
-        index,
-        highlightId: null,
-      });
-      index++;
-    }
-  }
-  return messages;
-}
+const LOG_DIR = path.join(process.cwd(), ".devflow-logs");
 
 // GET /api/sessions/:id/log — return raw log + parsed messages
 export async function GET(_req: NextRequest, { params }: Params) {
@@ -34,20 +17,26 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const session = await prisma.session.findUnique({ where: { id } });
     if (!session) return notFound("Session", id);
 
-    if (!session.logFilePath) {
-      return successResponse({ raw: "", messages: [] });
-    }
+    // Try .devflow-logs/{sessionId}.log first, then session.logFilePath fallback
+    const logFile = path.join(LOG_DIR, `${id}.log`);
+    const logPath = session.logFilePath || logFile;
 
     try {
-      const raw = await fs.readFile(session.logFilePath, "utf-8");
+      const raw = await fs.readFile(logPath, "utf-8");
       const messages = parseSessionLog(raw);
       return successResponse({ raw, messages });
     } catch {
-      return errorResponse(
-        "LOG_NOT_FOUND",
-        `Log file not found at ${session.logFilePath}`,
-        404
-      );
+      // If primary path fails and we have a different fallback, try it
+      if (logPath !== logFile) {
+        try {
+          const raw = await fs.readFile(logFile, "utf-8");
+          const messages = parseSessionLog(raw);
+          return successResponse({ raw, messages });
+        } catch {
+          // Both paths failed
+        }
+      }
+      return successResponse({ raw: "", messages: [] });
     }
   } catch (error) {
     return handlePrismaError(error);

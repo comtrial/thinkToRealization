@@ -2,22 +2,37 @@
 
 import { AppShell } from '@/components/layout/AppShell'
 import { useUIStore } from '@/stores/ui-store'
+import { useProject } from '@/components/providers/ProjectProvider'
+import { DashboardView } from '@/components/dashboard/DashboardView'
+import { CanvasView } from '@/components/canvas/CanvasView'
+import { ReactFlowProvider } from '@xyflow/react'
 
 function MainContent() {
   const activeTab = useUIStore((s) => s.activeTab)
+  const { currentProject } = useProject()
+
+  if (!currentProject) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-page-title text-text-primary mb-2">DevFlow</h1>
+          <p className="text-body text-text-secondary">
+            사이드바에서 프로젝트를 선택하세요
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-page-title text-text-primary mb-2">
-          {activeTab === 'dashboard' ? '대시보드' : '캔버스'}
-        </h1>
-        <p className="text-body text-text-secondary">
-          {activeTab === 'dashboard'
-            ? '진행 중인 작업을 확인하세요'
-            : '프로젝트의 사고 흐름을 시각화하세요'}
-        </p>
-      </div>
+    <div className="h-full">
+      {activeTab === 'dashboard' ? (
+        <DashboardView projectId={currentProject.id} />
+      ) : (
+        <ReactFlowProvider>
+          <CanvasView projectId={currentProject.id} />
+        </ReactFlowProvider>
+      )}
     </div>
   )
 }
