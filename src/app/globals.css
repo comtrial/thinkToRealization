@@ -1,27 +1,69 @@
+@import "xterm/css/xterm.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+@layer base {
+  :root {
+    --background: 222 47% 4%;
+    --foreground: 220 14% 91%;
+    --card: 222 47% 7%;
+    --card-foreground: 220 14% 91%;
+    --popover: 222 47% 7%;
+    --popover-foreground: 220 14% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 220 14% 91%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 218 11% 65%;
+    --accent: 43 96% 56%;
+    --accent-foreground: 222 47% 4%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217 19% 27%;
+    --input: 217 19% 27%;
+    --ring: 217 91% 60%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    -webkit-overflow-scrolling: touch;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* iOS Safari: xterm.js 터미널 네이티브 모멘텀 스크롤 */
+.xterm-viewport {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* iOS: xterm 터미널 터치 스크롤이 상위 요소로 전파되지 않도록 */
+.xterm {
+  touch-action: pan-y;
+}
+
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
 }

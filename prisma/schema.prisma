@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  status      String     @default("active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  stages      Stage[]
+  activities  Activity[]
+
+  @@index([status, updatedAt(sort: Desc)])
+  @@map("projects")
+}
+
+model Stage {
+  id         String     @id @default(cuid())
+  projectId  String     @map("project_id")
+  name       String
+  orderIndex Int        @map("order_index")
+  status     String     @default("waiting")
+  summary    String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sessions   Session[]
+  decisions  Decision[]
+  activities Activity[]
+
+  @@index([projectId, orderIndex])
+  @@index([projectId, status])
+  @@map("stages")
+}
+
+model Session {
+  id          String         @id @default(cuid())
+  stageId     String         @map("stage_id")
+  title       String?
+  autoSummary String?        @map("auto_summary")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  stage       Stage          @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  logs        TerminalLog[]
+  decisions   Decision[]
+
+  @@index([stageId, updatedAt(sort: Desc)])
+  @@map("sessions")
+}
+
+model TerminalLog {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  role      String
+  content   String
+  rawLength Int?     @map("raw_length")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("terminal_logs")
+}
+
+model Decision {
+  id        String   @id @default(cuid())
+  stageId   String   @map("stage_id")
+  sessionId String?  @map("session_id")
+  content   String
+  context   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([stageId, createdAt(sort: Desc)])
+  @@map("decisions")
+}
+
+model Activity {
+  id           String   @id @default(cuid())
+  projectId    String   @map("project_id")
+  stageId      String?  @map("stage_id")
+  activityType String   @map("activity_type")
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage        Stage?   @relation(fields: [stageId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([stageId])
+  @@map("activities")
+}
