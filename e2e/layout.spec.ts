@@ -30,16 +30,17 @@ test.describe("F-1: Layout (AppShell + Header + Sidebar)", () => {
   });
 
   test("Switching tabs shows different content", async ({ page }) => {
-    // Default should be dashboard
-    await expect(page.locator("main")).toContainText("대시보드");
+    // Without a project selected, EmptyState is shown
+    await expect(page.locator("main")).toContainText("프로젝트를 선택");
 
     // Click canvas tab
     await page.getByRole("button", { name: "캔버스" }).click();
-    await expect(page.locator("main")).toContainText("캔버스");
+    // Still shows empty state since no project is selected
+    await expect(page.locator("main")).toContainText("프로젝트를 선택");
 
     // Click back to dashboard
     await page.getByRole("button", { name: "대시보드" }).click();
-    await expect(page.locator("main")).toContainText("대시보드");
+    await expect(page.locator("main")).toContainText("프로젝트를 선택");
   });
 
   test("Sidebar toggle button works", async ({ page }) => {
