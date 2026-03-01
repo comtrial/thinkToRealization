@@ -24,6 +24,6 @@ export default defineConfig({
     command: `npx next dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
-    timeout: 60000,
+    timeout: 120000,
   },
 });

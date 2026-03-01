@@ -1,96 +1,88 @@
-import { type Page, type APIRequestContext } from "@playwright/test";
+const API = "http://localhost:3333/api";
 
-// API helper that wraps fetch responses
-// Uses relative URLs — Playwright's baseURL from config is applied automatically
-async function apiRequest<T>(
-  request: APIRequestContext,
-  url: string,
-  options?: {
-    method?: string;
-    data?: unknown;
+export async function cleanDatabase() {
+  const res = await fetch(`${API}/projects`);
+  const { data } = await res.json();
+  for (const p of data || []) {
+    await fetch(`${API}/projects/${p.id}`, { method: "DELETE" });
   }
-): Promise<T> {
-  const res = await request.fetch(url, {
-    method: options?.method ?? "GET",
-    data: options?.data,
+}
+
+export async function createTestProject(
+  title = "Test Project",
+  slug = "test-project-" + Date.now(),
+) {
+  const res = await fetch(`${API}/projects`, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title,
+      slug,
+      description: "E2E test project",
+      projectDir: "/tmp/test-project",
+    }),
   });
   const json = await res.json();
-  return json.data as T;
+  return json.data;
 }
 
-// Create a project via API and return it with stages
-export async function createTestProject(
-  request: APIRequestContext,
-  name = "테스트 프로젝트"
+export async function createTestNode(
+  projectId: string,
+  overrides: Record<string, unknown> = {},
 ) {
-  const project = await apiRequest<{
-    id: string;
-    name: string;
-    stages: { id: string; name: string; status: string; orderIndex: number }[];
-  }>(request, "/api/projects", {
+  const res = await fetch(`${API}/projects/${projectId}/nodes`, {
     method: "POST",
-    data: { name },
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "task",
+      title: "Test Node",
+      status: "backlog",
+      canvasX: 0,
+      canvasY: 0,
+      ...overrides,
+    }),
   });
-  return project;
+  const json = await res.json();
+  return json.data;
 }
 
-// Delete a project via API
-export async function deleteTestProject(
-  request: APIRequestContext,
-  projectId: string
+export async function createTestEdge(
+  fromNodeId: string,
+  toNodeId: string,
+  overrides: Record<string, unknown> = {},
 ) {
-  await apiRequest(request, `/api/projects/${projectId}`, {
-    method: "DELETE",
+  const res = await fetch(`${API}/edges`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fromNodeId, toNodeId, ...overrides }),
   });
+  const json = await res.json();
+  return json.data;
 }
 
-// Delete all projects (clean slate)
-export async function cleanDatabase(request: APIRequestContext) {
-  const projects = await apiRequest<{ id: string }[]>(
-    request,
-    "/api/projects"
-  );
-  for (const project of projects) {
-    await deleteTestProject(request, project.id);
-  }
-}
-
-// Create a session for a stage via API
 export async function createTestSession(
-  request: APIRequestContext,
-  stageId: string,
-  title?: string
+  nodeId: string,
+  title?: string,
 ) {
-  return apiRequest<{ id: string; stageId: string; title: string | null }>(
-    request,
-    `/api/stages/${stageId}/sessions`,
-    {
-      method: "POST",
-      data: { title },
-    }
-  );
+  const res = await fetch(`${API}/nodes/${nodeId}/sessions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  const json = await res.json();
+  return json.data;
 }
 
-// Create a decision for a stage via API
 export async function createTestDecision(
-  request: APIRequestContext,
-  stageId: string,
+  nodeId: string,
   content: string,
-  sessionId?: string
+  sessionId?: string,
 ) {
-  return apiRequest<{ id: string; content: string }>(
-    request,
-    "/api/decisions",
-    {
-      method: "POST",
-      data: { stageId, sessionId, content },
-    }
-  );
-}
-
-// Navigate to workspace for a project
-export async function goToWorkspace(page: Page, projectId: string) {
-  await page.goto(`/project/${projectId}`);
-  await page.waitForLoadState("networkidle");
+  const res = await fetch(`${API}/decisions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nodeId, content, sessionId }),
+  });
+  const json = await res.json();
+  return json.data;
 }

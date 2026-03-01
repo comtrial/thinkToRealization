@@ -1,9 +1,12 @@
 // node-pty is a native addon — use require() for compatibility
 const pty = require("node-pty") as typeof import("node-pty");
 import type { IPty } from "node-pty";
+import { eventBus } from "../events/event-bus";
 
 interface PtySession {
   pty: IPty;
+  sessionId: string;
+  nodeId: string;
   lastActivity: number;
   timeout: NodeJS.Timeout;
 }
@@ -11,23 +14,35 @@ interface PtySession {
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 export class PtyManager {
+  // Key: nodeId (one active PTY per node)
   private sessions = new Map<string, PtySession>();
+  // Reverse lookup: sessionId -> nodeId
+  private sessionToNode = new Map<string, string>();
 
-  create(sessionId: string, cols: number, rows: number): IPty {
-    // If session already exists, return existing pty
-    const existing = this.sessions.get(sessionId);
+  create(
+    nodeId: string,
+    sessionId: string,
+    cols: number,
+    rows: number,
+    cwd?: string
+  ): IPty {
+    // If this node already has an active PTY, return it
+    const existing = this.sessions.get(nodeId);
     if (existing) {
-      this.refreshTimeout(sessionId, existing);
+      this.refreshTimeout(nodeId, existing);
       return existing.pty;
     }
 
     const shell = process.env.SHELL || "/bin/zsh";
 
     // Filter out undefined values and Claude Code session markers from process.env
-    // (node-pty requires string values; Claude markers cause "nested session" errors)
     const cleanEnv: Record<string, string> = {};
     for (const [key, val] of Object.entries(process.env)) {
-      if (val !== undefined && !key.startsWith("CLAUDE") && key !== "CLAUDE_CODE_ENTRYPOINT") {
+      if (
+        val !== undefined &&
+        !key.startsWith("CLAUDE") &&
+        key !== "CLAUDE_CODE_ENTRYPOINT"
+      ) {
         cleanEnv[key] = val;
       }
     }
@@ -36,7 +51,7 @@ export class PtyManager {
       name: "xterm-256color",
       cols,
       rows,
-      cwd: process.env.HOME || "/",
+      cwd: cwd || process.env.HOME || "/",
       env: {
         ...cleanEnv,
         TERM: "xterm-256color",
@@ -47,39 +62,62 @@ export class PtyManager {
     });
 
     const timeout = setTimeout(() => {
-      console.log(`[pty-manager] Idle timeout for session ${sessionId}`);
-      this.kill(sessionId);
+      console.log(`[pty-manager] Idle timeout for node ${nodeId}`);
+      this.kill(nodeId);
     }, IDLE_TIMEOUT_MS);
 
-    this.sessions.set(sessionId, {
+    this.sessions.set(nodeId, {
       pty: ptyProcess,
+      sessionId,
+      nodeId,
       lastActivity: Date.now(),
       timeout,
     });
+    this.sessionToNode.set(sessionId, nodeId);
 
-    console.log(`[pty-manager] Created pty for session ${sessionId} (pid: ${ptyProcess.pid})`);
+    // Emit pty:data events via EventBus
+    ptyProcess.onData((data: string) => {
+      eventBus.emit("pty:data", { sessionId, data });
+    });
+
+    // Emit pty:exit events via EventBus
+    ptyProcess.onExit(
+      ({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+        console.log(
+          `[pty-manager] PTY exited for node ${nodeId} (code: ${exitCode}, signal: ${signal})`
+        );
+        eventBus.emit("pty:exit", { sessionId, exitCode, signal: signal ?? 0 });
+        // Clean up maps
+        this.sessions.delete(nodeId);
+        this.sessionToNode.delete(sessionId);
+      }
+    );
+
+    console.log(
+      `[pty-manager] Created pty for node ${nodeId}, session ${sessionId} (pid: ${ptyProcess.pid})`
+    );
     return ptyProcess;
   }
 
-  write(sessionId: string, data: string): void {
-    const session = this.sessions.get(sessionId);
+  write(nodeId: string, data: string): void {
+    const session = this.sessions.get(nodeId);
     if (!session) {
-      console.warn(`[pty-manager] No pty for session ${sessionId}`);
+      console.warn(`[pty-manager] No pty for node ${nodeId}`);
       return;
     }
-    this.refreshTimeout(sessionId, session);
+    this.refreshTimeout(nodeId, session);
     session.pty.write(data);
   }
 
-  resize(sessionId: string, cols: number, rows: number): void {
-    const session = this.sessions.get(sessionId);
+  resize(nodeId: string, cols: number, rows: number): void {
+    const session = this.sessions.get(nodeId);
     if (!session) return;
-    this.refreshTimeout(sessionId, session);
+    this.refreshTimeout(nodeId, session);
     session.pty.resize(cols, rows);
   }
 
-  kill(sessionId: string): void {
-    const session = this.sessions.get(sessionId);
+  kill(nodeId: string): void {
+    const session = this.sessions.get(nodeId);
     if (!session) return;
 
     clearTimeout(session.timeout);
@@ -88,31 +126,56 @@ export class PtyManager {
     } catch {
       // pty may already be dead
     }
-    this.sessions.delete(sessionId);
-    console.log(`[pty-manager] Killed pty for session ${sessionId}`);
+    this.sessionToNode.delete(session.sessionId);
+    this.sessions.delete(nodeId);
+    console.log(`[pty-manager] Killed pty for node ${nodeId}`);
   }
 
-  get(sessionId: string): IPty | undefined {
-    return this.sessions.get(sessionId)?.pty;
+  get(nodeId: string): IPty | undefined {
+    return this.sessions.get(nodeId)?.pty;
   }
 
-  has(sessionId: string): boolean {
-    return this.sessions.has(sessionId);
+  has(nodeId: string): boolean {
+    return this.sessions.has(nodeId);
+  }
+
+  /** Get session info by nodeId */
+  getSessionInfo(
+    nodeId: string
+  ): { sessionId: string; nodeId: string } | undefined {
+    const session = this.sessions.get(nodeId);
+    if (!session) return undefined;
+    return { sessionId: session.sessionId, nodeId: session.nodeId };
+  }
+
+  /** Get nodeId from sessionId */
+  getNodeIdBySession(sessionId: string): string | undefined {
+    return this.sessionToNode.get(sessionId);
+  }
+
+  /** Get all active sessions */
+  getAllActive(): Array<{ nodeId: string; sessionId: string }> {
+    return Array.from(this.sessions.values()).map((s) => ({
+      nodeId: s.nodeId,
+      sessionId: s.sessionId,
+    }));
   }
 
   dispose(): void {
-    console.log(`[pty-manager] Disposing all ptys (${this.sessions.size} sessions)`);
-    for (const [sessionId] of Array.from(this.sessions)) {
-      this.kill(sessionId);
+    console.log(
+      `[pty-manager] Disposing all ptys (${this.sessions.size} sessions)`
+    );
+    for (const [nodeId] of Array.from(this.sessions)) {
+      this.kill(nodeId);
     }
   }
 
-  private refreshTimeout(sessionId: string, session: PtySession): void {
+  private refreshTimeout(nodeId: string, session: PtySession): void {
     session.lastActivity = Date.now();
     clearTimeout(session.timeout);
     session.timeout = setTimeout(() => {
-      console.log(`[pty-manager] Idle timeout for session ${sessionId}`);
-      this.kill(sessionId);
+      console.log(`[pty-manager] Idle timeout for node ${nodeId}`);
+      this.kill(nodeId);
     }, IDLE_TIMEOUT_MS);
   }
 }
