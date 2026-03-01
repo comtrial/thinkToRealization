@@ -27,7 +27,35 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setIsZoomedIn: (value) => set({ isZoomedIn: value }),
   onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
   onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
-  onConnect: (connection) => set({ edges: addEdge(connection, get().edges) }),
+  onConnect: async (connection) => {
+    // Optimistic: add edge locally
+    set({ edges: addEdge(connection, get().edges) })
+    // Persist via API
+    try {
+      const res = await fetch('/api/edges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromNodeId: connection.source,
+          toNodeId: connection.target,
+          type: 'sequence',
+        }),
+      })
+      if (res.ok) {
+        const { data } = await res.json()
+        // Update with server-assigned ID
+        set((s) => ({
+          edges: s.edges.map((e) =>
+            e.source === connection.source && e.target === connection.target && !e.data
+              ? { ...e, id: data.id, type: data.type, data }
+              : e
+          ),
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to create edge:', err)
+    }
+  },
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
   addNode: (node) => set((s) => ({ nodes: [...s.nodes, node] })),

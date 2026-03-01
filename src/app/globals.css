@@ -67,6 +67,29 @@ body {
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
+/* cmdk styles */
+[cmdk-group-heading] {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[cmdk-separator] {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--color-border);
+}
+
+/* Toast slide-in from top-right */
+@keyframes toastSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

@@ -3,6 +3,7 @@
 import { useCallback, useRef, useEffect, useMemo } from 'react'
 import {
   ReactFlow,
+  ReactFlowProvider,
   MiniMap,
   Controls,
   Background,
@@ -17,6 +18,7 @@ import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { useNodeStore } from '@/stores/node-store'
+import { useUIStore } from '@/stores/ui-store'
 import { BaseNode } from './BaseNode'
 import { CustomEdge } from './CustomEdge'
 import { CanvasContextMenu } from './CanvasContextMenu'
@@ -45,6 +47,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
   } = useCanvasStore()
 
   const selectNode = useNodeStore((s) => s.selectNode)
+  const openPanel = useUIStore((s) => s.openPanel)
   const { screenToFlowPosition, fitView } = useReactFlow()
   const saveTimerRef = useRef<NodeJS.Timeout>()
   const contextPosRef = useRef({ x: 0, y: 0 })
@@ -81,8 +84,9 @@ function CanvasInner({ projectId }: { projectId: string }) {
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       selectNode(node.id)
+      openPanel(node.id)
     },
-    [selectNode]
+    [selectNode, openPanel]
   )
 
   const handleMoveEnd: OnMoveEnd = useCallback(
@@ -228,8 +232,10 @@ function CanvasInner({ projectId }: { projectId: string }) {
 
 export function CanvasView({ projectId }: { projectId: string }) {
   return (
-    <div className="w-full h-full">
-      <CanvasInner projectId={projectId} />
-    </div>
+    <ReactFlowProvider>
+      <div className="w-full h-full">
+        <CanvasInner projectId={projectId} />
+      </div>
+    </ReactFlowProvider>
   )
 }

@@ -6,6 +6,7 @@ import { CaptureManager } from "./terminal/capture-manager";
 import { sessionManager } from "./session/session-manager";
 import { fileWatcher } from "./file-watcher/file-watcher";
 import { eventBus } from "./events/event-bus";
+import { recoveryManager } from "./recovery/recovery-manager";
 import { prisma } from "../src/lib/prisma";
 
 const WS_PORT = 3001;
@@ -13,6 +14,11 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 
 const ptyManager = new PtyManager();
 const captureManager = new CaptureManager();
+
+// Recover stale sessions on startup
+recoveryManager.recoverStaleSessions().catch((err) => {
+  console.error("[ws-server] Recovery failed:", err);
+});
 
 // Track WebSocket clients by nodeId
 const nodeClients = new Map<string, Set<WebSocket>>();

@@ -2,10 +2,16 @@
 
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
+import { SidePanel } from '@/components/panel/SidePanel'
 import { useUIStore } from '@/stores/ui-store'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
+  const panelMode = useUIStore((s) => s.panelMode)
+
+  // Calculate main area padding-right when panel is open in peek mode
+  const mainPaddingRight =
+    panelMode === 'peek' ? 'calc(max(40%, 400px))' : '0px'
 
   return (
     <div
@@ -18,8 +24,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     >
       <Header />
       <Sidebar />
-      <main className="overflow-hidden relative">
+      <main
+        className="overflow-hidden relative transition-[padding-right] duration-panel ease-devflow"
+        style={{ paddingRight: mainPaddingRight }}
+      >
         {children}
+        <SidePanel />
       </main>
     </div>
   )

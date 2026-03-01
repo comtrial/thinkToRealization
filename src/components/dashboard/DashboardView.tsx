@@ -2,21 +2,28 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { DashboardSection } from './DashboardSection'
+import { DashboardSkeleton } from '@/components/shared/LoadingSkeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
 import type { DashboardResponse } from '@/lib/types/api'
 
 export function DashboardView({ projectId }: { projectId: string }) {
   const [data, setData] = useState<DashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const fetchDashboard = useCallback(async () => {
+    setError(false)
     try {
       const res = await fetch(`/api/projects/${projectId}/dashboard`)
       if (res.ok) {
         const json = await res.json()
         setData(json.data)
+      } else {
+        setError(true)
       }
     } catch (err) {
       console.error('Failed to load dashboard:', err)
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -28,16 +35,24 @@ export function DashboardView({ projectId }: { projectId: string }) {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <p className="text-body text-text-secondary">Loading...</p>
+      <div className="h-full overflow-y-auto">
+        <DashboardSkeleton />
       </div>
     )
   }
 
-  if (!data) {
+  if (error || !data) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-body text-text-secondary">Failed to load dashboard</p>
+        <div className="text-center">
+          <p className="text-body text-text-secondary mb-md">대시보드를 불러올 수 없습니다</p>
+          <button
+            onClick={fetchDashboard}
+            className="px-4 py-2 rounded-button text-body text-accent border border-accent hover:bg-accent-light transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
       </div>
     )
   }
@@ -52,11 +67,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
         </h1>
 
         {isEmpty ? (
-          <div className="text-center py-3xl">
-            <p className="text-body text-text-secondary">
-              아직 노드가 없습니다. 캔버스에서 첫 노드를 만들어보세요.
-            </p>
-          </div>
+          <EmptyState variant="empty-dashboard" />
         ) : (
           <div className="flex flex-col gap-2xl">
             {data.inProgress.length > 0 && (
