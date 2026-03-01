@@ -1,33 +1,43 @@
-"use client";
+import { create } from 'zustand'
 
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-
-interface UIState {
-  isFocusMode: boolean;
-  isTimelineOpen: boolean;
-  stagePanelSize: number;
-
-  toggleFocusMode: () => void;
-  toggleTimeline: () => void;
-  setStagePanelSize: (size: number) => void;
+interface UIStore {
+  sidebarOpen: boolean
+  toggleSidebar: () => void
+  activeTab: 'dashboard' | 'canvas'
+  setActiveTab: (tab: 'dashboard' | 'canvas') => void
+  panelMode: 'closed' | 'peek' | 'full'
+  panelNodeId: string | null
+  panelTab: 'overview' | 'sessions' | 'files'
+  openPanel: (nodeId: string) => void
+  closePanel: () => void
+  toggleFullPage: () => void
+  setPanelTab: (tab: 'overview' | 'sessions' | 'files') => void
+  terminalExpanded: boolean
+  terminalHeight: number
+  setTerminalExpanded: (expanded: boolean) => void
+  setTerminalHeight: (height: number) => void
+  commandPaletteOpen: boolean
+  toggleCommandPalette: () => void
 }
 
-export const useUIStore = create<UIState>()(
-  persist(
-    (set) => ({
-      isFocusMode: false,
-      isTimelineOpen: true,
-      stagePanelSize: 30,
-
-      toggleFocusMode: () =>
-        set((state) => ({ isFocusMode: !state.isFocusMode })),
-      toggleTimeline: () =>
-        set((state) => ({ isTimelineOpen: !state.isTimelineOpen })),
-      setStagePanelSize: (size: number) => set({ stagePanelSize: size }),
-    }),
-    {
-      name: "devflow-ui",
-    }
-  )
-);
+export const useUIStore = create<UIStore>((set) => ({
+  sidebarOpen: true,
+  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  activeTab: 'dashboard',
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  panelMode: 'closed',
+  panelNodeId: null,
+  panelTab: 'overview',
+  openPanel: (nodeId) => set({ panelMode: 'peek', panelNodeId: nodeId, panelTab: 'overview' }),
+  closePanel: () => set({ panelMode: 'closed', panelNodeId: null }),
+  toggleFullPage: () => set((s) => ({
+    panelMode: s.panelMode === 'full' ? 'peek' : 'full',
+  })),
+  setPanelTab: (tab) => set({ panelTab: tab }),
+  terminalExpanded: false,
+  terminalHeight: 300,
+  setTerminalExpanded: (expanded) => set({ terminalExpanded: expanded }),
+  setTerminalHeight: (height) => set({ terminalHeight: height }),
+  commandPaletteOpen: false,
+  toggleCommandPalette: () => set((s) => ({ commandPaletteOpen: !s.commandPaletteOpen })),
+}))

@@ -8,97 +8,105 @@ datasource db {
 }
 
 model Project {
-  id          String     @id @default(cuid())
-  name        String
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
   description String?
-  status      String     @default("active")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-
-  stages      Stage[]
-  activities  Activity[]
-
-  @@index([status, updatedAt(sort: Desc)])
-  @@map("projects")
+  projectDir  String   @default("")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  canvasViewportX    Float @default(0)
+  canvasViewportY    Float @default(0)
+  canvasViewportZoom Float @default(1.0)
+  nodes Node[]
 }
 
-model Stage {
-  id         String     @id @default(cuid())
-  projectId  String     @map("project_id")
-  name       String
-  orderIndex Int        @map("order_index")
-  status     String     @default("waiting")
-  summary    String?
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
-
-  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sessions   Session[]
-  decisions  Decision[]
-  activities Activity[]
-
-  @@index([projectId, orderIndex])
+model Node {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String   @default("task")
+  title       String
+  description String?
+  status      String   @default("backlog")
+  priority    String   @default("none")
+  canvasX     Float    @default(0)
+  canvasY     Float    @default(0)
+  canvasW     Float    @default(280)
+  canvasH     Float    @default(140)
+  parentNodeId String?
+  parentNode   Node?    @relation("NodeChildren", fields: [parentNodeId], references: [id])
+  childNodes   Node[]   @relation("NodeChildren")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sessions     Session[]
+  decisions    Decision[]
+  outEdges     Edge[]         @relation("EdgeFrom")
+  inEdges      Edge[]         @relation("EdgeTo")
+  stateLogs    NodeStateLog[]
   @@index([projectId, status])
-  @@map("stages")
+}
+
+model Edge {
+  id         String   @id @default(cuid())
+  fromNodeId String
+  toNodeId   String
+  fromNode   Node     @relation("EdgeFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode     Node     @relation("EdgeTo", fields: [toNodeId], references: [id], onDelete: Cascade)
+  type       String   @default("sequence")
+  label      String?
+  createdAt  DateTime @default(now())
 }
 
 model Session {
-  id          String         @id @default(cuid())
-  stageId     String         @map("stage_id")
-  title       String?
-  autoSummary String?        @map("auto_summary")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-
-  stage       Stage          @relation(fields: [stageId], references: [id], onDelete: Cascade)
-  logs        TerminalLog[]
-  decisions   Decision[]
-
-  @@index([stageId, updatedAt(sort: Desc)])
-  @@map("sessions")
+  id              String    @id @default(cuid())
+  nodeId          String
+  node            Node      @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  claudeSessionId String?
+  title           String?
+  status          String    @default("active")
+  fileChangeCount Int       @default(0)
+  resumeCount     Int       @default(0)
+  logFilePath     String?
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSeconds Int       @default(0)
+  files     SessionFile[]
+  decisions Decision[]
+  @@index([nodeId])
 }
 
-model TerminalLog {
-  id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
-  role      String
-  content   String
-  rawLength Int?     @map("raw_length")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId, createdAt])
-  @@map("terminal_logs")
+model SessionFile {
+  id         String   @id @default(cuid())
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  filePath   String
+  changeType String
+  detectedAt DateTime @default(now())
+  @@index([sessionId])
 }
 
 model Decision {
-  id        String   @id @default(cuid())
-  stageId   String   @map("stage_id")
-  sessionId String?  @map("session_id")
-  content   String
-  context   String?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
-  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-
-  @@index([stageId, createdAt(sort: Desc)])
-  @@map("decisions")
+  id              String   @id @default(cuid())
+  nodeId          String
+  node            Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  sessionId       String?
+  session         Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  content         String
+  promotedToNodeId String?
+  createdAt       DateTime @default(now())
+  @@index([nodeId])
 }
 
-model Activity {
-  id           String   @id @default(cuid())
-  projectId    String   @map("project_id")
-  stageId      String?  @map("stage_id")
-  activityType String   @map("activity_type")
-  description  String?
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  stage        Stage?   @relation(fields: [stageId], references: [id], onDelete: SetNull)
-
-  @@index([projectId, createdAt])
-  @@index([stageId])
-  @@map("activities")
+model NodeStateLog {
+  id              String   @id @default(cuid())
+  nodeId          String
+  node            Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  fromStatus      String?
+  toStatus        String
+  triggerType     String
+  triggerSessionId String?
+  createdAt       DateTime @default(now())
+  @@index([nodeId])
 }

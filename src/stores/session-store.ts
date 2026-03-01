@@ -1,63 +1,100 @@
-"use client";
+import { create } from 'zustand'
+import type { SessionMessage } from '@/lib/types/api'
 
-import { create } from "zustand";
-import { api } from "@/lib/api-client";
-import type { Session } from "@/types";
-
-interface SessionState {
-  activeSessionId: string | null;
-  liveSessionId: string | null; // The most recent session with active terminal
-  sessions: Session[];
-  isLoading: boolean;
-
-  fetchSessions: (stageId: string) => Promise<void>;
-  createSession: (stageId: string) => Promise<void>;
-  setActiveSession: (id: string) => void;
-  isLiveSession: (id: string) => boolean;
+interface SessionStore {
+  activeSession: {
+    sessionId: string
+    nodeId: string
+    claudeSessionId: string | null
+  } | null
+  sessionLog: SessionMessage[] | null
+  isSessionStarting: boolean
+  sessionEndPromptVisible: boolean
+  startSession: (nodeId: string, title?: string) => Promise<void>
+  endSession: (completed: boolean) => Promise<void>
+  resumeSession: (sessionId: string) => Promise<void>
+  dismissEndPrompt: () => void
+  loadSessionLog: (sessionId: string) => Promise<void>
+  handleSessionStarted: (payload: { sessionId: string; nodeId: string; claudeSessionId?: string }) => void
+  handleSessionEnded: (payload: { sessionId: string; needsPrompt?: boolean }) => void
 }
 
-export const useSessionStore = create<SessionState>((set, get) => ({
-  activeSessionId: null,
-  liveSessionId: null,
-  sessions: [],
-  isLoading: false,
-
-  fetchSessions: async (stageId: string) => {
-    set({ isLoading: true });
-    const result = await api<Session[]>(`/api/stages/${stageId}/sessions`);
-    if (result.ok) {
-      const sessions = result.data;
-      const latestId = sessions[0]?.id ?? null;
-      set({
-        sessions,
-        activeSessionId: latestId,
-        liveSessionId: latestId,
-        isLoading: false,
-      });
-    } else {
-      set({ isLoading: false });
+export const useSessionStore = create<SessionStore>((set, get) => ({
+  activeSession: null,
+  sessionLog: null,
+  isSessionStarting: false,
+  sessionEndPromptVisible: false,
+  startSession: async (nodeId, title) => {
+    set({ isSessionStarting: true })
+    try {
+      const res = await fetch(`/api/nodes/${nodeId}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+      if (res.ok) {
+        const { data } = await res.json()
+        set({
+          activeSession: { sessionId: data.id, nodeId, claudeSessionId: data.claudeSessionId },
+          isSessionStarting: false,
+        })
+      }
+    } catch (err) {
+      console.error('Failed to start session:', err)
+      set({ isSessionStarting: false })
     }
   },
-
-  createSession: async (stageId: string) => {
-    const result = await api<Session>(`/api/stages/${stageId}/sessions`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
-    if (result.ok) {
-      set((state) => ({
-        sessions: [result.data, ...state.sessions],
-        activeSessionId: result.data.id,
-        liveSessionId: result.data.id,
-      }));
+  endSession: async (completed) => {
+    const { activeSession } = get()
+    if (!activeSession) return
+    try {
+      await fetch(`/api/sessions/${activeSession.sessionId}/end`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed }),
+      })
+      set({ activeSession: null, sessionEndPromptVisible: false })
+    } catch (err) {
+      console.error('Failed to end session:', err)
     }
   },
-
-  setActiveSession: (id: string) => {
-    set({ activeSessionId: id });
+  resumeSession: async (sessionId) => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/resume`, { method: 'POST' })
+      if (res.ok) {
+        const { data } = await res.json()
+        set({
+          activeSession: { sessionId: data.id, nodeId: data.nodeId, claudeSessionId: data.claudeSessionId },
+        })
+      }
+    } catch (err) {
+      console.error('Failed to resume session:', err)
+    }
   },
-
-  isLiveSession: (id: string) => {
-    return get().liveSessionId === id;
+  dismissEndPrompt: () => set({ sessionEndPromptVisible: false }),
+  loadSessionLog: async (sessionId) => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/log`)
+      if (res.ok) {
+        const { data } = await res.json()
+        set({ sessionLog: data.messages })
+      }
+    } catch (err) {
+      console.error('Failed to load session log:', err)
+    }
   },
-}));
+  handleSessionStarted: (payload) => {
+    set({
+      activeSession: {
+        sessionId: payload.sessionId,
+        nodeId: payload.nodeId,
+        claudeSessionId: payload.claudeSessionId || null,
+      },
+    })
+  },
+  handleSessionEnded: (payload) => {
+    if (payload.needsPrompt) {
+      set({ sessionEndPromptVisible: true })
+    }
+  },
+}))

@@ -1,41 +1,35 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Providers } from '@/components/providers/Providers'
+import './globals.css'
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: "DevFlow",
-  description: "사고 흐름을 구조화하는 개발 워크스페이스",
-};
-
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover" as const,
-};
+  title: 'DevFlow',
+  description: '캔버스 기반 개발 사고 운영 도구',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="ko" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} font-[family-name:var(--font-geist-sans)] antialiased`}
-      >
-        {children}
+    <html lang="ko">
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+        <Providers>{children}</Providers>
       </body>
     </html>
-  );
+  )
 }

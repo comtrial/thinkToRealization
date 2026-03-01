@@ -1,62 +1,100 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-    darkMode: ["class"],
-    content: [
+  content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-  	extend: {
-  		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
-  			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
-  			},
-  			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
-  			},
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
-  			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
-  			},
-  			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
-  			},
-  			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
-  			},
-  			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
-  			},
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
-  			}
-  		},
-  		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
-  		}
-  	}
+    extend: {
+      colors: {
+        background: 'var(--color-background)',
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          hover: 'var(--color-surface-hover)',
+          active: 'var(--color-surface-active)',
+          overlay: 'var(--color-surface-overlay)',
+        },
+        border: {
+          DEFAULT: 'var(--color-border)',
+          hover: 'var(--color-border-hover)',
+          focus: 'var(--color-border-focus)',
+        },
+        accent: {
+          DEFAULT: 'var(--color-accent)',
+          hover: 'var(--color-accent-hover)',
+          light: 'var(--color-accent-light)',
+        },
+        'text-primary': 'var(--color-text-primary)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-tertiary': 'var(--color-text-tertiary)',
+        'text-on-accent': 'var(--color-text-on-accent)',
+        'status-backlog': '#D4D4D4',
+        'status-todo': '#FBBF24',
+        'status-progress': '#4F46E5',
+        'status-done': '#22C55E',
+        'status-archived': '#A3A3A3',
+        'type-idea': '#FBBF24',
+        'type-decision': '#8B5CF6',
+        'type-task': '#3B82F6',
+        'type-issue': '#F87171',
+        'type-milestone': '#10B981',
+        'type-note': '#A3A3A3',
+        'terminal-bg': '#1E1E1E',
+        'terminal-text': '#D4D4D4',
+        error: '#EF4444',
+        warning: '#F59E0B',
+        success: '#22C55E',
+        info: '#3B82F6',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      fontSize: {
+        'page-title': ['24px', { lineHeight: '32px', fontWeight: '600' }],
+        'section-header': ['16px', { lineHeight: '24px', fontWeight: '600' }],
+        'node-title-lg': ['14px', { lineHeight: '20px', fontWeight: '500' }],
+        'node-title-sm': ['13px', { lineHeight: '18px', fontWeight: '500' }],
+        body: ['14px', { lineHeight: '22px', fontWeight: '400' }],
+        caption: ['12px', { lineHeight: '16px', fontWeight: '400' }],
+        badge: ['11px', { lineHeight: '14px', fontWeight: '500' }],
+        terminal: ['13px', { lineHeight: '20px', fontWeight: '400' }],
+      },
+      spacing: {
+        xs: '4px',
+        sm: '8px',
+        md: '12px',
+        lg: '16px',
+        xl: '24px',
+        '2xl': '32px',
+        '3xl': '48px',
+      },
+      boxShadow: {
+        'elevation-1': '0 1px 3px rgba(0,0,0,0.08)',
+        'elevation-2': '0 4px 12px rgba(0,0,0,0.12)',
+        'elevation-3': '0 8px 24px rgba(0,0,0,0.16)',
+        'elevation-4': '0 12px 32px rgba(0,0,0,0.20)',
+      },
+      borderRadius: {
+        node: '8px',
+        frame: '12px',
+        button: '6px',
+        badge: '4px',
+        palette: '12px',
+        dropdown: '8px',
+      },
+      transitionTimingFunction: {
+        devflow: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)',
+      },
+      transitionDuration: {
+        panel: '250ms',
+        terminal: '200ms',
+        zoom: '200ms',
+        prompt: '300ms',
+      },
+    },
   },
   plugins: [require("tailwindcss-animate")],
 };

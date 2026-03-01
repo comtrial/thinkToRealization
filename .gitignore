@@ -26,7 +26,15 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
+
+# playwright
+/playwright-report/
+/test-results/
+
+# devflow logs
+/.devflow-logs/
 
 # vercel
 .vercel
