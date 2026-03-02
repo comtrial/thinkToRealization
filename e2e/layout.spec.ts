@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { cleanDatabase } from "./helpers";
 
 test.describe("F-1: Layout (AppShell + Header + Sidebar)", () => {
   test.beforeEach(async ({ page }) => {
+    await cleanDatabase();
     await page.goto("/");
     await page.waitForLoadState("networkidle");
   });

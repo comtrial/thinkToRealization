@@ -13,14 +13,20 @@ export function TerminalPanel({ nodeId }: TerminalPanelProps) {
   const xtermRef = useRef<unknown>(null)
   const fitAddonRef = useRef<unknown>(null)
   const { sendPTYInput, sendPTYResize } = useWebSocket()
+  const sendPTYInputRef = useRef(sendPTYInput)
+  const sendPTYResizeRef = useRef(sendPTYResize)
+  sendPTYInputRef.current = sendPTYInput
+  sendPTYResizeRef.current = sendPTYResize
+
   useEffect(() => {
     if (!termRef.current || !nodeId) return
 
     let disposed = false
+    let cleanup: (() => void) | undefined
 
     // Dynamically import xterm to avoid SSR issues (xterm uses `self`)
     Promise.all([
-      import('xterm'),
+      import('@xterm/xterm'),
       import('@xterm/addon-fit'),
     ]).then(([{ Terminal }, { FitAddon }]) => {
       if (disposed || !termRef.current) return
@@ -60,9 +66,9 @@ export function TerminalPanel({ nodeId }: TerminalPanelProps) {
         }
       })
 
-      // PTY input: send keystrokes to server
+      // PTY input: send keystrokes to server (use ref to avoid stale closure)
       const dataDisposable = term.onData((data: string) => {
-        sendPTYInput(nodeId, data)
+        sendPTYInputRef.current(nodeId, data)
       })
 
       // PTY output: receive data from server via emitter (bypasses Zustand)
@@ -75,7 +81,7 @@ export function TerminalPanel({ nodeId }: TerminalPanelProps) {
       const resizeObserver = new ResizeObserver(() => {
         try {
           fitAddon.fit()
-          sendPTYResize(nodeId, term.cols, term.rows)
+          sendPTYResizeRef.current(nodeId, term.cols, term.rows)
         } catch {
           // ignore
         }
@@ -87,10 +93,8 @@ export function TerminalPanel({ nodeId }: TerminalPanelProps) {
 
       xtermRef.current = term
       fitAddonRef.current = fitAddon
-      // terminal ready
 
-      // Store cleanup function
-      ;(termRef.current as HTMLDivElement & { __cleanup?: () => void }).__cleanup = () => {
+      cleanup = () => {
         dataDisposable.dispose()
         ptyDataEmitter.off(nodeId, handler)
         resizeObserver.disconnect()
@@ -100,17 +104,11 @@ export function TerminalPanel({ nodeId }: TerminalPanelProps) {
       }
     })
 
-    // Capture ref for cleanup
-    const currentEl = termRef.current as HTMLDivElement & { __cleanup?: () => void } | null
-
     return () => {
       disposed = true
-      if (currentEl?.__cleanup) {
-        currentEl.__cleanup()
-        currentEl.__cleanup = undefined
-      }
+      cleanup?.()
     }
-  }, [nodeId, sendPTYInput, sendPTYResize])
+  }, [nodeId])
 
   if (!nodeId) {
     return (

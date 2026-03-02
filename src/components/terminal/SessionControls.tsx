@@ -2,6 +2,7 @@
 
 import { useSessionStore } from '@/stores/session-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useWebSocket } from '@/components/providers/WebSocketProvider'
 import { Play, Square } from 'lucide-react'
 
 interface SessionControlsProps {
@@ -12,43 +13,18 @@ export function SessionControls({ nodeId }: SessionControlsProps) {
   const activeSession = useSessionStore((s) => s.activeSession)
   const isSessionStarting = useSessionStore((s) => s.isSessionStarting)
   const setTerminalExpanded = useUIStore((s) => s.setTerminalExpanded)
+  const { sendSessionStart, sendSessionEnd } = useWebSocket()
 
   const isActive = activeSession?.nodeId === nodeId
 
   const handleStartSession = () => {
-    // Send session:start via WebSocket
-    const port = 3001
-    const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
-    const ws = new WebSocket(`ws://${host}:${port}/ws?nodeId=${nodeId}`)
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({
-        type: 'session:start',
-        payload: { nodeId, cols: 80, rows: 24 },
-      }))
-      setTerminalExpanded(true)
-      // Close this temporary connection - the main WebSocketProvider will handle ongoing communication
-      setTimeout(() => ws.close(), 500)
-    }
-
-    ws.onerror = () => {
-      console.error('Failed to connect to WebSocket for session start')
-    }
+    sendSessionStart(nodeId)
+    setTerminalExpanded(true)
   }
 
   const handleEndSession = () => {
     if (!activeSession) return
-    const port = 3001
-    const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
-    const ws = new WebSocket(`ws://${host}:${port}/ws?nodeId=${nodeId}`)
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({
-        type: 'session:end',
-        payload: { nodeId, markDone: false },
-      }))
-      setTimeout(() => ws.close(), 500)
-    }
+    sendSessionEnd(nodeId, false)
   }
 
   return (

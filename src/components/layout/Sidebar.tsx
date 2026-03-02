@@ -1,7 +1,10 @@
 'use client'
 
-import { Inbox, ListTodo, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { Inbox, ListTodo, Plus, FolderOpen } from 'lucide-react'
 import { useUIStore } from '@/stores/ui-store'
+import { useProject } from '@/components/providers/ProjectProvider'
+import { CreateProjectDialog } from '@/components/layout/CreateProjectDialog'
 
 interface SidebarItemProps {
   icon: React.ReactNode
@@ -30,38 +33,59 @@ function SidebarItem({ icon, label, active, collapsed, onClick }: SidebarItemPro
 
 export function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
+  const { currentProject, setCurrentProject, projects } = useProject()
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
   return (
-    <aside
-      className="bg-background border-r border-border flex flex-col overflow-hidden transition-all duration-200 ease-devflow"
-      style={{
-        width: sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)',
-      }}
-    >
-      <div className="flex-1 py-2 px-2 flex flex-col gap-1">
-        <SidebarItem
-          icon={<Inbox size={18} />}
-          label="Inbox"
-          collapsed={!sidebarOpen}
-        />
-        <SidebarItem
-          icon={<ListTodo size={18} />}
-          label="My Work"
-          active
-          collapsed={!sidebarOpen}
-        />
+    <>
+      <aside
+        className="bg-background border-r border-border flex flex-col overflow-hidden transition-all duration-200 ease-devflow"
+        style={{
+          width: sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)',
+        }}
+      >
+        <div className="flex-1 py-2 px-2 flex flex-col gap-1">
+          <SidebarItem
+            icon={<Inbox size={18} />}
+            label="Inbox"
+            collapsed={!sidebarOpen}
+          />
+          <SidebarItem
+            icon={<ListTodo size={18} />}
+            label="My Work"
+            collapsed={!sidebarOpen}
+          />
 
-        {sidebarOpen && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between px-3 mb-1">
-              <span className="text-caption text-text-tertiary font-medium">프로젝트</span>
-              <button className="p-0.5 rounded hover:bg-surface-hover">
-                <Plus size={14} className="text-text-tertiary" />
-              </button>
+          {sidebarOpen && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between px-3 mb-1">
+                <span className="text-caption text-text-tertiary font-medium">프로젝트</span>
+                <button
+                  data-testid="create-project-btn"
+                  onClick={() => setCreateDialogOpen(true)}
+                  className="p-0.5 rounded hover:bg-surface-hover"
+                  title="새 프로젝트"
+                >
+                  <Plus size={14} className="text-text-tertiary" />
+                </button>
+              </div>
+              <div data-testid="project-list" className="flex flex-col gap-0.5">
+                {projects.map((project) => (
+                  <SidebarItem
+                    key={project.id}
+                    icon={<FolderOpen size={16} />}
+                    label={project.title}
+                    active={currentProject?.id === project.id}
+                    onClick={() => setCurrentProject(project)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-    </aside>
+          )}
+        </div>
+      </aside>
+
+      <CreateProjectDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+    </>
   )
 }

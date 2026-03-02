@@ -1,5 +1,6 @@
 'use client'
 
+import { type MutableRefObject } from 'react'
 import * as ContextMenu from '@radix-ui/react-context-menu'
 import { Lightbulb, Wrench, Zap, Bug, Flag, StickyNote } from 'lucide-react'
 import type { NodeType } from '@/lib/types/api'
@@ -8,6 +9,7 @@ interface CanvasContextMenuProps {
   children: React.ReactNode
   onCreateNode: (type: NodeType, position: { x: number; y: number }) => void
   screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
+  contextPositionRef: MutableRefObject<{ x: number; y: number }>
 }
 
 const nodeTypeOptions: { type: NodeType; label: string; icon: React.ReactNode }[] = [
@@ -19,7 +21,7 @@ const nodeTypeOptions: { type: NodeType; label: string; icon: React.ReactNode }[
   { type: 'note', label: '새 메모', icon: <StickyNote size={14} /> },
 ]
 
-export function CanvasContextMenu({ children, onCreateNode, screenToFlowPosition }: CanvasContextMenuProps) {
+export function CanvasContextMenu({ children, onCreateNode, screenToFlowPosition, contextPositionRef }: CanvasContextMenuProps) {
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger asChild>
@@ -35,11 +37,13 @@ export function CanvasContextMenu({ children, onCreateNode, screenToFlowPosition
               key={type}
               className="flex items-center gap-2 px-3 py-1.5 text-body text-text-primary hover:bg-surface-hover cursor-pointer outline-none"
               onSelect={() => {
-                const triggerEl = document.querySelector('[data-context-position]')
-                const posData = triggerEl?.getAttribute('data-context-position')
-                const pos = posData ? JSON.parse(posData) : { x: 400, y: 300 }
-                const flowPos = screenToFlowPosition(pos)
-                onCreateNode(type, flowPos)
+                try {
+                  const screenPos = contextPositionRef.current
+                  const flowPos = screenToFlowPosition(screenPos)
+                  onCreateNode(type, flowPos)
+                } catch (err) {
+                  console.error('Failed to create node from context menu:', err)
+                }
               }}
             >
               {icon}

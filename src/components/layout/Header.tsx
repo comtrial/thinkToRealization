@@ -28,6 +28,7 @@ export function Header() {
         {(['dashboard', 'canvas'] as const).map((tab) => (
           <button
             key={tab}
+            data-active={activeTab === tab ? 'true' : undefined}
             onClick={() => setActiveTab(tab)}
             className={`px-3 py-1.5 text-body rounded-button transition-colors relative ${
               activeTab === tab

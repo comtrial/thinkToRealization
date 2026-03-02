@@ -12,6 +12,7 @@ import {
   type Viewport,
   type Node,
   type OnMoveEnd,
+  type OnConnectEnd,
   MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -34,6 +35,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
   const {
     nodes,
     edges,
+    initialViewport,
     onNodesChange,
     onEdgesChange,
     onConnect,
@@ -44,6 +46,8 @@ function CanvasInner({ projectId }: { projectId: string }) {
     saveViewport,
     setNodes,
     addNode,
+    pushSnapshot,
+    setEdges,
   } = useCanvasStore()
 
   const selectNode = useNodeStore((s) => s.selectNode)
@@ -51,6 +55,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
   const { screenToFlowPosition, fitView } = useReactFlow()
   const saveTimerRef = useRef<NodeJS.Timeout>()
   const contextPosRef = useRef({ x: 0, y: 0 })
+  const connectingNodeRef = useRef<{ nodeId: string; handleId: string | null } | null>(null)
 
   useEffect(() => {
     loadCanvas(projectId)
@@ -65,6 +70,34 @@ function CanvasInner({ projectId }: { projectId: string }) {
     },
     [isZoomedIn, setIsZoomedIn]
   )
+
+  const handleNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      pushSnapshot()
+      deleted.forEach((node) => {
+        fetch(`/api/nodes/${node.id}`, { method: 'DELETE' }).catch((err) =>
+          console.error('Failed to delete node:', err)
+        )
+      })
+    },
+    [pushSnapshot]
+  )
+
+  const handleEdgesDelete = useCallback(
+    (deleted: { id: string }[]) => {
+      pushSnapshot()
+      deleted.forEach((edge) => {
+        fetch(`/api/edges/${edge.id}`, { method: 'DELETE' }).catch((err) =>
+          console.error('Failed to delete edge:', err)
+        )
+      })
+    },
+    [pushSnapshot]
+  )
+
+  const handleNodeDragStart = useCallback(() => {
+    pushSnapshot()
+  }, [pushSnapshot])
 
   const handleNodeDragStop = useCallback(
     (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
@@ -109,24 +142,92 @@ function CanvasInner({ projectId }: { projectId: string }) {
             canvasY: position.y,
           }),
         })
-        if (res.ok) {
-          const { data } = await res.json()
-          addNode({
-            id: data.id,
-            type: 'baseNode',
-            position: { x: data.canvasX, y: data.canvasY },
-            data,
-          })
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => ({}))
+          console.error('Node creation API error:', res.status, errorBody)
+          return null
         }
+        const { data } = await res.json()
+        pushSnapshot()
+        addNode({
+          id: data.id,
+          type: 'baseNode',
+          position: { x: data.canvasX, y: data.canvasY },
+          data,
+        })
+        return data
       } catch (err) {
         console.error('Failed to create node:', err)
+        return null
       }
     },
-    [projectId, addNode]
+    [projectId, addNode, pushSnapshot]
+  )
+
+  const handleConnectStart = useCallback(
+    (_event: MouseEvent | TouchEvent, params: { nodeId: string | null; handleId: string | null }) => {
+      if (params.nodeId) {
+        connectingNodeRef.current = { nodeId: params.nodeId, handleId: params.handleId }
+      }
+    },
+    []
+  )
+
+  const handleConnectEnd: OnConnectEnd = useCallback(
+    async (event) => {
+      const connecting = connectingNodeRef.current
+      connectingNodeRef.current = null
+
+      if (!connecting) return
+
+      // Check if we dropped on a valid target (another handle)
+      const target = event.target as HTMLElement
+      if (target.classList.contains('react-flow__handle')) return
+
+      // Dropped on empty canvas — create a new node and connect
+      const mouseEvent = event as unknown as MouseEvent
+      const position = screenToFlowPosition({
+        x: mouseEvent.clientX,
+        y: mouseEvent.clientY,
+      })
+
+      const newNode = await handleCreateNode('task', position)
+      if (!newNode) return
+
+      // Create edge from source to new node
+      try {
+        const res = await fetch('/api/edges', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fromNodeId: connecting.nodeId,
+            toNodeId: newNode.id,
+            type: 'sequence',
+          }),
+        })
+        if (res.ok) {
+          const { data: edgeData } = await res.json()
+          setEdges([
+            ...useCanvasStore.getState().edges,
+            {
+              id: edgeData.id,
+              source: edgeData.fromNodeId,
+              target: edgeData.toNodeId,
+              type: edgeData.type,
+              data: edgeData,
+            },
+          ])
+        }
+      } catch (err) {
+        console.error('Failed to create edge:', err)
+      }
+    },
+    [screenToFlowPosition, handleCreateNode, setEdges]
   )
 
   const handleAutoLayout = useCallback(() => {
     if (nodes.length === 0) return
+    pushSnapshot()
 
     const g = new dagre.graphlib.Graph()
     g.setDefaultEdgeLabel(() => ({}))
@@ -164,12 +265,10 @@ function CanvasInner({ projectId }: { projectId: string }) {
       savePositions(positions)
       fitView({ duration: 300 })
     }, 350)
-  }, [nodes, edges, isZoomedIn, setNodes, savePositions, fitView])
+  }, [nodes, edges, isZoomedIn, setNodes, savePositions, fitView, pushSnapshot])
 
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
     contextPosRef.current = { x: event.clientX, y: event.clientY }
-    const wrapper = event.currentTarget as HTMLElement
-    wrapper.setAttribute('data-context-position', JSON.stringify(contextPosRef.current))
   }, [])
 
   const proOptions = useMemo(() => ({ hideAttribution: true }), [])
@@ -178,14 +277,20 @@ function CanvasInner({ projectId }: { projectId: string }) {
     <CanvasContextMenu
       onCreateNode={handleCreateNode}
       screenToFlowPosition={screenToFlowPosition}
+      contextPositionRef={contextPosRef}
     >
-      <div className="w-full h-full" onContextMenu={handleContextMenu} data-context-position="">
+      <div className="w-full h-full" onContextMenu={handleContextMenu}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onConnectStart={handleConnectStart}
+          onConnectEnd={handleConnectEnd}
+          onNodesDelete={handleNodesDelete}
+          onEdgesDelete={handleEdgesDelete}
+          onNodeDragStart={handleNodeDragStart}
           onViewportChange={handleViewportChange}
           onNodeDragStop={handleNodeDragStop}
           onNodeClick={handleNodeClick}
@@ -193,7 +298,8 @@ function CanvasInner({ projectId }: { projectId: string }) {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           defaultEdgeOptions={defaultEdgeOptions}
-          fitView
+          defaultViewport={initialViewport ?? undefined}
+          fitView={!initialViewport}
           minZoom={0.25}
           maxZoom={2}
           proOptions={proOptions}
@@ -205,6 +311,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
             className="bg-surface border border-border rounded-button shadow-elevation-1"
           />
           <MiniMap
+            style={{ width: 120, height: 80 }}
             nodeColor={(node) => {
               const type = (node.data as Record<string, unknown>)?.type as string
               const colors: Record<string, string> = {
@@ -219,6 +326,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
         </ReactFlow>
         {/* Auto-layout button */}
         <button
+          data-testid="auto-layout-btn"
           onClick={handleAutoLayout}
           className="absolute bottom-4 right-4 px-3 py-1.5 rounded-button text-badge bg-surface border border-border text-text-secondary hover:bg-surface-hover shadow-elevation-1 transition-colors z-10"
           title="자동 정렬 (Cmd+L)"

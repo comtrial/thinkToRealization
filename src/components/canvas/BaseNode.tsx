@@ -1,12 +1,13 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 import { cn } from '@/lib/utils'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
 import { StatusBadge, StatusDot, TypeColorBar } from '@/components/shared/Badge'
+import { MarkdownRenderer } from '@/components/shared/MarkdownRenderer'
 import type { NodeType, NodeStatus } from '@/lib/types/api'
 
 interface NodeData {
@@ -40,7 +41,9 @@ function ExpandedNode({ data }: { data: NodeData }) {
         <StatusBadge status={data.status} />
       </div>
       {data.description && (
-        <p className="text-caption text-text-secondary line-clamp-2">{data.description}</p>
+        <div className="line-clamp-2 overflow-hidden">
+          <MarkdownRenderer content={data.description} compact />
+        </div>
       )}
       <div className="flex gap-3 mt-auto text-caption text-text-tertiary">
         {data.sessionCount > 0 && <span>세션 {data.sessionCount}</span>}
@@ -52,6 +55,39 @@ function ExpandedNode({ data }: { data: NodeData }) {
 }
 
 const handleStyle = { width: 8, height: 8, background: '#4F46E5', border: 'none' }
+
+function HandleWithPlus({
+  type,
+  position,
+  id,
+}: {
+  type: 'source' | 'target'
+  position: Position
+  id?: string
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Handle type={type} position={position} style={handleStyle} id={id} />
+      {hovered && type === 'source' && (
+        <div
+          className={cn(
+            'absolute z-20 w-4 h-4 rounded-full bg-accent text-white flex items-center justify-center text-[10px] font-bold pointer-events-none',
+            position === Position.Right && 'left-2 top-1/2 -translate-y-1/2',
+            position === Position.Bottom && 'top-2 left-1/2 -translate-x-1/2'
+          )}
+        >
+          +
+        </div>
+      )}
+    </div>
+  )
+}
 
 export const BaseNode = memo(function BaseNode({ data, selected }: NodeProps) {
   const isZoomedIn = useCanvasStore((s) => s.isZoomedIn)
@@ -94,11 +130,11 @@ export const BaseNode = memo(function BaseNode({ data, selected }: NodeProps) {
         <ExpandedNode data={nodeData} />
       </div>
 
-      {/* Handles */}
+      {/* Handles - target handles stay simple, source handles get "+" on hover */}
       <Handle type="target" position={Position.Left} style={handleStyle} />
-      <Handle type="source" position={Position.Right} style={handleStyle} />
+      <HandleWithPlus type="source" position={Position.Right} />
       <Handle type="target" position={Position.Top} style={handleStyle} id="top" />
-      <Handle type="source" position={Position.Bottom} style={handleStyle} id="bottom" />
+      <HandleWithPlus type="source" position={Position.Bottom} id="bottom" />
     </div>
   )
 })

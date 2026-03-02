@@ -1,11 +1,20 @@
 const API = "http://localhost:3333/api";
 
 export async function cleanDatabase() {
-  const res = await fetch(`${API}/projects`);
-  const { data } = await res.json();
-  for (const p of data || []) {
-    await fetch(`${API}/projects/${p.id}`, { method: "DELETE" });
+  // Hard-delete all test data via cleanup endpoint (includes WAL checkpoint)
+  const res = await fetch(`${API}/test/cleanup`, { method: "POST" });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "unknown");
+    throw new Error(`cleanDatabase failed (${res.status}): ${text}`);
   }
+  // Verify cleanup completed - wait for DB to be consistent
+  for (let i = 0; i < 10; i++) {
+    const check = await fetch(`${API}/projects`);
+    const json = await check.json();
+    if (json.data.length === 0) return;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  throw new Error("cleanDatabase: projects still exist after 10 retries");
 }
 
 export async function createTestProject(
@@ -23,6 +32,9 @@ export async function createTestProject(
     }),
   });
   const json = await res.json();
+  if (!res.ok) {
+    throw new Error(`createTestProject failed (${res.status}): ${JSON.stringify(json)}`);
+  }
   return json.data;
 }
 
@@ -43,6 +55,9 @@ export async function createTestNode(
     }),
   });
   const json = await res.json();
+  if (!res.ok) {
+    throw new Error(`createTestNode failed (${res.status}): ${JSON.stringify(json)}`);
+  }
   return json.data;
 }
 

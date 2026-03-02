@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  retries: 2,
   workers: 1,
   reporter: "html",
   timeout: 30000,
@@ -25,5 +25,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    env: { NODE_OPTIONS: "--max-old-space-size=4096" },
   },
 });

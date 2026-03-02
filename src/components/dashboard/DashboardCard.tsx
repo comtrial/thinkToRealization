@@ -25,10 +25,12 @@ interface DashboardCardProps {
 
 export function DashboardCard({ node, compact = false }: DashboardCardProps) {
   const setActiveTab = useUIStore((s) => s.setActiveTab)
+  const openPanel = useUIStore((s) => s.openPanel)
   const selectNode = useNodeStore((s) => s.selectNode)
 
   const handleClick = () => {
     selectNode(node.id)
+    openPanel(node.id)
     setActiveTab('canvas')
   }
 
@@ -39,6 +41,7 @@ export function DashboardCard({ node, compact = false }: DashboardCardProps) {
   if (compact) {
     return (
       <button
+        data-testid={`dashboard-card-${node.id}`}
         onClick={handleClick}
         className={cn(
           'relative w-full text-left rounded-node border border-border bg-surface',
@@ -59,6 +62,7 @@ export function DashboardCard({ node, compact = false }: DashboardCardProps) {
 
   return (
     <button
+      data-testid={`dashboard-card-${node.id}`}
       onClick={handleClick}
       className={cn(
         'relative w-full text-left rounded-node border border-border bg-surface',

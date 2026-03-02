@@ -35,7 +35,7 @@ interface EmptyStateProps {
 export function EmptyState({ variant, className }: EmptyStateProps) {
   const config = variants[variant]
   return (
-    <div className={cn('flex flex-col items-center justify-center py-3xl gap-md text-center', className)}>
+    <div data-testid={`empty-${variant}`} className={cn('flex flex-col items-center justify-center py-3xl gap-md text-center', className)}>
       {config.icon}
       <p className="text-body text-text-secondary">{config.message}</p>
       {config.hint && (

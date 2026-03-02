@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNodeStore } from '@/stores/node-store'
+import { useCanvasStore } from '@/stores/canvas-store'
 import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
+import { MarkdownRenderer } from '@/components/shared/MarkdownRenderer'
 import type { NodeType, NodeStatus } from '@/lib/types/api'
 
 const STATUS_OPTIONS: { value: NodeStatus; label: string; color: string }[] = [
@@ -30,22 +32,27 @@ const TYPE_OPTIONS: { value: NodeType; label: string }[] = [
   { value: 'note', label: 'Note' },
 ]
 
+type SaveStatus = 'idle' | 'saving' | 'saved'
+
 export function NodeDetailPanel() {
   const selectedNode = useNodeStore((s) => s.selectedNode)
   const decisions = useNodeStore((s) => s.decisions)
+  const sessions = useNodeStore((s) => s.sessions)
   const updateNodeStatus = useNodeStore((s) => s.updateNodeStatus)
 
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState('')
-  const [editingDesc, setEditingDesc] = useState(false)
   const [descValue, setDescValue] = useState('')
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const descInputRef = useRef<HTMLTextAreaElement>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout>()
+  const savedTimerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     if (selectedNode) {
       setTitleValue(selectedNode.title)
       setDescValue(selectedNode.description || '')
+      setSaveStatus('idle')
     }
   }, [selectedNode])
 
@@ -56,11 +63,45 @@ export function NodeDetailPanel() {
     }
   }, [editingTitle])
 
+  // Cleanup timers on unmount
   useEffect(() => {
-    if (editingDesc && descInputRef.current) {
-      descInputRef.current.focus()
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
     }
-  }, [editingDesc])
+  }, [])
+
+  const saveDescription = useCallback(async (value: string) => {
+    if (!selectedNode) return
+    setSaveStatus('saving')
+    try {
+      const res = await fetch(`/api/nodes/${selectedNode.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: value || null }),
+      })
+      if (res.ok) {
+        const { data } = await res.json()
+        useNodeStore.setState((s) => ({
+          selectedNode: s.selectedNode ? { ...s.selectedNode, description: data.description } : null,
+        }))
+        useCanvasStore.getState().updateNodeData(selectedNode.id, { description: data.description })
+        setSaveStatus('saved')
+        if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+        savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
+      }
+    } catch (err) {
+      console.error('Failed to update description:', err)
+      setSaveStatus('idle')
+    }
+  }, [selectedNode])
+
+  const handleDescChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setDescValue(value)
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => saveDescription(value), 500)
+  }, [saveDescription])
 
   if (!selectedNode) return null
 
@@ -68,11 +109,18 @@ export function NodeDetailPanel() {
     setEditingTitle(false)
     if (titleValue !== selectedNode.title && titleValue.trim()) {
       try {
-        await fetch(`/api/nodes/${selectedNode.id}`, {
+        const res = await fetch(`/api/nodes/${selectedNode.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: titleValue.trim() }),
         })
+        if (res.ok) {
+          const { data } = await res.json()
+          useNodeStore.setState((s) => ({
+            selectedNode: s.selectedNode ? { ...s.selectedNode, title: data.title } : null,
+          }))
+          useCanvasStore.getState().updateNodeData(selectedNode.id, { title: data.title })
+        }
       } catch (err) {
         console.error('Failed to update title:', err)
         setTitleValue(selectedNode.title)
@@ -80,20 +128,11 @@ export function NodeDetailPanel() {
     }
   }
 
-  const handleDescSave = async () => {
-    setEditingDesc(false)
-    if (descValue !== (selectedNode.description || '')) {
-      try {
-        await fetch(`/api/nodes/${selectedNode.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: descValue || null }),
-        })
-      } catch (err) {
-        console.error('Failed to update description:', err)
-        setDescValue(selectedNode.description || '')
-      }
-    }
+  // Helper to find session title by ID
+  const getSessionTitle = (sessionId: string | null): string | null => {
+    if (!sessionId) return null
+    const session = sessions.find((s) => s.id === sessionId)
+    return session?.title || null
   }
 
   return (
@@ -150,12 +189,19 @@ export function NodeDetailPanel() {
           <select
             value={selectedNode.priority}
             onChange={async (e) => {
+              const newPriority = e.target.value
               try {
-                await fetch(`/api/nodes/${selectedNode.id}`, {
+                const res = await fetch(`/api/nodes/${selectedNode.id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ priority: e.target.value }),
+                  body: JSON.stringify({ priority: newPriority }),
                 })
+                if (res.ok) {
+                  useNodeStore.setState((s) => ({
+                    selectedNode: s.selectedNode ? { ...s.selectedNode, priority: newPriority } : null,
+                  }))
+                  useCanvasStore.getState().updateNodeData(selectedNode.id, { priority: newPriority })
+                }
               } catch (err) {
                 console.error('Failed to update priority:', err)
               }
@@ -176,12 +222,19 @@ export function NodeDetailPanel() {
           <select
             value={selectedNode.type}
             onChange={async (e) => {
+              const newType = e.target.value as NodeType
               try {
-                await fetch(`/api/nodes/${selectedNode.id}`, {
+                const res = await fetch(`/api/nodes/${selectedNode.id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ type: e.target.value }),
+                  body: JSON.stringify({ type: newType }),
                 })
+                if (res.ok) {
+                  useNodeStore.setState((s) => ({
+                    selectedNode: s.selectedNode ? { ...s.selectedNode, type: newType } : null,
+                  }))
+                  useCanvasStore.getState().updateNodeData(selectedNode.id, { type: newType })
+                }
               } catch (err) {
                 console.error('Failed to update type:', err)
               }
@@ -197,26 +250,39 @@ export function NodeDetailPanel() {
         </div>
       </div>
 
-      {/* Description */}
+      {/* Description - Split View: Markdown preview + textarea */}
       <div>
-        <label className="text-caption text-text-tertiary mb-1 block">설명</label>
-        {editingDesc ? (
-          <textarea
-            ref={descInputRef}
-            value={descValue}
-            onChange={(e) => setDescValue(e.target.value)}
-            onBlur={handleDescSave}
-            rows={4}
-            className="w-full text-body text-text-primary bg-surface-hover border border-border rounded-node p-2 outline-none focus:border-accent resize-y"
-          />
-        ) : (
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-caption text-text-tertiary">설명</label>
+          {saveStatus !== 'idle' && (
+            <span
+              data-testid="save-status"
+              className={`text-caption ${saveStatus === 'saving' ? 'text-text-tertiary' : 'text-green-600'}`}
+            >
+              {saveStatus === 'saving' ? '저장 중...' : '저장됨'}
+            </span>
+          )}
+        </div>
+
+        {/* Markdown Preview */}
+        {descValue && (
           <div
-            className="text-body text-text-secondary cursor-pointer p-2 rounded-node hover:bg-surface-hover transition-colors min-h-[40px]"
-            onClick={() => setEditingDesc(true)}
+            data-testid="markdown-preview"
+            className="p-2 rounded-node border border-border bg-surface-hover mb-2 min-h-[120px] overflow-y-auto max-h-[300px]"
           >
-            {selectedNode.description || '설명을 추가하세요...'}
+            <MarkdownRenderer content={descValue} />
           </div>
         )}
+
+        {/* Textarea - always visible */}
+        <textarea
+          data-testid="desc-textarea"
+          value={descValue}
+          onChange={handleDescChange}
+          placeholder="설명을 추가하세요... (Markdown 지원)"
+          rows={12}
+          className="w-full text-body text-text-primary bg-surface-hover border border-border rounded-node p-2 outline-none focus:border-accent resize-y min-h-[120px]"
+        />
       </div>
 
       {/* Decisions */}
@@ -230,15 +296,28 @@ export function NodeDetailPanel() {
           </p>
         ) : (
           <div className="flex flex-col gap-2">
-            {decisions.map((d) => (
-              <div
-                key={d.id}
-                className="p-2 rounded-badge border border-border bg-surface-hover text-caption text-text-primary"
-              >
-                <span className="text-accent mr-1">{'\u2B50'}</span>
-                {d.content.length > 120 ? d.content.slice(0, 120) + '...' : d.content}
-              </div>
-            ))}
+            {decisions.map((d) => {
+              const sessionTitle = getSessionTitle(d.sessionId)
+              return (
+                <div
+                  key={d.id}
+                  className="p-2 rounded-badge border border-border bg-surface-hover text-caption text-text-primary"
+                >
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-accent">{'\u2B50'}</span>
+                    <span
+                      data-testid="decision-source"
+                      className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-tertiary"
+                    >
+                      {d.sessionId
+                        ? `세션: ${sessionTitle || d.sessionId.slice(0, 8)}`
+                        : '직접 추가'}
+                    </span>
+                  </div>
+                  {d.content.length > 120 ? d.content.slice(0, 120) + '...' : d.content}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
