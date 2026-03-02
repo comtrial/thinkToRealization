@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   successResponse,
@@ -15,7 +15,16 @@ type Params = { params: Promise<{ id: string }> };
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: { code: "INVALID_JSON", message: "Invalid JSON body", status: 400 } },
+        { status: 400 }
+      );
+    }
+
     const parsed = endSessionSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
@@ -34,24 +43,25 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     const now = new Date();
-    const durationSeconds = Math.floor(
+    const additionalSeconds = Math.floor(
       (now.getTime() - session.startedAt.getTime()) / 1000
     );
+    const totalDuration = session.durationSeconds + additionalSeconds;
 
     const result = await prisma.$transaction(async (tx) => {
-      const updatedSession = await tx.session.update({
-        where: { id },
-        data: {
-          status: "completed",
-          endedAt: now,
-          durationSeconds,
-        },
-      });
-
-      // If completed=true, transition node to done
       if (parsed.data.completed) {
+        // completed=true: session → completed, node → done
+        const updatedSession = await tx.session.update({
+          where: { id },
+          data: {
+            status: "completed",
+            endedAt: now,
+            durationSeconds: totalDuration,
+          },
+        });
+
         const node = session.node;
-        if (node.status === "in_progress") {
+        if (node.status === "in_progress" || node.status === "todo") {
           await tx.node.update({
             where: { id: node.id },
             data: { status: "done" },
@@ -59,27 +69,45 @@ export async function PUT(req: NextRequest, { params }: Params) {
           await tx.nodeStateLog.create({
             data: {
               nodeId: node.id,
-              fromStatus: "in_progress",
+              fromStatus: node.status,
               toStatus: "done",
               triggerType: "session_end_done",
               triggerSessionId: id,
             },
           });
         }
+
+        return updatedSession;
       } else {
-        // Session ended but task continues
-        await tx.nodeStateLog.create({
+        // completed=false: session → paused, node → todo
+        const updatedSession = await tx.session.update({
+          where: { id },
           data: {
-            nodeId: session.nodeId,
-            fromStatus: session.node.status,
-            toStatus: session.node.status,
-            triggerType: "session_end_continue",
-            triggerSessionId: id,
+            status: "paused",
+            endedAt: now,
+            durationSeconds: totalDuration,
           },
         });
-      }
 
-      return updatedSession;
+        const node = session.node;
+        if (node.status === "in_progress") {
+          await tx.node.update({
+            where: { id: node.id },
+            data: { status: "todo" },
+          });
+          await tx.nodeStateLog.create({
+            data: {
+              nodeId: node.id,
+              fromStatus: node.status,
+              toStatus: "todo",
+              triggerType: "session_end_pause",
+              triggerSessionId: id,
+            },
+          });
+        }
+
+        return updatedSession;
+      }
     });
 
     return successResponse(result);

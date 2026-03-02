@@ -20,7 +20,6 @@ export const createNodeSchema = z.object({
 export const updateNodeSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(5000).nullable().optional(),
-  status: nodeStatusEnum.optional(),
   priority: priorityEnum.optional(),
   type: nodeTypeEnum.optional(),
   canvasX: z.number().optional(),

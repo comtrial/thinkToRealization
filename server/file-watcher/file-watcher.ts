@@ -86,15 +86,15 @@ export class FileWatcher {
     console.log(`[file-watcher] Watching ${projectDir} for session ${sessionId}`);
   }
 
-  unwatch(sessionId: string): void {
+  async unwatch(sessionId: string): Promise<void> {
     const entry = this.watchers.get(sessionId);
     if (!entry) return;
 
-    // Flush any remaining changes
+    // Flush any remaining changes before closing
     if (entry.debounceTimer) {
       clearTimeout(entry.debounceTimer);
     }
-    this.flushChanges(sessionId);
+    await this.flushChanges(sessionId);
 
     entry.watcher.close().catch((err) => {
       console.error(`[file-watcher] Error closing watcher for session ${sessionId}:`, err);

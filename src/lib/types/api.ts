@@ -46,6 +46,10 @@ export interface SessionResponse {
   status: SessionStatus;
   startedAt: string;
   endedAt: string | null;
+  fileChangeCount: number;
+  resumeCount: number;
+  durationSeconds: number;
+  logFilePath: string | null;
 }
 
 export interface DecisionResponse {
@@ -53,6 +57,7 @@ export interface DecisionResponse {
   nodeId: string;
   sessionId: string | null;
   content: string;
+  promotedToNodeId: string | null;
   createdAt: string;
 }
 
@@ -65,7 +70,7 @@ export interface SessionMessage {
 
 export interface ProjectResponse {
   id: string;
-  name: string;
+  title: string;
   slug: string;
   description: string | null;
   canvasViewportX: number;

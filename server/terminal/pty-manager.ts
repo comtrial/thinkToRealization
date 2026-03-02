@@ -9,6 +9,7 @@ interface PtySession {
   nodeId: string;
   lastActivity: number;
   timeout: NodeJS.Timeout;
+  killed: boolean;
 }
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -72,6 +73,7 @@ export class PtyManager {
       nodeId,
       lastActivity: Date.now(),
       timeout,
+      killed: false,
     });
     this.sessionToNode.set(sessionId, nodeId);
 
@@ -86,6 +88,13 @@ export class PtyManager {
         console.log(
           `[pty-manager] PTY exited for node ${nodeId} (code: ${exitCode}, signal: ${signal})`
         );
+        // If killed via kill(), skip event emit to prevent double cleanup
+        const sess = this.sessions.get(nodeId);
+        if (sess?.killed) {
+          this.sessions.delete(nodeId);
+          this.sessionToNode.delete(sessionId);
+          return;
+        }
         eventBus.emit("pty:exit", { sessionId, exitCode, signal: signal ?? 0 });
         // Clean up maps
         this.sessions.delete(nodeId);
@@ -121,6 +130,7 @@ export class PtyManager {
     if (!session) return;
 
     clearTimeout(session.timeout);
+    session.killed = true;
     try {
       session.pty.kill();
     } catch {

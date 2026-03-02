@@ -17,7 +17,7 @@ export async function saveLog(
   try {
     const logFile = path.join(LOG_DIR, `${sessionId}.log`);
     const entry = `[${new Date().toISOString()}] [${role}] ${content}\n`;
-    fs.appendFileSync(logFile, entry, "utf-8");
+    await fs.promises.appendFile(logFile, entry, "utf-8");
   } catch (err) {
     console.error("[capture-store] Failed to save log:", err);
   }

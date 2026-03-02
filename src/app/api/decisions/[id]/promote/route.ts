@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, validationError, notFound } from "@/lib/api-response";
 import { handlePrismaError } from "@/lib/prisma-error";
@@ -10,7 +10,15 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: { code: "INVALID_JSON", message: "Invalid JSON body", status: 400 } },
+        { status: 400 }
+      );
+    }
     const parsed = promoteDecisionSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 

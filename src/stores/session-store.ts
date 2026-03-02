@@ -93,8 +93,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     })
   },
   handleSessionEnded: (payload) => {
-    if (payload.needsPrompt) {
-      set({ sessionEndPromptVisible: true })
-    }
+    set({
+      activeSession: null,
+      sessionEndPromptVisible: payload.needsPrompt === true,
+    })
   },
 }))

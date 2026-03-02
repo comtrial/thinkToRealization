@@ -54,53 +54,56 @@ class StateMachine {
     targetStatus?: NodeStatus,
     triggerSessionId?: string
   ): Promise<TransitionResult | null> {
-    const node = await prisma.node.findUnique({
-      where: { id: nodeId },
-      select: { status: true },
-    });
+    // Use interactive transaction to prevent race conditions
+    // (read + validate + write atomically)
+    const result = await prisma.$transaction(async (tx) => {
+      const node = await tx.node.findUnique({
+        where: { id: nodeId },
+        select: { status: true },
+      });
 
-    if (!node) {
-      console.error(`[state-machine] Node not found: ${nodeId}`);
-      return null;
-    }
-
-    const currentStatus = node.status as NodeStatus;
-    let newStatus: NodeStatus;
-
-    if (triggerType === "user_manual") {
-      // Track B: manual transitions are unrestricted
-      if (!targetStatus) {
-        console.error(
-          "[state-machine] user_manual trigger requires targetStatus"
-        );
+      if (!node) {
+        console.error(`[state-machine] Node not found: ${nodeId}`);
         return null;
       }
-      newStatus = targetStatus;
-    } else {
-      // Track A: use transition rules
-      const transitions = TRACK_A_TRANSITIONS[currentStatus];
-      const resolved = transitions?.[triggerType as TrackATrigger];
-      if (!resolved) {
-        console.warn(
-          `[state-machine] No transition for ${currentStatus} + ${triggerType}`
-        );
+
+      const currentStatus = node.status as NodeStatus;
+      let newStatus: NodeStatus;
+
+      if (triggerType === "user_manual") {
+        // Track B: manual transitions are unrestricted
+        if (!targetStatus) {
+          console.error(
+            "[state-machine] user_manual trigger requires targetStatus"
+          );
+          return null;
+        }
+        newStatus = targetStatus;
+      } else {
+        // Track A: use transition rules
+        const transitions = TRACK_A_TRANSITIONS[currentStatus];
+        const resolved = transitions?.[triggerType as TrackATrigger];
+        if (!resolved) {
+          console.warn(
+            `[state-machine] No transition for ${currentStatus} + ${triggerType}`
+          );
+          return null;
+        }
+        newStatus = resolved;
+      }
+
+      // Idempotent: skip if same status
+      if (currentStatus === newStatus) {
         return null;
       }
-      newStatus = resolved;
-    }
 
-    // Idempotent: skip if same status
-    if (currentStatus === newStatus) {
-      return null;
-    }
-
-    // Execute DB update + log in transaction
-    await prisma.$transaction([
-      prisma.node.update({
+      // Execute DB update + log atomically within the transaction
+      await tx.node.update({
         where: { id: nodeId },
         data: { status: newStatus, updatedAt: new Date() },
-      }),
-      prisma.nodeStateLog.create({
+      });
+
+      await tx.nodeStateLog.create({
         data: {
           nodeId,
           fromStatus: currentStatus,
@@ -108,24 +111,23 @@ class StateMachine {
           triggerType,
           triggerSessionId: triggerSessionId ?? null,
         },
-      }),
-    ]);
+      });
 
-    const result: TransitionResult = {
-      fromStatus: currentStatus,
-      toStatus: newStatus,
-    };
+      return { fromStatus: currentStatus, toStatus: newStatus } as TransitionResult;
+    });
 
-    // Emit state change event
+    if (!result) return null;
+
+    // Emit state change event (outside transaction)
     eventBus.emit("node:stateChanged", {
       nodeId,
-      fromStatus: currentStatus,
-      toStatus: newStatus,
+      fromStatus: result.fromStatus,
+      toStatus: result.toStatus,
       triggerType,
     });
 
     console.log(
-      `[state-machine] ${nodeId}: ${currentStatus} -> ${newStatus} (${triggerType})`
+      `[state-machine] ${nodeId}: ${result.fromStatus} -> ${result.toStatus} (${triggerType})`
     );
 
     return result;

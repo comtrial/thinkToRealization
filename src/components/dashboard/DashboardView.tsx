@@ -30,6 +30,9 @@ export function DashboardView({ projectId }: { projectId: string }) {
   }, [projectId])
 
   useEffect(() => {
+    setLoading(true)
+    setData(null)
+    setError(false)
     fetchDashboard()
   }, [fetchDashboard])
 

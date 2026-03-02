@@ -1,13 +1,22 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   successResponse,
   validationError,
   notFound,
+  errorResponse,
 } from "@/lib/api-response";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { updateNodeStatusSchema } from "@/lib/schemas/node";
 import { nodeWithCounts, toNodeResponse } from "@/lib/node-helpers";
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  backlog: ["todo", "in_progress", "archived"],
+  todo: ["backlog", "in_progress", "archived"],
+  in_progress: ["todo", "done", "archived"],
+  done: ["todo", "in_progress", "archived"],
+  archived: ["backlog", "todo"],
+};
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -15,24 +24,54 @@ type Params = { params: Promise<{ id: string }> };
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: { code: "INVALID_JSON", message: "Invalid JSON body", status: 400 } },
+        { status: 400 }
+      );
+    }
+
     const parsed = updateNodeStatusSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
     const existing = await prisma.node.findUnique({ where: { id } });
     if (!existing) return notFound("Node", id);
 
+    const targetStatus = parsed.data.status;
+
+    // Same status transition check
+    if (existing.status === targetStatus) {
+      return errorResponse(
+        "SAME_STATUS",
+        `Node is already in '${targetStatus}' status`,
+        400
+      );
+    }
+
+    // Valid transition check
+    const allowed = VALID_TRANSITIONS[existing.status] ?? [];
+    if (!allowed.includes(targetStatus)) {
+      return errorResponse(
+        "INVALID_TRANSITION",
+        `Cannot transition from '${existing.status}' to '${targetStatus}'. Allowed transitions: ${allowed.join(", ")}`,
+        400
+      );
+    }
+
     const [updated] = await prisma.$transaction([
       prisma.node.update({
         where: { id },
-        data: { status: parsed.data.status },
+        data: { status: targetStatus },
         include: nodeWithCounts,
       }),
       prisma.nodeStateLog.create({
         data: {
           nodeId: id,
           fromStatus: existing.status,
-          toStatus: parsed.data.status,
+          toStatus: targetStatus,
           triggerType: parsed.data.triggerType,
         },
       }),

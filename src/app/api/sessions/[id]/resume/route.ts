@@ -13,7 +13,10 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
-    const session = await prisma.session.findUnique({ where: { id } });
+    const session = await prisma.session.findUnique({
+      where: { id },
+      include: { node: true },
+    });
     if (!session) return notFound("Session", id);
 
     if (session.status === "active") {
@@ -36,16 +39,38 @@ export async function POST(_req: NextRequest, { params }: Params) {
       );
     }
 
-    const updated = await prisma.session.update({
-      where: { id },
-      data: {
-        status: "active",
-        resumeCount: { increment: 1 },
-        endedAt: null,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.session.update({
+        where: { id },
+        data: {
+          status: "active",
+          resumeCount: { increment: 1 },
+          endedAt: null,
+        },
+      });
+
+      // Restore node to in_progress if not already
+      const node = session.node;
+      if (node.status !== "in_progress") {
+        await tx.node.update({
+          where: { id: node.id },
+          data: { status: "in_progress" },
+        });
+        await tx.nodeStateLog.create({
+          data: {
+            nodeId: node.id,
+            fromStatus: node.status,
+            toStatus: "in_progress",
+            triggerType: "session_resume",
+            triggerSessionId: id,
+          },
+        });
+      }
+
+      return updated;
     });
 
-    return successResponse(updated);
+    return successResponse(result);
   } catch (error) {
     return handlePrismaError(error);
   }

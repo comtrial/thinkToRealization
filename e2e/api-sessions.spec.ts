@@ -59,7 +59,7 @@ test.describe("API: Sessions lifecycle", () => {
     });
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.data.status).toBe("completed");
+    expect(json.data.status).toBe("paused");
     expect(json.data.endedAt).toBeTruthy();
     expect(json.data.durationSeconds).toBeGreaterThanOrEqual(0);
   });
@@ -92,6 +92,11 @@ test.describe("API: Sessions lifecycle", () => {
     expect(res.status).toBe(200);
     expect(json.data.status).toBe("active");
     expect(json.data.resumeCount).toBe(1);
+
+    // Verify node is restored to in_progress after resume
+    const nodeRes = await fetch(`${API}/nodes/${nodeId}`);
+    const nodeJson = await nodeRes.json();
+    expect(nodeJson.data.status).toBe("in_progress");
   });
 
   test("Cannot create second active session on same node", async () => {

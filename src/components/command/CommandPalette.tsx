@@ -5,6 +5,7 @@ import { Command } from 'cmdk'
 import { useUIStore } from '@/stores/ui-store'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { useNodeStore } from '@/stores/node-store'
+import { useProject } from '@/components/providers/ProjectProvider'
 import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
 import { StatusDot } from '@/components/shared/Badge'
 import {
@@ -17,7 +18,9 @@ import type { NodeType, NodeStatus } from '@/lib/types/api'
 export function CommandPalette() {
   const { commandPaletteOpen, toggleCommandPalette, setActiveTab, toggleSidebar } = useUIStore()
   const nodes = useCanvasStore((s) => s.nodes)
+  const addNode = useCanvasStore((s) => s.addNode)
   const selectNode = useNodeStore((s) => s.selectNode)
+  const { currentProject } = useProject()
   const [search, setSearch] = useState('')
 
   // Reset search when opening
@@ -25,14 +28,48 @@ export function CommandPalette() {
     if (commandPaletteOpen) setSearch('')
   }, [commandPaletteOpen])
 
+  const openPanel = useUIStore((s) => s.openPanel)
+
   const handleSelectNode = useCallback(
     (nodeId: string) => {
       selectNode(nodeId)
       setActiveTab('canvas')
+      openPanel(nodeId)
       toggleCommandPalette()
     },
-    [selectNode, setActiveTab, toggleCommandPalette]
+    [selectNode, setActiveTab, openPanel, toggleCommandPalette]
   )
+
+  const handleCreateNodeFromPalette = useCallback(async () => {
+    if (!currentProject) return
+    toggleCommandPalette()
+    setActiveTab('canvas')
+    try {
+      const res = await fetch(`/api/projects/${currentProject.id}/nodes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'task' as NodeType,
+          title: '새 작업',
+          canvasX: 100 + Math.random() * 200,
+          canvasY: 100 + Math.random() * 200,
+        }),
+      })
+      if (!res.ok) {
+        console.error('Node creation failed:', res.status)
+        return
+      }
+      const { data } = await res.json()
+      addNode({
+        id: data.id,
+        type: 'baseNode',
+        position: { x: data.canvasX, y: data.canvasY },
+        data,
+      })
+    } catch (err) {
+      console.error('Failed to create node from palette:', err)
+    }
+  }, [currentProject, toggleCommandPalette, setActiveTab, addNode])
 
   if (!commandPaletteOpen) return null
 
@@ -80,10 +117,7 @@ export function CommandPalette() {
                 icon={<Plus size={14} />}
                 label="새 노드 생성"
                 shortcut="⌘N"
-                onSelect={() => {
-                  setActiveTab('canvas')
-                  toggleCommandPalette()
-                }}
+                onSelect={handleCreateNodeFromPalette}
               />
               <CommandItem
                 icon={<LayoutGrid size={14} />}

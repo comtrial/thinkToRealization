@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useUIStore } from '@/stores/ui-store'
+import { useCanvasStore } from '@/stores/canvas-store'
 
 function isInputFocused(): boolean {
   const el = document.activeElement
@@ -48,6 +49,17 @@ export function useKeyboardShortcuts() {
 
       // Do not process below shortcuts when input is focused
       if (isInputFocused()) return
+
+      // Cmd+Z: Undo / Cmd+Shift+Z: Redo
+      if (isMod && e.key === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          useCanvasStore.getState().redo()
+        } else {
+          useCanvasStore.getState().undo()
+        }
+        return
+      }
 
       // Cmd+1: Dashboard tab
       if (isMod && e.key === '1') {

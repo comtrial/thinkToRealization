@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useCanvasStore } from '@/stores/canvas-store'
 import type { NodeResponse, SessionResponse, DecisionResponse } from '@/lib/types/api'
 
 interface NodeStore {
@@ -43,6 +44,8 @@ export const useNodeStore = create<NodeStore>((set) => ({
       if (res.ok) {
         const { data } = await res.json()
         set((s) => ({ selectedNode: s.selectedNode ? { ...s.selectedNode, status: data.status } : null }))
+        // Also update canvas node data
+        useCanvasStore.getState().updateNodeData(nodeId, { status: data.status })
       }
     } catch (err) {
       console.error('Failed to update status:', err)
@@ -75,11 +78,42 @@ export const useNodeStore = create<NodeStore>((set) => ({
   },
   promoteDecision: async (decisionId, nodeType, title) => {
     try {
-      await fetch(`/api/decisions/${decisionId}/promote`, {
+      const res = await fetch(`/api/decisions/${decisionId}/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodeType, title }),
       })
+      if (res.ok) {
+        const { data } = await res.json()
+        // Update decisions array with promotedToNodeId
+        set((s) => ({
+          decisions: s.decisions.map((d) =>
+            d.id === decisionId ? { ...d, promotedToNodeId: data.newNode?.id ?? d.promotedToNodeId } : d
+          ),
+        }))
+        // Add new node and edge to canvas
+        if (data.newNode) {
+          const canvasStore = useCanvasStore.getState()
+          canvasStore.addNode({
+            id: data.newNode.id,
+            type: 'baseNode',
+            position: { x: data.newNode.canvasX ?? 0, y: data.newNode.canvasY ?? 0 },
+            data: data.newNode,
+          })
+          if (data.newEdge) {
+            canvasStore.setEdges([
+              ...canvasStore.edges,
+              {
+                id: data.newEdge.id,
+                source: data.newEdge.fromNodeId,
+                target: data.newEdge.toNodeId,
+                type: data.newEdge.type,
+                data: data.newEdge,
+              },
+            ])
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to promote decision:', err)
     }

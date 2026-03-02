@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   successResponse,
@@ -49,7 +49,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: { code: "INVALID_JSON", message: "Invalid JSON body", status: 400 } },
+        { status: 400 }
+      );
+    }
+
     const parsed = updateNodeSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
@@ -75,19 +84,22 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const existing = await prisma.node.findUnique({ where: { id } });
     if (!existing) return notFound("Node", id);
 
-    const archived = await prisma.node.update({
-      where: { id },
-      data: { status: "archived" },
-    });
+    const archived = await prisma.$transaction(async (tx) => {
+      const updated = await tx.node.update({
+        where: { id },
+        data: { status: "archived" },
+      });
 
-    // Log state change
-    await prisma.nodeStateLog.create({
-      data: {
-        nodeId: id,
-        fromStatus: existing.status,
-        toStatus: "archived",
-        triggerType: "user_manual",
-      },
+      await tx.nodeStateLog.create({
+        data: {
+          nodeId: id,
+          fromStatus: existing.status,
+          toStatus: "archived",
+          triggerType: "user_manual",
+        },
+      });
+
+      return updated;
     });
 
     return successResponse(archived);

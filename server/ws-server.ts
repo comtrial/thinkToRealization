@@ -23,6 +23,9 @@ recoveryManager.recoverStaleSessions().catch((err) => {
 // Track WebSocket clients by nodeId
 const nodeClients = new Map<string, Set<WebSocket>>();
 
+// Track global clients (no nodeId — receive broadcasts only)
+const globalClients = new Set<WebSocket>();
+
 // --- Helper: send JSON to a WebSocket client ---
 function sendJson(ws: WebSocket, msg: Record<string, unknown>): void {
   if (ws.readyState === WebSocket.OPEN) {
@@ -48,13 +51,39 @@ function broadcastToNode(
   }
 }
 
-// --- Helper: broadcast to ALL connected clients ---
+// --- Helper: broadcast to ALL connected clients (global + node-specific) ---
 function broadcastToAll(msg: Record<string, unknown>): void {
   const payload = JSON.stringify({
     ...msg,
     timestamp: new Date().toISOString(),
   });
   for (const client of wss.clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  }
+}
+
+// --- Helper: broadcast to node clients AND global clients ---
+function broadcastToNodeAndGlobal(
+  nodeId: string,
+  msg: Record<string, unknown>
+): void {
+  const payload = JSON.stringify({
+    ...msg,
+    timestamp: new Date().toISOString(),
+  });
+  // Send to node-specific clients
+  const clients = nodeClients.get(nodeId);
+  if (clients) {
+    for (const client of clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(payload);
+      }
+    }
+  }
+  // Also send to global clients so WebSocketProvider receives events
+  for (const client of globalClients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(payload);
     }
@@ -71,7 +100,7 @@ console.log(`[ws-server] WebSocket server listening on port ${WS_PORT}`);
 eventBus.on("pty:data", ({ sessionId, data }) => {
   const nodeId = ptyManager.getNodeIdBySession(sessionId);
   if (nodeId) {
-    broadcastToNode(nodeId, { type: "pty:data", payload: { nodeId, data } });
+    broadcastToNodeAndGlobal(nodeId, { type: "pty:data", payload: { nodeId, data } });
   }
   // Also feed capture manager
   captureManager.append(sessionId, data);
@@ -79,28 +108,28 @@ eventBus.on("pty:data", ({ sessionId, data }) => {
 
 // PTY exit -> end session + stop file watcher + broadcast
 eventBus.on("pty:exit", async ({ sessionId, exitCode }) => {
-  const nodeId = ptyManager.getNodeIdBySession(sessionId);
-  captureManager.stop(sessionId);
-  fileWatcher.unwatch(sessionId);
-
-  if (nodeId) {
-    broadcastToNode(nodeId, {
-      type: "session:ended",
-      payload: { nodeId, sessionId, needsPrompt: true, exitCode },
-    });
-  }
-
-  // Auto-end session as paused (user can choose "done" via prompt)
   try {
+    const nodeId = ptyManager.getNodeIdBySession(sessionId);
+    await captureManager.stop(sessionId);
+    await fileWatcher.unwatch(sessionId);
+
+    if (nodeId) {
+      broadcastToNodeAndGlobal(nodeId, {
+        type: "session:ended",
+        payload: { nodeId, sessionId, needsPrompt: true, exitCode },
+      });
+    }
+
+    // Auto-end session as paused (user can choose "done" via prompt)
     await sessionManager.endSession(sessionId, false);
   } catch (err) {
-    console.error("[ws-server] Failed to end session on pty exit:", err);
+    console.error("[ws-server] Error in pty:exit handler:", err);
   }
 });
 
 // Session started
 eventBus.on("session:started", ({ sessionId, nodeId }) => {
-  broadcastToNode(nodeId, {
+  broadcastToNodeAndGlobal(nodeId, {
     type: "session:started",
     payload: { nodeId, sessionId },
   });
@@ -108,7 +137,7 @@ eventBus.on("session:started", ({ sessionId, nodeId }) => {
 
 // Session ended (from session manager)
 eventBus.on("session:ended", ({ sessionId, nodeId, status }) => {
-  broadcastToNode(nodeId, {
+  broadcastToNodeAndGlobal(nodeId, {
     type: "session:ended",
     payload: { nodeId, sessionId, status },
   });
@@ -116,7 +145,7 @@ eventBus.on("session:ended", ({ sessionId, nodeId, status }) => {
 
 // Session resumed
 eventBus.on("session:resumed", ({ sessionId, nodeId }) => {
-  broadcastToNode(nodeId, {
+  broadcastToNodeAndGlobal(nodeId, {
     type: "session:resumed",
     payload: { nodeId, sessionId },
   });
@@ -133,14 +162,28 @@ eventBus.on(
   }
 );
 
-// File changed -> broadcast file count update
-eventBus.on("file:changed", ({ sessionId, filePath, changeType }) => {
-  const nodeId = ptyManager.getNodeIdBySession(sessionId);
-  if (nodeId) {
-    broadcastToNode(nodeId, {
-      type: "node:fileCountUpdated",
-      payload: { nodeId, sessionId, filePath, changeType },
-    });
+// File changed -> broadcast file count update with actual count
+eventBus.on("file:changed", async ({ sessionId, filePath, changeType }) => {
+  try {
+    const nodeId = ptyManager.getNodeIdBySession(sessionId);
+    if (nodeId) {
+      // Get actual file change count from DB
+      let count = 0;
+      try {
+        const session = await prisma.session.findUnique({
+          where: { id: sessionId },
+          select: { fileChangeCount: true },
+        });
+        count = session?.fileChangeCount ?? 0;
+      } catch { /* ignore */ }
+
+      broadcastToNodeAndGlobal(nodeId, {
+        type: "node:fileCountUpdated",
+        payload: { nodeId, sessionId, filePath, changeType, count },
+      });
+    }
+  } catch (err) {
+    console.error("[ws-server] Error in file:changed handler:", err);
   }
 });
 
@@ -203,11 +246,79 @@ wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
   const nodeId = url.searchParams.get("nodeId");
 
   if (!nodeId) {
-    sendJson(ws, {
-      type: "error",
-      payload: { code: "MISSING_NODE_ID", message: "Missing nodeId query parameter" },
+    // Global client — receives broadcasts but no node-specific events
+    console.log(`[ws-server] Global client connected`);
+    globalClients.add(ws);
+
+    ws.on("close", () => {
+      globalClients.delete(ws);
+      console.log(`[ws-server] Global client disconnected`);
     });
-    ws.close();
+
+    ws.on("error", (err) => {
+      console.error(`[ws-server] Global client error:`, err);
+    });
+
+    // Global clients can send messages (forwarded to node handlers)
+    ws.on("message", async (raw: Buffer | string) => {
+      try {
+        const msg = JSON.parse(raw.toString());
+        // Forward PTY input/resize to the correct node
+        if (msg.type === "pty:input" && msg.payload?.nodeId) {
+          ptyManager.write(msg.payload.nodeId, msg.payload.data ?? "");
+        } else if (msg.type === "pty:resize" && msg.payload?.nodeId) {
+          const { cols, rows } = msg.payload;
+          if (typeof cols === "number" && typeof rows === "number") {
+            ptyManager.resize(msg.payload.nodeId, cols, rows);
+          }
+        } else if (msg.type === "session:start" && msg.payload?.nodeId) {
+          const targetNodeId = msg.payload.nodeId;
+          try {
+            const sessionId = await sessionManager.startSession(targetNodeId, msg.payload.title);
+            const cols = msg.payload.cols ?? 80;
+            const rows = msg.payload.rows ?? 24;
+            const cwd = msg.payload.cwd;
+            ptyManager.create(targetNodeId, sessionId, cols, rows, cwd);
+            captureManager.start(sessionId);
+            await startFileWatcherForSession(sessionId, targetNodeId);
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to start session";
+            sendJson(ws, { type: "error", payload: { code: "SESSION_START_FAILED", message } });
+          }
+        } else if (msg.type === "session:end" && msg.payload?.nodeId) {
+          const targetNodeId = msg.payload.nodeId;
+          const sessionInfo = ptyManager.getSessionInfo(targetNodeId);
+          if (sessionInfo) {
+            const markDone = msg.payload.markDone ?? false;
+            ptyManager.kill(targetNodeId);
+            await fileWatcher.unwatch(sessionInfo.sessionId);
+            try {
+              await sessionManager.endSession(sessionInfo.sessionId, markDone);
+            } catch (err) {
+              console.error("[ws-server] Failed to end session:", err);
+            }
+          }
+        } else if (msg.type === "session:resume" && msg.payload?.sessionId && msg.payload?.nodeId) {
+          const { sessionId, nodeId: targetNodeId } = msg.payload;
+          try {
+            await sessionManager.resumeSession(sessionId);
+            const cols = msg.payload.cols ?? 80;
+            const rows = msg.payload.rows ?? 24;
+            const cwd = msg.payload.cwd;
+            ptyManager.create(targetNodeId, sessionId, cols, rows, cwd);
+            captureManager.start(sessionId);
+            await startFileWatcherForSession(sessionId, targetNodeId);
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to resume session";
+            sendJson(ws, { type: "error", payload: { code: "SESSION_RESUME_FAILED", message } });
+          }
+        } else if (msg.type === "ping") {
+          sendJson(ws, { type: "pong" });
+        }
+      } catch {
+        sendJson(ws, { type: "error", payload: { code: "INVALID_JSON", message: "Invalid JSON message" } });
+      }
+    });
     return;
   }
 
@@ -278,7 +389,7 @@ wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
           if (sessionInfo) {
             const markDone = msg.payload?.markDone ?? false;
             ptyManager.kill(nodeId);
-            fileWatcher.unwatch(sessionInfo.sessionId);
+            await fileWatcher.unwatch(sessionInfo.sessionId);
             try {
               await sessionManager.endSession(
                 sessionInfo.sessionId,
@@ -368,14 +479,32 @@ wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
 async function shutdown() {
   console.log("[ws-server] Shutting down...");
   clearInterval(heartbeatInterval);
+
+  // End all active sessions gracefully
+  const activeSessions = ptyManager.getAllActive();
+  for (const { nodeId, sessionId } of activeSessions) {
+    try {
+      ptyManager.kill(nodeId);
+      await fileWatcher.unwatch(sessionId);
+      await sessionManager.endSession(sessionId, false);
+    } catch (err) {
+      console.error(`[ws-server] Error cleaning up session ${sessionId}:`, err);
+    }
+  }
+
   captureManager.dispose();
   fileWatcher.dispose();
   ptyManager.dispose();
   eventBus.removeAllListeners();
+
   wss.close(() => {
     console.log("[ws-server] Server closed.");
-    process.exit(0);
   });
+
+  // Allow pending I/O to complete before exiting
+  setTimeout(() => {
+    process.exit(0);
+  }, 500);
 }
 
 process.on("SIGINT", shutdown);

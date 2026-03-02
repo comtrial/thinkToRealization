@@ -2,9 +2,19 @@ import { create } from 'zustand'
 import type { Node, Edge, OnNodesChange, OnEdgesChange, OnConnect } from '@xyflow/react'
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react'
 
+interface Snapshot {
+  nodes: Node[]
+  edges: Edge[]
+}
+
+const MAX_HISTORY = 30
+
 interface CanvasStore {
   nodes: Node[]
   edges: Edge[]
+  undoStack: Snapshot[]
+  redoStack: Snapshot[]
+  initialViewport: { x: number; y: number; zoom: number } | null
   isZoomedIn: boolean
   setIsZoomedIn: (value: boolean) => void
   onNodesChange: OnNodesChange
@@ -15,19 +25,102 @@ interface CanvasStore {
   addNode: (node: Node) => void
   updateNodeData: (id: string, data: Partial<Record<string, unknown>>) => void
   removeNode: (id: string) => void
+  pushSnapshot: () => void
+  undo: () => Promise<void>
+  redo: () => Promise<void>
   loadCanvas: (projectId: string) => Promise<void>
   savePositions: (nodes: { id: string; x: number; y: number }[]) => Promise<void>
   saveViewport: (projectId: string, viewport: { x: number; y: number; zoom: number }) => void
 }
 
+let viewportSaveTimer: NodeJS.Timeout | undefined
+
+async function reconcileWithAPI(prev: Snapshot, next: Snapshot) {
+  const prevNodeIds = new Set(prev.nodes.map((n) => n.id))
+  const nextNodeIds = new Set(next.nodes.map((n) => n.id))
+  const prevEdgeIds = new Set(prev.edges.map((e) => e.id))
+  const nextEdgeIds = new Set(next.edges.map((e) => e.id))
+
+  const promises: Promise<unknown>[] = []
+
+  // Nodes that appeared (were deleted before, now restored) → unarchive
+  for (const node of next.nodes) {
+    if (!prevNodeIds.has(node.id)) {
+      const originalStatus = (node.data as Record<string, unknown>)?.status as string | undefined
+      promises.push(
+        fetch(`/api/nodes/${node.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: originalStatus || 'backlog' }),
+        })
+      )
+    }
+  }
+
+  // Nodes that disappeared → archive
+  for (const node of prev.nodes) {
+    if (!nextNodeIds.has(node.id)) {
+      promises.push(fetch(`/api/nodes/${node.id}`, { method: 'DELETE' }))
+    }
+  }
+
+  // Edges that appeared → recreate
+  for (const edge of next.edges) {
+    if (!prevEdgeIds.has(edge.id)) {
+      promises.push(
+        fetch('/api/edges', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fromNodeId: edge.source,
+            toNodeId: edge.target,
+            type: (edge.data as Record<string, unknown>)?.type || edge.type || 'sequence',
+          }),
+        })
+      )
+    }
+  }
+
+  // Edges that disappeared → delete
+  for (const edge of prev.edges) {
+    if (!nextEdgeIds.has(edge.id)) {
+      promises.push(fetch(`/api/edges/${edge.id}`, { method: 'DELETE' }))
+    }
+  }
+
+  // Position changes
+  const movedNodes = next.nodes.filter((n) => {
+    const prevNode = prev.nodes.find((p) => p.id === n.id)
+    return prevNode && (prevNode.position.x !== n.position.x || prevNode.position.y !== n.position.y)
+  })
+  if (movedNodes.length > 0) {
+    promises.push(
+      fetch('/api/nodes/positions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nodes: movedNodes.map((n) => ({ id: n.id, canvasX: n.position.x, canvasY: n.position.y })),
+        }),
+      })
+    )
+  }
+
+  await Promise.allSettled(promises)
+}
+
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
   nodes: [],
   edges: [],
+  undoStack: [],
+  redoStack: [],
+  initialViewport: null,
   isZoomedIn: true,
   setIsZoomedIn: (value) => set({ isZoomedIn: value }),
   onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
   onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
   onConnect: async (connection) => {
+    // Save snapshot before connecting
+    get().pushSnapshot()
     // Optimistic: add edge locally
     set({ edges: addEdge(connection, get().edges) })
     // Persist via API
@@ -68,6 +161,56 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
     })),
+  pushSnapshot: () => {
+    const { nodes, edges, undoStack } = get()
+    const snapshot: Snapshot = {
+      nodes: structuredClone(nodes),
+      edges: structuredClone(edges),
+    }
+    const newStack = [...undoStack, snapshot]
+    if (newStack.length > MAX_HISTORY) newStack.shift()
+    set({ undoStack: newStack, redoStack: [] })
+  },
+  undo: async () => {
+    const { undoStack, nodes, edges } = get()
+    if (undoStack.length === 0) return
+
+    const newUndoStack = [...undoStack]
+    const snapshot = newUndoStack.pop()!
+    const currentSnapshot: Snapshot = {
+      nodes: structuredClone(nodes),
+      edges: structuredClone(edges),
+    }
+
+    set({
+      undoStack: newUndoStack,
+      redoStack: [...get().redoStack, currentSnapshot],
+      nodes: snapshot.nodes,
+      edges: snapshot.edges,
+    })
+
+    await reconcileWithAPI(currentSnapshot, snapshot)
+  },
+  redo: async () => {
+    const { redoStack, nodes, edges } = get()
+    if (redoStack.length === 0) return
+
+    const newRedoStack = [...redoStack]
+    const snapshot = newRedoStack.pop()!
+    const currentSnapshot: Snapshot = {
+      nodes: structuredClone(nodes),
+      edges: structuredClone(edges),
+    }
+
+    set({
+      redoStack: newRedoStack,
+      undoStack: [...get().undoStack, currentSnapshot],
+      nodes: snapshot.nodes,
+      edges: snapshot.edges,
+    })
+
+    await reconcileWithAPI(currentSnapshot, snapshot)
+  },
   loadCanvas: async (projectId) => {
     try {
       const res = await fetch(`/api/projects/${projectId}/canvas`)
@@ -86,7 +229,14 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         type: e.type,
         data: e,
       }))
-      set({ nodes, edges })
+      const hasViewport = data.viewport && (data.viewport.x !== 0 || data.viewport.y !== 0 || data.viewport.zoom !== 1)
+      set({
+        nodes,
+        edges,
+        initialViewport: hasViewport ? data.viewport : null,
+        undoStack: [],
+        redoStack: [],
+      })
     } catch (err) {
       console.error('Failed to load canvas:', err)
     }
@@ -102,15 +252,18 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       console.error('Failed to save positions:', err)
     }
   },
-  saveViewport: async (projectId, viewport) => {
-    try {
-      await fetch(`/api/projects/${projectId}/canvas/viewport`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(viewport),
-      })
-    } catch (err) {
-      console.error('Failed to save viewport:', err)
-    }
+  saveViewport: (projectId, viewport) => {
+    if (viewportSaveTimer) clearTimeout(viewportSaveTimer)
+    viewportSaveTimer = setTimeout(async () => {
+      try {
+        await fetch(`/api/projects/${projectId}/canvas/viewport`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(viewport),
+        })
+      } catch (err) {
+        console.error('Failed to save viewport:', err)
+      }
+    }, 1000)
   },
 }))

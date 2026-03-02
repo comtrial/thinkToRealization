@@ -2,6 +2,7 @@ import stripAnsi from "strip-ansi";
 import { saveLog } from "../db/capture-store";
 
 const FLUSH_INTERVAL_MS = 2000; // 2 seconds
+const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB
 
 interface CaptureSession {
   buffer: string;
@@ -25,11 +26,16 @@ export class CaptureManager {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     session.buffer += data;
+
+    // Flush immediately if buffer exceeds max size
+    if (session.buffer.length > MAX_BUFFER_SIZE) {
+      this.flush(sessionId);
+    }
   }
 
-  stop(sessionId: string): void {
+  async stop(sessionId: string): Promise<void> {
     // Flush remaining buffer before stopping
-    this.flush(sessionId);
+    await this.flush(sessionId);
 
     const session = this.sessions.get(sessionId);
     if (!session) return;
@@ -44,7 +50,7 @@ export class CaptureManager {
     }
   }
 
-  private flush(sessionId: string): void {
+  private async flush(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session || session.buffer.length === 0) return;
 
@@ -77,10 +83,10 @@ export class CaptureManager {
       chunks.push({ role: currentRole, content: currentChunk.join("\n") });
     }
 
-    // Save each chunk asynchronously
+    // Save each chunk
     for (const chunk of chunks) {
       if (chunk.content.trim().length === 0) continue;
-      saveLog(sessionId, chunk.role, chunk.content, rawLength);
+      await saveLog(sessionId, chunk.role, chunk.content, rawLength);
     }
   }
 }

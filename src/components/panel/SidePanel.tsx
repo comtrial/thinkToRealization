@@ -7,6 +7,7 @@ import { SessionLogViewer } from './SessionLogViewer'
 import { useNodeStore } from '@/stores/node-store'
 import { X, Maximize2, Minimize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+// ESC key handling is centralized in useKeyboardShortcuts
 
 export function SidePanel() {
   const panelMode = useUIStore((s) => s.panelMode)
@@ -28,21 +29,6 @@ export function SidePanel() {
     }
   }, [panelNodeId, panelMode, selectNode])
 
-  // Handle ESC key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && panelMode !== 'closed') {
-        if (panelMode === 'full') {
-          toggleFullPage()
-        } else {
-          closePanel()
-        }
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [panelMode, closePanel, toggleFullPage])
-
   if (panelMode === 'closed') return null
 
   return (
@@ -57,6 +43,7 @@ export function SidePanel() {
 
       {/* Panel */}
       <aside
+        data-testid="side-panel"
         className={[
           'absolute top-0 right-0 h-full bg-surface border-l border-border z-30',
           'flex flex-col',
@@ -69,6 +56,7 @@ export function SidePanel() {
         <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <button
+              data-testid="panel-close-btn"
               onClick={closePanel}
               className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
               title="닫기 (ESC)"
@@ -82,6 +70,7 @@ export function SidePanel() {
             )}
           </div>
           <button
+            data-testid="panel-fullscreen-btn"
             onClick={toggleFullPage}
             className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
             title={panelMode === 'full' ? '축소' : '전체 화면'}

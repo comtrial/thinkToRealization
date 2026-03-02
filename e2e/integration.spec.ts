@@ -143,6 +143,12 @@ test.describe("Integration: Full user workflow", () => {
     const doneNode = await createTestNode(project.id, {
       title: "Done Node",
     });
+    // Must transition through in_progress first (backlog → done is not allowed)
+    await fetch(`${API}/nodes/${doneNode.id}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "in_progress", triggerType: "user_manual" }),
+    });
     await fetch(`${API}/nodes/${doneNode.id}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -233,11 +239,13 @@ test.describe("Integration: Full user workflow", () => {
     expect(session.status).toBe("active");
 
     // End session (not completed)
-    await fetch(`${API}/sessions/${session.id}/end`, {
+    const endRes1 = await fetch(`${API}/sessions/${session.id}/end`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: false }),
     });
+    // Verify session status is "paused" (not completed)
+    expect((await endRes1.json()).data.status).toBe("paused");
 
     // Resume session
     const resumeRes = await fetch(`${API}/sessions/${session.id}/resume`, {
@@ -248,12 +256,17 @@ test.describe("Integration: Full user workflow", () => {
     expect(resumed.status).toBe("active");
     expect(resumed.resumeCount).toBe(1);
 
+    // Verify node is restored to in_progress after resume
+    let nodeCheck = await fetch(`${API}/nodes/${node.id}`);
+    expect((await nodeCheck.json()).data.status).toBe("in_progress");
+
     // End again (not completed)
-    await fetch(`${API}/sessions/${session.id}/end`, {
+    const endRes2 = await fetch(`${API}/sessions/${session.id}/end`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: false }),
     });
+    expect((await endRes2.json()).data.status).toBe("paused");
 
     // Resume again
     const resume2Res = await fetch(`${API}/sessions/${session.id}/resume`, {
@@ -261,6 +274,10 @@ test.describe("Integration: Full user workflow", () => {
     });
     const resumed2 = (await resume2Res.json()).data;
     expect(resumed2.resumeCount).toBe(2);
+
+    // Verify node restored to in_progress again
+    nodeCheck = await fetch(`${API}/nodes/${node.id}`);
+    expect((await nodeCheck.json()).data.status).toBe("in_progress");
 
     // End as completed
     await fetch(`${API}/sessions/${session.id}/end`, {
@@ -439,11 +456,23 @@ test.describe("Integration: Full user workflow", () => {
       }),
     });
     expect((await res.json()).data.status).toBe("archived");
+
+    // Invalid transition: archived → in_progress (should fail)
+    res = await fetch(`${API}/nodes/${node.id}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "in_progress",
+        triggerType: "user_manual",
+      }),
+    });
+    expect(res.status).toBe(400);
   });
 });
 
 test.describe("Integration: UI components", () => {
   test.beforeEach(async ({ page }) => {
+    await cleanDatabase();
     await page.goto("/");
     await page.waitForLoadState("networkidle");
   });
@@ -459,22 +488,27 @@ test.describe("Integration: UI components", () => {
     await expect(paletteInput).toBeHidden({ timeout: 3000 });
   });
 
-  test("Keyboard shortcut 1 switches to dashboard, 2 to canvas", async ({
+  test("Keyboard shortcut Cmd+1/2 switches tabs", async ({
     page,
   }) => {
-    // Press 2 for canvas tab
-    await page.keyboard.press("Digit2");
+    // Create a project so tabs are functional
+    await createTestProject("KB Test");
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+
+    // Press Cmd+2 for canvas tab
+    await page.keyboard.press("Meta+2");
     const canvasTab = page.getByRole("button", { name: "캔버스" });
     await expect(canvasTab).toHaveAttribute("data-active", "true", {
       timeout: 3000,
-    }).catch(() => {
-      // Attribute might not exist, check aria or class instead
     });
 
-    // Press 1 for dashboard tab
-    await page.keyboard.press("Digit1");
+    // Press Cmd+1 for dashboard tab
+    await page.keyboard.press("Meta+1");
     const dashTab = page.getByRole("button", { name: "대시보드" });
-    await expect(dashTab).toBeVisible();
+    await expect(dashTab).toHaveAttribute("data-active", "true", {
+      timeout: 3000,
+    });
   });
 
   test("Empty state shows when no project selected", async ({ page }) => {
