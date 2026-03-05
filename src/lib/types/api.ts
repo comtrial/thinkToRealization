@@ -4,6 +4,7 @@ export type NodeType = "idea" | "decision" | "task" | "issue" | "milestone" | "n
 export type NodeStatus = "backlog" | "todo" | "in_progress" | "done" | "archived";
 export type EdgeType = "sequence" | "dependency" | "related" | "regression" | "branch";
 export type SessionStatus = "active" | "paused" | "completed";
+export type PlanStatus = "draft" | "approved" | "rejected" | "revised";
 
 export interface NodeResponse {
   id: string;
@@ -24,6 +25,9 @@ export interface NodeResponse {
   sessionCount: number;
   decisionCount: number;
   fileChangeCount: number;
+  childCount: number;
+  planCount: number;
+  latestPlanStatus: string | null;
   hasActiveSession: boolean;
   lastSessionAt: string | null;
   lastSessionTitle: string | null;
@@ -61,6 +65,42 @@ export interface DecisionResponse {
   createdAt: string;
 }
 
+export interface PlanContent {
+  summary: string;
+  affectedFiles: Array<{
+    path: string;
+    action: "create" | "modify" | "delete";
+    description: string;
+  }>;
+  changes: Array<{
+    title: string;
+    description: string;
+    risk: "low" | "medium" | "high";
+  }>;
+  testPlan: Array<{
+    description: string;
+    type: "unit" | "integration" | "e2e";
+  }>;
+  risks: Array<{
+    description: string;
+    severity: "low" | "medium" | "high";
+    mitigation: string;
+  }>;
+}
+
+export interface PlanResponse {
+  id: string;
+  nodeId: string;
+  version: number;
+  status: PlanStatus;
+  content: PlanContent;
+  prompt: string;
+  rawResponse: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SessionMessage {
   role: "user" | "assistant";
   content: string;
@@ -73,6 +113,8 @@ export interface ProjectResponse {
   title: string;
   slug: string;
   description: string | null;
+  projectDir: string;
+  claudeMdPath: string | null;
   canvasViewportX: number;
   canvasViewportY: number;
   canvasViewportZoom: number;

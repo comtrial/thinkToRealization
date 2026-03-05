@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
-  cleanDatabase,
+  cleanTestData,
   createTestProject,
   createTestNode,
   createTestEdge,
@@ -14,7 +14,7 @@ test.describe("API: Edges CRUD", () => {
   let nodeBId: string;
 
   test.beforeEach(async () => {
-    await cleanDatabase();
+    await cleanTestData();
     const project = await createTestProject();
     projectId = project.id;
     const nodeA = await createTestNode(projectId, { title: "Node A" });

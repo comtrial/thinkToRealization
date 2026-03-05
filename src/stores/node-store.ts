@@ -6,19 +6,28 @@ interface NodeStore {
   selectedNode: NodeResponse | null
   sessions: SessionResponse[]
   decisions: DecisionResponse[]
+  isLoading: boolean
   selectNode: (nodeId: string) => Promise<void>
   clearSelection: () => void
   updateNodeStatus: (nodeId: string, status: string) => Promise<void>
-  addDecision: (nodeId: string, content: string, sessionId?: string) => Promise<void>
+  addDecision: (nodeId: string, content: string, sessionId?: string) => Promise<DecisionResponse | null>
   removeDecision: (decisionId: string) => Promise<void>
   promoteDecision: (decisionId: string, nodeType: string, title: string) => Promise<void>
+  addSubIssue: (parentNodeId: string, projectId: string) => Promise<void>
 }
 
-export const useNodeStore = create<NodeStore>((set) => ({
+export const useNodeStore = create<NodeStore>((set, get) => ({
   selectedNode: null,
   sessions: [],
   decisions: [],
+  isLoading: false,
   selectNode: async (nodeId) => {
+    // Guard: skip if already loading the same node
+    const current = get()
+    if (current.isLoading && current.selectedNode?.id === nodeId) return
+    if (current.selectedNode?.id === nodeId && !current.isLoading) return
+
+    set({ isLoading: true })
     try {
       const [nodeRes, sessionsRes, decisionsRes] = await Promise.all([
         fetch(`/api/nodes/${nodeId}`),
@@ -28,12 +37,13 @@ export const useNodeStore = create<NodeStore>((set) => ({
       const node = nodeRes.ok ? (await nodeRes.json()).data : null
       const sessions = sessionsRes.ok ? (await sessionsRes.json()).data : []
       const decisions = decisionsRes.ok ? (await decisionsRes.json()).data : []
-      set({ selectedNode: node, sessions, decisions })
+      set({ selectedNode: node, sessions, decisions, isLoading: false })
     } catch (err) {
       console.error('Failed to select node:', err)
+      set({ isLoading: false })
     }
   },
-  clearSelection: () => set({ selectedNode: null, sessions: [], decisions: [] }),
+  clearSelection: () => set({ selectedNode: null, sessions: [], decisions: [], isLoading: false }),
   updateNodeStatus: async (nodeId, status) => {
     try {
       const res = await fetch(`/api/nodes/${nodeId}/status`, {
@@ -61,9 +71,12 @@ export const useNodeStore = create<NodeStore>((set) => ({
       if (res.ok) {
         const { data } = await res.json()
         set((s) => ({ decisions: [...s.decisions, data] }))
+        return data as DecisionResponse
       }
+      return null
     } catch (err) {
       console.error('Failed to add decision:', err)
+      return null
     }
   },
   removeDecision: async (decisionId) => {
@@ -74,6 +87,67 @@ export const useNodeStore = create<NodeStore>((set) => ({
       }
     } catch (err) {
       console.error('Failed to remove decision:', err)
+    }
+  },
+  addSubIssue: async (parentNodeId, projectId) => {
+    try {
+      // Find parent node position from canvas
+      const canvasStore = useCanvasStore.getState()
+      const parentCanvasNode = canvasStore.nodes.find((n) => n.id === parentNodeId)
+      const parentX = parentCanvasNode?.position.x ?? 0
+      const parentY = parentCanvasNode?.position.y ?? 0
+
+      // Create child issue node positioned below parent
+      const res = await fetch(`/api/projects/${projectId}/nodes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'issue',
+          title: '새 하위 이슈',
+          status: 'backlog',
+          parentNodeId,
+          canvasX: parentX,
+          canvasY: parentY + 200,
+        }),
+      })
+      if (!res.ok) return
+
+      const { data: newNode } = await res.json()
+
+      // Add node to canvas
+      canvasStore.pushSnapshot()
+      canvasStore.addNode({
+        id: newNode.id,
+        type: 'baseNode',
+        position: { x: newNode.canvasX, y: newNode.canvasY },
+        data: newNode,
+      })
+
+      // Create parent→child edge (type=dependency)
+      const edgeRes = await fetch('/api/edges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromNodeId: parentNodeId,
+          toNodeId: newNode.id,
+          type: 'dependency',
+        }),
+      })
+      if (edgeRes.ok) {
+        const { data: edgeData } = await edgeRes.json()
+        canvasStore.setEdges([
+          ...canvasStore.edges,
+          {
+            id: edgeData.id,
+            source: edgeData.fromNodeId,
+            target: edgeData.toNodeId,
+            type: edgeData.type,
+            data: edgeData,
+          },
+        ])
+      }
+    } catch (err) {
+      console.error('Failed to add sub-issue:', err)
     }
   },
   promoteDecision: async (decisionId, nodeType, title) => {

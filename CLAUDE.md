@@ -448,3 +448,7 @@ Shadow:  elevation-1 ~ elevation-4
 - **Undo/Redo API 동기화**: 스냅샷 복원 후 diff 기반으로 나타난 노드(unarchive)/사라진 노드(archive)/엣지 재생성·삭제/위치 변경을 `Promise.allSettled`로 병렬 처리
 - **Node 삭제 API 누락 버그**: ReactFlow의 `onNodesDelete`/`onEdgesDelete` 핸들러에서 명시적으로 `DELETE /api/nodes/:id`, `DELETE /api/edges/:id` 호출 필요. 없으면 새로고침 시 삭제한 노드 복활
 - **Build 경고**: `_document` PageNotFoundError는 App Router 프로젝트에서 정상 (Pages Router 파일 없음)
+- **Playwright + React controlled input**: `fill()`이나 `keyboard.type()`이 React onChange를 안정적으로 트리거하지 못할 수 있음. 확실한 방법은 `evaluate()`로 `nativeInputValueSetter` + `dispatchEvent(new Event('input', {bubbles: true}))` 사용
+- **Debounced auto-save 패턴**: `useRef`로 debounce timer 관리, `useCallback([selectedNode])`로 save 함수 메모이제이션, 500ms debounce가 로컬 SQLite에 적합
+- **ReactFlow onConnectEnd**: 핸들에서 빈 공간으로 드래그 시 `onConnectEnd`에서 `target.classList.contains('react-flow__handle')` 체크로 기존 연결 vs 새 노드 생성 구분
+- **Decisions API 정렬**: `createdAt: "desc"` — 테스트 시 생성 순서와 표시 순서가 반대임에 주의

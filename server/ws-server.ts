@@ -7,6 +7,8 @@ import { sessionManager } from "./session/session-manager";
 import { fileWatcher } from "./file-watcher/file-watcher";
 import { eventBus } from "./events/event-bus";
 import { recoveryManager } from "./recovery/recovery-manager";
+import { initDevflowDir } from "./db/devflow-config";
+import { checkCLIAvailable } from "./cli/cli-manager";
 import { prisma } from "../src/lib/prisma";
 
 const WS_PORT = 3001;
@@ -14,6 +16,18 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 
 const ptyManager = new PtyManager();
 const captureManager = new CaptureManager();
+
+// Initialize ~/.devflow/ directory structure
+initDevflowDir();
+
+// Check Claude CLI availability
+checkCLIAvailable().then(({ available, path, error }) => {
+  if (available) {
+    console.log(`[ws-server] Claude CLI found at ${path}`);
+  } else {
+    console.warn(`[ws-server] Claude CLI not available: ${error}`);
+  }
+});
 
 // Recover stale sessions on startup
 recoveryManager.recoverStaleSessions().catch((err) => {
@@ -185,6 +199,28 @@ eventBus.on("file:changed", async ({ sessionId, filePath, changeType }) => {
   } catch (err) {
     console.error("[ws-server] Error in file:changed handler:", err);
   }
+});
+
+// Plan events -> broadcast to all clients
+eventBus.on("plan:generating", ({ nodeId, planId }) => {
+  broadcastToAll({
+    type: "plan:generating",
+    payload: { nodeId, planId },
+  });
+});
+
+eventBus.on("plan:created", ({ nodeId, planId, version }) => {
+  broadcastToAll({
+    type: "plan:created",
+    payload: { nodeId, planId, version },
+  });
+});
+
+eventBus.on("plan:error", ({ nodeId, error }) => {
+  broadcastToAll({
+    type: "plan:error",
+    payload: { nodeId, error },
+  });
 });
 
 // --- Heartbeat ---

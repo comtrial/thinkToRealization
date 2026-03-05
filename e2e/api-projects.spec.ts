@@ -1,22 +1,27 @@
 import { test, expect } from "@playwright/test";
-import { cleanDatabase, createTestProject } from "./helpers";
+import { cleanTestData, createTestProject } from "./helpers";
 
 const API = "http://localhost:3333/api";
 
 test.describe("API: Projects CRUD", () => {
   test.beforeEach(async () => {
-    await cleanDatabase();
+    await cleanTestData();
   });
 
-  test("GET /api/projects returns empty list initially", async () => {
+  test("GET /api/projects returns list after cleanup (no test projects)", async () => {
     const res = await fetch(`${API}/projects`);
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.data).toEqual([]);
+    expect(Array.isArray(json.data)).toBe(true);
+    // After cleanup, no test projects should remain
+    const testProjects = json.data.filter((p: { slug: string }) =>
+      p.slug.startsWith("__e2e__") || p.slug.startsWith("e2e-test-"),
+    );
+    expect(testProjects.length).toBe(0);
   });
 
   test("POST /api/projects creates project with slug", async () => {
-    const uniqueSlug = `my-project-${Date.now()}`;
+    const uniqueSlug = `__e2e__project-${Date.now()}`;
     const res = await fetch(`${API}/projects`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,7 +70,9 @@ test.describe("API: Projects CRUD", () => {
     // Should no longer appear in list (list filters isActive=true)
     const listRes = await fetch(`${API}/projects`);
     const listJson = await listRes.json();
-    expect(listJson.data.length).toBe(0);
+    // The deleted test project should not appear
+    const found = listJson.data.find((p: { id: string }) => p.id === project.id);
+    expect(found).toBeUndefined();
   });
 
   test("GET /api/projects/:id returns 404 for non-existent", async () => {

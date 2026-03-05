@@ -2,11 +2,13 @@
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 import type { Components } from 'react-markdown'
 
 interface MarkdownRendererProps {
   content: string
   compact?: boolean
+  highlight?: boolean
 }
 
 const components: Components = {
@@ -20,10 +22,10 @@ const components: Components = {
   strong: ({ children }) => <strong className="font-semibold text-text-primary">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   code: ({ children, className }) => {
-    const isBlock = className?.includes('language-')
+    const isBlock = className?.includes('language-') || className?.includes('hljs')
     if (isBlock) {
       return (
-        <code className="block bg-surface-hover rounded-node p-2 text-caption font-mono overflow-x-auto mb-2">
+        <code className={`block bg-surface-hover rounded-node p-2 text-caption font-mono overflow-x-auto mb-2 ${className || ''}`}>
           {children}
         </code>
       )
@@ -63,19 +65,33 @@ const components: Components = {
 
 const compactComponents: Components = {
   ...components,
-  h1: ({ children }) => <span className="font-bold text-text-primary">{children}</span>,
-  h2: ({ children }) => <span className="font-semibold text-text-primary">{children}</span>,
-  h3: ({ children }) => <span className="font-semibold text-text-primary">{children}</span>,
-  p: ({ children }) => <span className="text-caption text-text-secondary">{children} </span>,
-  ul: ({ children }) => <span className="text-caption text-text-secondary">{children}</span>,
-  ol: ({ children }) => <span className="text-caption text-text-secondary">{children}</span>,
-  li: ({ children }) => <span className="text-caption">{children} </span>,
+  h1: ({ children }) => <div className="font-bold text-text-primary text-caption leading-tight">{children}</div>,
+  h2: ({ children }) => <div className="font-semibold text-text-primary text-caption leading-tight">{children}</div>,
+  h3: ({ children }) => <div className="font-semibold text-text-primary text-caption leading-tight">{children}</div>,
+  p: ({ children }) => <div className="text-caption text-text-secondary leading-tight">{children}</div>,
+  ul: ({ children }) => <div className="text-caption text-text-secondary leading-tight">{children}</div>,
+  ol: ({ children }) => <div className="text-caption text-text-secondary leading-tight">{children}</div>,
+  li: ({ children }) => <div className="text-caption leading-tight">• {children}</div>,
+  code: ({ children, className }) => {
+    const isBlock = className?.includes('language-')
+    if (isBlock) return null
+    return (
+      <code className="bg-surface-hover rounded px-0.5 text-[11px] font-mono text-accent">
+        {children}
+      </code>
+    )
+  },
+  pre: () => null,
+  blockquote: ({ children }) => <div className="text-caption text-text-tertiary leading-tight">{children}</div>,
+  table: () => null,
+  hr: () => null,
 }
 
-export function MarkdownRenderer({ content, compact = false }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, compact = false, highlight = false }: MarkdownRendererProps) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
+      rehypePlugins={highlight ? [rehypeHighlight] : []}
       components={compact ? compactComponents : components}
     >
       {content}

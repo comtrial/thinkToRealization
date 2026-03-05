@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { SessionEndPrompt } from '@/components/terminal/SessionEndPrompt'
 import { SessionControls } from '@/components/terminal/SessionControls'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useMobile } from '@/hooks/useMobile'
 
 const CanvasView = dynamic(
   () => import('@/components/canvas/CanvasView').then(m => ({ default: m.CanvasView })),
@@ -31,10 +32,12 @@ function TerminalSection() {
   const activeSession = useSessionStore((s) => s.activeSession)
   const sessionEndPromptVisible = useSessionStore((s) => s.sessionEndPromptVisible)
   const panelNodeId = useUIStore((s) => s.panelNodeId)
+  const isMobile = useMobile()
 
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null)
 
-  const handleDragStart = useCallback(
+  // Mouse drag handler (desktop)
+  const handleMouseDragStart = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
       dragRef.current = { startY: e.clientY, startHeight: terminalHeight }
@@ -42,7 +45,8 @@ function TerminalSection() {
       const handleMouseMove = (ev: MouseEvent) => {
         if (!dragRef.current) return
         const delta = dragRef.current.startY - ev.clientY
-        const newHeight = Math.max(150, Math.min(600, dragRef.current.startHeight + delta))
+        const maxH = isMobile ? 400 : 600
+        const newHeight = Math.max(150, Math.min(maxH, dragRef.current.startHeight + delta))
         setTerminalHeight(newHeight)
       }
 
@@ -55,7 +59,35 @@ function TerminalSection() {
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     },
-    [terminalHeight, setTerminalHeight]
+    [terminalHeight, setTerminalHeight, isMobile]
+  )
+
+  // Touch drag handler (mobile)
+  const handleTouchDragStart = useCallback(
+    (e: React.TouchEvent) => {
+      const touch = e.touches[0]
+      dragRef.current = { startY: touch.clientY, startHeight: terminalHeight }
+
+      const handleTouchMove = (ev: TouchEvent) => {
+        if (!dragRef.current) return
+        ev.preventDefault()
+        const t = ev.touches[0]
+        const delta = dragRef.current.startY - t.clientY
+        const maxH = isMobile ? 400 : 600
+        const newHeight = Math.max(150, Math.min(maxH, dragRef.current.startHeight + delta))
+        setTerminalHeight(newHeight)
+      }
+
+      const handleTouchEnd = () => {
+        dragRef.current = null
+        document.removeEventListener('touchmove', handleTouchMove)
+        document.removeEventListener('touchend', handleTouchEnd)
+      }
+
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd)
+    },
+    [terminalHeight, setTerminalHeight, isMobile]
   )
 
   const nodeId = activeSession?.nodeId || panelNodeId
@@ -75,7 +107,7 @@ function TerminalSection() {
       <div className="flex items-center justify-between px-3 h-10 shrink-0 bg-surface border-b border-border">
         <button
           onClick={() => setTerminalExpanded(!terminalExpanded)}
-          className="text-caption text-text-secondary hover:text-text-primary transition-colors"
+          className="text-caption text-text-secondary hover:text-text-primary transition-colors min-h-[44px] flex items-center"
         >
           {terminalExpanded ? '\u25BC' : '\u25B2'} Terminal
         </button>
@@ -84,10 +116,11 @@ function TerminalSection() {
 
       {terminalExpanded && (
         <>
-          {/* Drag handle */}
+          {/* Drag handle — touch-friendly on mobile */}
           <div
-            className="h-1 cursor-row-resize bg-border-hover hover:bg-accent shrink-0"
-            onMouseDown={handleDragStart}
+            className={`${isMobile ? 'h-3' : 'h-1'} cursor-row-resize bg-border-hover hover:bg-accent active:bg-accent shrink-0`}
+            onMouseDown={handleMouseDragStart}
+            onTouchStart={handleTouchDragStart}
           />
 
           {/* Terminal */}

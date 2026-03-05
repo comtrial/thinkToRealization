@@ -1,20 +1,18 @@
 import { test, expect } from "@playwright/test";
-import { cleanDatabase, createTestProject, createTestNode } from "./helpers";
+import { cleanTestData, createTestProject, createTestNode, selectProjectInSidebar } from "./helpers";
 
 test.describe("Keyboard Shortcuts", () => {
-  test.beforeEach(async () => {
-    await cleanDatabase();
+  test.beforeEach(async ({ page }) => {
+    await cleanTestData();
     await createTestProject("단축키 테스트");
+    await selectProjectInSidebar(page, "단축키 테스트");
   });
 
   test.afterAll(async () => {
-    await cleanDatabase();
+    await cleanTestData();
   });
 
   test("Cmd+1 switches to dashboard tab", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
     // Switch to canvas first
     await page.getByRole("button", { name: "캔버스" }).click();
     await expect(
@@ -30,9 +28,6 @@ test.describe("Keyboard Shortcuts", () => {
   });
 
   test("Cmd+2 switches to canvas tab", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
     // Dashboard is default
     await expect(
       page.locator("button[data-active='true']", { hasText: "대시보드" }),
@@ -47,9 +42,6 @@ test.describe("Keyboard Shortcuts", () => {
   });
 
   test("[ key toggles sidebar", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
     // Sidebar should be visible with "My Work"
     const sidebar = page.locator("aside").first();
     await expect(sidebar).toContainText("My Work");
@@ -68,9 +60,6 @@ test.describe("Keyboard Shortcuts", () => {
   });
 
   test("Cmd+K opens command palette", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
     // Cmd+K
     await page.keyboard.press("Meta+k");
 
@@ -84,14 +73,11 @@ test.describe("Keyboard Shortcuts", () => {
   });
 
   test("ESC closes side panel from peek mode", async ({ page }) => {
-    // Reuse project from beforeEach and add a node
+    // Get the test project to add a node
     const res = await fetch("http://localhost:3333/api/projects");
     const json = await res.json();
-    const project = json.data[0];
+    const project = json.data.find((p: { slug: string }) => p.slug.startsWith("__e2e__"));
     await createTestNode(project.id, { title: "ESC 테스트 노드", canvasX: 200, canvasY: 200 });
-
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
 
     // Switch to canvas and click node
     await page.getByRole("button", { name: "캔버스" }).click();
@@ -110,14 +96,11 @@ test.describe("Keyboard Shortcuts", () => {
   });
 
   test("ESC from full mode goes to peek mode", async ({ page }) => {
-    // Reuse project from beforeEach and add a node
+    // Get the test project to add a node
     const res = await fetch("http://localhost:3333/api/projects");
     const json = await res.json();
-    const project = json.data[0];
+    const project = json.data.find((p: { slug: string }) => p.slug.startsWith("__e2e__"));
     await createTestNode(project.id, { title: "풀모드 노드", canvasX: 200, canvasY: 200 });
-
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
 
     // Switch to canvas and click node
     await page.getByRole("button", { name: "캔버스" }).click();

@@ -7,6 +7,7 @@ const tabs = [
   { value: 'overview' as const, label: '개요' },
   { value: 'sessions' as const, label: '세션' },
   { value: 'files' as const, label: '파일' },
+  { value: 'plans' as const, label: '계획서' },
 ]
 
 export function PanelTabs() {

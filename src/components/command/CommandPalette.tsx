@@ -13,6 +13,7 @@ import {
   SquareTerminal, PanelLeftClose,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useMobile } from '@/hooks/useMobile'
 import type { NodeType, NodeStatus } from '@/lib/types/api'
 
 export function CommandPalette() {
@@ -21,6 +22,7 @@ export function CommandPalette() {
   const addNode = useCanvasStore((s) => s.addNode)
   const selectNode = useNodeStore((s) => s.selectNode)
   const { currentProject } = useProject()
+  const isMobile = useMobile()
   const [search, setSearch] = useState('')
 
   // Reset search when opening
@@ -81,11 +83,16 @@ export function CommandPalette() {
         onClick={toggleCommandPalette}
       />
       {/* Palette */}
-      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-full max-w-[640px] px-4">
+      <div className={cn(
+        isMobile
+          ? 'absolute bottom-0 left-0 right-0 px-0'
+          : 'absolute top-[20%] left-1/2 -translate-x-1/2 w-full max-w-[640px] px-4'
+      )}>
         <Command
           className={cn(
-            'bg-surface rounded-palette border border-border shadow-elevation-3',
-            'overflow-hidden'
+            'bg-surface border border-border shadow-elevation-3',
+            'overflow-hidden',
+            isMobile ? 'rounded-t-palette' : 'rounded-palette'
           )}
           shouldFilter
         >
@@ -99,14 +106,19 @@ export function CommandPalette() {
                 'flex-1 py-3 text-body text-text-primary bg-transparent',
                 'focus:outline-none placeholder:text-text-tertiary'
               )}
-              autoFocus
+              autoFocus={!isMobile}
             />
-            <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover border border-border text-text-tertiary">
-              ESC
-            </kbd>
+            {!isMobile && (
+              <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover border border-border text-text-tertiary">
+                ESC
+              </kbd>
+            )}
           </div>
 
-          <Command.List className="max-h-[360px] overflow-y-auto py-2">
+          <Command.List className={cn(
+            'overflow-y-auto py-2',
+            isMobile ? 'max-h-[70vh]' : 'max-h-[360px]'
+          )}>
             <Command.Empty className="py-6 text-center text-caption text-text-tertiary">
               결과가 없습니다
             </Command.Empty>
@@ -118,6 +130,7 @@ export function CommandPalette() {
                 label="새 노드 생성"
                 shortcut="⌘N"
                 onSelect={handleCreateNodeFromPalette}
+                isMobile={isMobile}
               />
               <CommandItem
                 icon={<LayoutGrid size={14} />}
@@ -126,6 +139,7 @@ export function CommandPalette() {
                 onSelect={() => {
                   toggleCommandPalette()
                 }}
+                isMobile={isMobile}
               />
               <CommandItem
                 icon={<Maximize size={14} />}
@@ -134,6 +148,7 @@ export function CommandPalette() {
                 onSelect={() => {
                   toggleCommandPalette()
                 }}
+                isMobile={isMobile}
               />
               <CommandItem
                 icon={<PanelLeftClose size={14} />}
@@ -143,6 +158,7 @@ export function CommandPalette() {
                   toggleSidebar()
                   toggleCommandPalette()
                 }}
+                isMobile={isMobile}
               />
               <CommandItem
                 icon={<PlayCircle size={14} />}
@@ -152,6 +168,7 @@ export function CommandPalette() {
                   setActiveTab('dashboard')
                   toggleCommandPalette()
                 }}
+                isMobile={isMobile}
               />
               <CommandItem
                 icon={<SquareTerminal size={14} />}
@@ -161,6 +178,7 @@ export function CommandPalette() {
                   setActiveTab('canvas')
                   toggleCommandPalette()
                 }}
+                isMobile={isMobile}
               />
             </Command.Group>
 
@@ -175,11 +193,12 @@ export function CommandPalette() {
                       value={`${d.title} ${d.type} ${d.status}`}
                       onSelect={() => handleSelectNode(node.id)}
                       className={cn(
-                        'flex items-center gap-2 px-3 py-2 rounded-button',
+                        'flex items-center gap-2 px-3 rounded-button',
                         'text-body text-text-primary',
                         'cursor-pointer',
                         'aria-selected:bg-surface-hover',
-                        'outline-none'
+                        'outline-none',
+                        isMobile ? 'py-3' : 'py-2'
                       )}
                     >
                       <NodeTypeIcon type={d.type as NodeType} size={14} />
@@ -202,26 +221,29 @@ function CommandItem({
   label,
   shortcut,
   onSelect,
+  isMobile,
 }: {
   icon: React.ReactNode
   label: string
   shortcut?: string
   onSelect: () => void
+  isMobile?: boolean
 }) {
   return (
     <Command.Item
       onSelect={onSelect}
       className={cn(
-        'flex items-center gap-2 px-3 py-2 rounded-button',
+        'flex items-center gap-2 px-3 rounded-button',
         'text-body text-text-primary',
         'cursor-pointer',
         'aria-selected:bg-surface-hover',
-        'outline-none'
+        'outline-none',
+        isMobile ? 'py-3' : 'py-2'
       )}
     >
       <span className="text-text-tertiary">{icon}</span>
       <span className="flex-1">{label}</span>
-      {shortcut && (
+      {shortcut && !isMobile && (
         <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover border border-border text-text-tertiary">
           {shortcut}
         </kbd>

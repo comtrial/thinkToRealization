@@ -22,6 +22,9 @@ export type EventMap = {
   };
   "pty:data": { sessionId: string; data: string };
   "pty:exit": { sessionId: string; exitCode: number; signal?: number };
+  "plan:generating": { nodeId: string; planId?: string };
+  "plan:created": { nodeId: string; planId: string; version: number };
+  "plan:error": { nodeId: string; error: string };
 };
 
 export type EventName = keyof EventMap;

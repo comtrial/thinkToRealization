@@ -14,6 +14,7 @@ model Project {
   description String?
   projectDir  String   @default("")
   isActive    Boolean  @default(true)
+  claudeMdPath String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   canvasViewportX    Float @default(0)
@@ -45,6 +46,7 @@ model Node {
   outEdges     Edge[]         @relation("EdgeFrom")
   inEdges      Edge[]         @relation("EdgeTo")
   stateLogs    NodeStateLog[]
+  plans        Plan[]
   @@index([projectId, status])
 }
 
@@ -96,6 +98,21 @@ model Decision {
   content         String
   promotedToNodeId String?
   createdAt       DateTime @default(now())
+  @@index([nodeId])
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  nodeId      String
+  node        Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  version     Int      @default(1)
+  status      String   @default("draft")
+  content     String
+  prompt      String
+  rawResponse String?
+  reviewNote  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@index([nodeId])
 }
 

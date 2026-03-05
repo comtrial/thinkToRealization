@@ -40,7 +40,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     <div
       className={cn(
         'flex items-center gap-2 px-4 py-3 rounded-node bg-surface border shadow-elevation-2',
-        'animate-slideUp min-w-[280px] max-w-[400px]',
+        'animate-slideUp min-w-0 md:min-w-[280px] max-w-full md:max-w-[400px]',
         toast.type === 'error' && 'border-error/30',
         toast.type === 'success' && 'border-success/30',
         toast.type === 'info' && 'border-border'
@@ -50,7 +50,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       <span className="text-body text-text-primary flex-1">{toast.message}</span>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="p-0.5 rounded hover:bg-surface-hover transition-colors flex-shrink-0"
+        className="p-0.5 rounded hover:bg-surface-hover transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center"
       >
         <X size={14} className="text-text-tertiary" />
       </button>
@@ -74,7 +74,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ addToast }}>
       {children}
       {/* Toast container */}
-      <div className="fixed top-[60px] right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-[60px] right-4 left-4 md:left-auto z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map((toast) => (
           <div key={toast.id} className="pointer-events-auto">
             <ToastItem toast={toast} onDismiss={dismissToast} />

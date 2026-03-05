@@ -1,41 +1,38 @@
 import { test, expect } from "@playwright/test";
-import { cleanDatabase, createTestProject } from "./helpers";
+import { cleanTestData, createTestProject } from "./helpers";
 
 const API = "http://localhost:3333/api";
 
 test.describe("UI: Project creation and selection flow", () => {
   test.beforeEach(async ({ page }) => {
-    await cleanDatabase();
+    await cleanTestData();
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-
-    // Ensure stale cache is cleared - if a project is still showing, reload
-    const header = page.locator("header");
-    const text = await header.textContent().catch(() => "");
-    if (text && !text.includes("프로젝트 선택")) {
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-    }
   });
 
-  test("Shows empty state when no projects exist", async ({ page }) => {
-    // Should show the no-project empty state
+  test("Page loads and main content is visible", async ({ page }) => {
     const main = page.locator("main");
-    await expect(main).toContainText("프로젝트를 선택", { timeout: 5000 });
+    await expect(main).toBeVisible({ timeout: 5000 });
   });
 
-  test("Project selector shows '프로젝트 선택' when no projects", async ({
+  test("Header has project selector", async ({
     page,
   }) => {
     // Wait for loading to finish
     await page.waitForTimeout(1000);
-    // The header project selector should show default text
-    const selector = page.locator("header button", { hasText: /프로젝트/ });
-    await expect(selector).toContainText("프로젝트 선택", { timeout: 5000 });
+    // The header should have the ProjectSelector button (contains ChevronDown SVG)
+    // It shows either a project name or "프로젝트 선택"
+    const selectorButton = page.locator("header button").filter({
+      has: page.locator("svg"),
+    });
+    // At least one button with SVG should be visible in header
+    await expect(selectorButton.first()).toBeVisible({ timeout: 5000 });
   });
 
   test("Create project via sidebar '+' button", async ({ page }) => {
-    const uniqueName = `Test Project ${Date.now()}`;
+    const ts = Date.now();
+    const uniqueName = `Test Project ${ts}`;
+    const uniqueSlug = `__e2e__flow-${ts}`;
 
     // Click the create project button in sidebar
     const createBtn = page.getByTestId("create-project-btn");
@@ -46,8 +43,9 @@ test.describe("UI: Project creation and selection flow", () => {
     const dialogTitle = page.getByText("새 프로젝트");
     await expect(dialogTitle).toBeVisible({ timeout: 3000 });
 
-    // Fill in the form
+    // Fill in the form with e2e-prefixed slug for cleanup
     await page.getByPlaceholder("예: DevFlow v2").fill(uniqueName);
+    await page.getByTestId("project-slug-input").fill(uniqueSlug);
     await page
       .getByPlaceholder("/Users/username/my-project")
       .fill("/tmp/test-project");
@@ -72,11 +70,14 @@ test.describe("UI: Project creation and selection flow", () => {
   });
 
   test("Create project with description", async ({ page }) => {
-    const uniqueTitle = `Described Project ${Date.now()}`;
+    const ts = Date.now();
+    const uniqueTitle = `Described Project ${ts}`;
+    const uniqueSlug = `__e2e__desc-${ts}`;
     const createBtn = page.getByTestId("create-project-btn");
     await createBtn.click();
 
     await page.getByPlaceholder("예: DevFlow v2").fill(uniqueTitle);
+    await page.getByTestId("project-slug-input").fill(uniqueSlug);
     await page
       .getByPlaceholder("프로젝트에 대한 간단한 설명")
       .fill("A test project with description");

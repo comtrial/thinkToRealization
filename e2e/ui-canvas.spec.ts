@@ -1,29 +1,21 @@
 import { test, expect } from "@playwright/test";
 import {
-  cleanDatabase,
+  cleanTestData,
   createTestProject,
   createTestNode,
   createTestEdge,
+  selectProjectInSidebar,
 } from "./helpers";
 
 test.describe("UI: Canvas view interactions", () => {
   let projectId: string;
 
   test.beforeEach(async ({ page }) => {
-    await cleanDatabase();
+    await cleanTestData();
     const project = await createTestProject("Canvas Project");
     projectId = project.id;
 
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Retry navigation until correct project shows (handles cache/timing issues)
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const headerText = await page.locator("header").textContent().catch(() => "") || "";
-      if (headerText.includes("Canvas Project")) break;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-    }
+    await selectProjectInSidebar(page, "Canvas Project");
 
     // Switch to canvas tab
     await page.getByRole("button", { name: "캔버스" }).click();

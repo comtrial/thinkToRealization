@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import {
-  cleanDatabase,
+  cleanTestData,
   createTestProject,
 } from "./helpers";
 
 test.describe("UI: Command palette and keyboard shortcuts", () => {
   test.beforeEach(async ({ page }) => {
-    await cleanDatabase();
+    await cleanTestData();
     await createTestProject("Shortcut Project");
 
     await page.goto("/");

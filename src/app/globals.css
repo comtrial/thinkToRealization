@@ -26,6 +26,22 @@
   --panel-min-width: 400px;
 }
 
+/* Mobile overrides */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+    --sidebar-collapsed-width: 0px;
+    --panel-min-width: 100vw;
+  }
+}
+
+/* iOS safe area padding */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -89,6 +105,128 @@ body {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+/* Tiptap editor styles */
+.tiptap-editor .tiptap-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+}
+
+.tiptap-editor .tiptap-content h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor .tiptap-content h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.375rem;
+}
+
+.tiptap-editor .tiptap-content h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.tiptap-editor .tiptap-content p {
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor .tiptap-content p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-editor .tiptap-content ul,
+.tiptap-editor .tiptap-content ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor .tiptap-content ul {
+  list-style-type: disc;
+}
+
+.tiptap-editor .tiptap-content ol {
+  list-style-type: decimal;
+}
+
+.tiptap-editor .tiptap-content li {
+  margin-bottom: 0.125rem;
+}
+
+.tiptap-editor .tiptap-content blockquote {
+  border-left: 2px solid var(--color-accent);
+  padding-left: 0.75rem;
+  color: var(--color-text-tertiary);
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor .tiptap-content code {
+  background: var(--color-surface-hover);
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  color: var(--color-accent);
+}
+
+.tiptap-editor .tiptap-content pre {
+  background: var(--color-surface-hover);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  overflow-x: auto;
+}
+
+.tiptap-editor .tiptap-content pre code {
+  background: none;
+  padding: 0;
+  color: var(--color-text-primary);
+}
+
+.tiptap-editor .tiptap-content strong {
+  font-weight: 600;
+}
+
+.tiptap-editor .tiptap-content hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0.75rem 0;
+}
+
+.tiptap-editor .tiptap-content .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  height: 0;
+}
+
+/* highlight.js theme for session log code blocks */
+.hljs {
+  background: #1E1E1E !important;
+  color: #D4D4D4;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.hljs-keyword { color: #569CD6; }
+.hljs-string { color: #CE9178; }
+.hljs-number { color: #B5CEA8; }
+.hljs-comment { color: #6A9955; }
+.hljs-function { color: #DCDCAA; }
+.hljs-title { color: #DCDCAA; }
+.hljs-params { color: #9CDCFE; }
+.hljs-built_in { color: #4EC9B0; }
+.hljs-type { color: #4EC9B0; }
+.hljs-attr { color: #9CDCFE; }
+.hljs-variable { color: #9CDCFE; }
+.hljs-literal { color: #569CD6; }
+.hljs-meta { color: #C586C0; }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {

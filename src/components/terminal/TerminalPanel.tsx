@@ -31,6 +31,8 @@ export function TerminalPanel({ nodeId }: TerminalPanelProps) {
     ]).then(([{ Terminal }, { FitAddon }]) => {
       if (disposed || !termRef.current) return
 
+      const isMobileView = window.matchMedia('(max-width: 768px)').matches
+
       const term = new Terminal({
         theme: {
           background: '#1E1E1E',
@@ -47,10 +49,10 @@ export function TerminalPanel({ nodeId }: TerminalPanelProps) {
           white: '#D4D4D4',
         },
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 13,
+        fontSize: isMobileView ? 14 : 13,
         lineHeight: 1.5,
         cursorBlink: true,
-        scrollback: 10000,
+        scrollback: isMobileView ? 2000 : 10000,
       })
 
       const fitAddon = new FitAddon()

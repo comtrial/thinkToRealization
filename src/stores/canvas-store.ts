@@ -7,7 +7,12 @@ interface Snapshot {
   edges: Edge[]
 }
 
-const MAX_HISTORY = 30
+function getMaxHistory(): number {
+  if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+    return 15
+  }
+  return 30
+}
 
 interface CanvasStore {
   nodes: Node[]
@@ -168,7 +173,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       edges: structuredClone(edges),
     }
     const newStack = [...undoStack, snapshot]
-    if (newStack.length > MAX_HISTORY) newStack.shift()
+    const maxHistory = getMaxHistory()
+    while (newStack.length > maxHistory) newStack.shift()
     set({ undoStack: newStack, redoStack: [] })
   },
   undo: async () => {

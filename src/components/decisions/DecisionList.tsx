@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Star, ArrowUpRight, Trash2, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useMobile } from '@/hooks/useMobile'
 import { useNodeStore } from '@/stores/node-store'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -13,9 +14,10 @@ interface DecisionItemProps {
   decision: DecisionResponse
   onDelete: (id: string) => void
   onPromote: (decision: DecisionResponse) => void
+  isMobile: boolean
 }
 
-function DecisionItem({ decision, onDelete, onPromote }: DecisionItemProps) {
+function DecisionItem({ decision, onDelete, onPromote, isMobile }: DecisionItemProps) {
   const timeAgo = formatDistanceToNow(new Date(decision.createdAt), {
     addSuffix: true,
     locale: ko,
@@ -32,20 +34,29 @@ function DecisionItem({ decision, onDelete, onPromote }: DecisionItemProps) {
           <p className="text-caption text-text-tertiary mt-1">{timeAgo}</p>
         </div>
       </div>
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className={cn(
+        'absolute top-2 right-2 flex gap-1 transition-opacity',
+        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      )}>
         <button
           onClick={() => onPromote(decision)}
-          className="p-1 rounded-button hover:bg-accent-light text-text-tertiary hover:text-accent transition-colors"
+          className={cn(
+            'rounded-button hover:bg-accent-light text-text-tertiary hover:text-accent transition-colors',
+            isMobile ? 'min-w-[44px] min-h-[44px] p-2' : 'p-1'
+          )}
           title="노드로 승격"
         >
-          <ArrowUpRight size={14} />
+          <ArrowUpRight size={isMobile ? 18 : 14} />
         </button>
         <button
           onClick={() => onDelete(decision.id)}
-          className="p-1 rounded-button hover:bg-red-50 text-text-tertiary hover:text-error transition-colors"
+          className={cn(
+            'rounded-button hover:bg-red-50 text-text-tertiary hover:text-error transition-colors',
+            isMobile ? 'min-w-[44px] min-h-[44px] p-2' : 'p-1'
+          )}
           title="삭제"
         >
-          <Trash2 size={14} />
+          <Trash2 size={isMobile ? 18 : 14} />
         </button>
       </div>
     </div>
@@ -53,6 +64,7 @@ function DecisionItem({ decision, onDelete, onPromote }: DecisionItemProps) {
 }
 
 export function DecisionList() {
+  const isMobile = useMobile()
   const { selectedNode, decisions, addDecision, removeDecision } = useNodeStore()
   const [newContent, setNewContent] = useState('')
   const [promoteTarget, setPromoteTarget] = useState<DecisionResponse | null>(null)
@@ -94,6 +106,7 @@ export function DecisionList() {
               decision={d}
               onDelete={removeDecision}
               onPromote={setPromoteTarget}
+              isMobile={isMobile}
             />
           ))}
         </div>
@@ -108,7 +121,8 @@ export function DecisionList() {
           onKeyDown={handleKeyDown}
           placeholder="새 결정사항 추가..."
           className={cn(
-            'flex-1 px-3 py-1.5 rounded-button text-body',
+            'flex-1 px-3 rounded-button text-body',
+            isMobile ? 'min-h-[44px] py-2.5' : 'py-1.5',
             'bg-surface-hover border border-border',
             'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20',
             'placeholder:text-text-tertiary',

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { cleanDatabase, createTestProject, createTestNode } from "./helpers";
+import { cleanTestData, createTestProject, createTestNode } from "./helpers";
 
 const API = "http://localhost:3333/api";
 
@@ -7,7 +7,7 @@ test.describe("API: Nodes CRUD", () => {
   let projectId: string;
 
   test.beforeEach(async () => {
-    await cleanDatabase();
+    await cleanTestData();
     const project = await createTestProject();
     projectId = project.id;
   });

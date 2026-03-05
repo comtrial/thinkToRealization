@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
 import {
-  cleanDatabase,
+  cleanTestData,
   createTestProject,
   createTestNode,
+  selectProjectInSidebar,
 } from "./helpers";
 
 const API = "http://localhost:3333/api";
@@ -11,23 +12,11 @@ test.describe("UI: Dashboard rendering and interactions", () => {
   let projectId: string;
 
   test.beforeEach(async ({ page }) => {
-    await cleanDatabase();
+    await cleanTestData();
     const project = await createTestProject("Dashboard Project");
     projectId = project.id;
 
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Retry navigation until correct project shows (handles cache/timing issues)
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const headerText = await page.locator("header").textContent().catch(() => "") || "";
-      if (headerText.includes("Dashboard Project")) break;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-    }
-    await expect(page.locator("header")).toContainText("Dashboard Project", {
-      timeout: 10000,
-    });
+    await selectProjectInSidebar(page, "Dashboard Project");
   });
 
   test("Shows empty dashboard when no nodes exist", async ({ page }) => {

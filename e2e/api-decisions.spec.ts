@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
-  cleanDatabase,
+  cleanTestData,
   createTestProject,
   createTestNode,
   createTestDecision,
@@ -13,7 +13,7 @@ test.describe("API: Decisions CRUD", () => {
   let nodeId: string;
 
   test.beforeEach(async () => {
-    await cleanDatabase();
+    await cleanTestData();
     const project = await createTestProject();
     projectId = project.id;
     const node = await createTestNode(projectId);

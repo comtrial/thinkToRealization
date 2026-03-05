@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { Plus } from 'lucide-react'
 import { useNodeStore } from '@/stores/node-store'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
-import { MarkdownRenderer } from '@/components/shared/MarkdownRenderer'
+import { TiptapEditor } from '@/components/shared/TiptapEditor'
 import type { NodeType, NodeStatus } from '@/lib/types/api'
 
 const STATUS_OPTIONS: { value: NodeStatus; label: string; color: string }[] = [
@@ -42,7 +43,6 @@ export function NodeDetailPanel() {
 
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState('')
-  const [descValue, setDescValue] = useState('')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const titleInputRef = useRef<HTMLInputElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout>()
@@ -51,7 +51,6 @@ export function NodeDetailPanel() {
   useEffect(() => {
     if (selectedNode) {
       setTitleValue(selectedNode.title)
-      setDescValue(selectedNode.description || '')
       setSaveStatus('idle')
     }
   }, [selectedNode])
@@ -96,11 +95,9 @@ export function NodeDetailPanel() {
     }
   }, [selectedNode])
 
-  const handleDescChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    setDescValue(value)
+  const handleDescUpdate = useCallback((md: string) => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    debounceTimerRef.current = setTimeout(() => saveDescription(value), 500)
+    debounceTimerRef.current = setTimeout(() => saveDescription(md), 500)
   }, [saveDescription])
 
   if (!selectedNode) return null
@@ -250,7 +247,18 @@ export function NodeDetailPanel() {
         </div>
       </div>
 
-      {/* Description - Split View: Markdown preview + textarea */}
+      {/* Sub-issue button */}
+      {selectedNode.type === 'issue' && (
+        <button
+          onClick={() => useNodeStore.getState().addSubIssue(selectedNode.id, selectedNode.projectId)}
+          className="flex items-center gap-1.5 text-caption text-accent hover:bg-accent/10 px-2 py-1.5 rounded-button transition-colors w-fit"
+        >
+          <Plus size={14} />
+          <span>하위 이슈 추가</span>
+        </button>
+      )}
+
+      {/* Description - Notion-like inline markdown editor */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-caption text-text-tertiary">설명</label>
@@ -264,24 +272,11 @@ export function NodeDetailPanel() {
           )}
         </div>
 
-        {/* Markdown Preview */}
-        {descValue && (
-          <div
-            data-testid="markdown-preview"
-            className="p-2 rounded-node border border-border bg-surface-hover mb-2 min-h-[120px] overflow-y-auto max-h-[300px]"
-          >
-            <MarkdownRenderer content={descValue} />
-          </div>
-        )}
-
-        {/* Textarea - always visible */}
-        <textarea
-          data-testid="desc-textarea"
-          value={descValue}
-          onChange={handleDescChange}
+        <TiptapEditor
+          key={selectedNode.id}
+          content={selectedNode.description || ''}
+          onUpdate={handleDescUpdate}
           placeholder="설명을 추가하세요... (Markdown 지원)"
-          rows={12}
-          className="w-full text-body text-text-primary bg-surface-hover border border-border rounded-node p-2 outline-none focus:border-accent resize-y min-h-[120px]"
         />
       </div>
 

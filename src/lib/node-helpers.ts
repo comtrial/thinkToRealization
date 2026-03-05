@@ -7,6 +7,8 @@ export const nodeWithCounts = {
     select: {
       sessions: true,
       decisions: true,
+      childNodes: true,
+      plans: true,
     },
   },
   sessions: {
@@ -18,6 +20,13 @@ export const nodeWithCounts = {
       fileChangeCount: true,
     },
     orderBy: { startedAt: Prisma.SortOrder.desc },
+    take: 1,
+  },
+  plans: {
+    select: {
+      status: true,
+    },
+    orderBy: { createdAt: Prisma.SortOrder.desc },
     take: 1,
   },
 } as const;
@@ -51,6 +60,9 @@ export function toNodeResponse(node: NodeWithCounts): NodeResponse {
     sessionCount: node._count.sessions,
     decisionCount: node._count.decisions,
     fileChangeCount: totalFileChanges,
+    childCount: node._count.childNodes,
+    planCount: node._count.plans,
+    latestPlanStatus: node.plans[0]?.status ?? null,
     hasActiveSession: lastSession?.status === "active",
     lastSessionAt: lastSession?.startedAt?.toISOString() ?? null,
     lastSessionTitle: lastSession?.title ?? null,

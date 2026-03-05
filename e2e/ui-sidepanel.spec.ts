@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 import {
-  cleanDatabase,
+  cleanTestData,
   createTestProject,
   createTestNode,
   createTestDecision,
+  selectProjectInSidebar,
 } from "./helpers";
 
 const API = "http://localhost:3333/api";
@@ -13,7 +14,7 @@ test.describe("UI: Side panel interactions", () => {
   let nodeId: string;
 
   test.beforeEach(async ({ page }) => {
-    await cleanDatabase();
+    await cleanTestData();
     const project = await createTestProject("Panel Project");
     projectId = project.id;
 
@@ -25,20 +26,7 @@ test.describe("UI: Side panel interactions", () => {
     });
     nodeId = node.id;
 
-    // Navigate and ensure clean state
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Retry navigation until correct project shows (handles cache/timing issues)
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const headerText = await page.locator("header").textContent().catch(() => "") || "";
-      if (headerText.includes("Panel Project")) break;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-    }
-    await expect(page.locator("header")).toContainText("Panel Project", {
-      timeout: 10000,
-    });
+    await selectProjectInSidebar(page, "Panel Project");
 
     // Switch to canvas and wait for node to render
     await page.getByRole("button", { name: "캔버스" }).click();
