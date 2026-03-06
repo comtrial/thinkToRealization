@@ -1,18 +1,16 @@
-import { PrismaClient } from "@prisma/client";
 import path from "path";
 
-// WS server runs in a separate process from Next.js,
-// so it needs its own PrismaClient instance.
-// Adjust DATABASE_URL to resolve relative path from project root.
-const dbPath = path.resolve(__dirname, "../../prisma/dev.db");
-process.env.DATABASE_URL = `file:${dbPath}`;
+// WS server runs in a separate process from Next.js.
+// Set DATABASE_URL only if not already provided (e.g., by test environment).
+if (!process.env.DATABASE_URL) {
+  const dbPath = path.resolve(__dirname, "../../prisma/dev.db");
+  process.env.DATABASE_URL = `file:${dbPath}`;
+}
 
-const prisma = new PrismaClient();
-
-// SQLite WAL mode + performance pragmas (must match Next.js instance)
-prisma.$executeRawUnsafe("PRAGMA journal_mode=WAL;").catch(() => {});
-prisma.$executeRawUnsafe("PRAGMA busy_timeout=5000;").catch(() => {});
-prisma.$executeRawUnsafe("PRAGMA synchronous=NORMAL;").catch(() => {});
-prisma.$executeRawUnsafe("PRAGMA cache_size=-20000;").catch(() => {});
-
-export default prisma;
+// Delegate to the unified DB module — no duplicate PRAGMA logic.
+// WS server is a separate tsx process, so globalThis singleton won't conflict.
+//
+// WARNING: tsx transpiles to CJS, so the env setup above runs before this import.
+// If migrating to pure ESM, import hoisting will cause the import to evaluate
+// before the env setup. In that case, use a preload module or dynamic import().
+export { prisma as default } from "../../src/lib/db";

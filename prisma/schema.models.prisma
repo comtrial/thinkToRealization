@@ -1,0 +1,126 @@
+// prisma/schema.models.prisma
+// ──────────────────────────────────────────────
+// This file is the Single Source of Truth for model definitions.
+// Do not use directly — run npm run schema:sqlite or schema:postgres to generate.
+// ──────────────────────────────────────────────
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  projectDir  String   @default("")
+  isActive    Boolean  @default(true)
+  claudeMdPath String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  canvasViewportX    Float @default(0)
+  canvasViewportY    Float @default(0)
+  canvasViewportZoom Float @default(1.0)
+  nodes Node[]
+}
+
+model Node {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String   @default("task")
+  title       String
+  description String?
+  status      String   @default("backlog")
+  priority    String   @default("none")
+  canvasX     Float    @default(0)
+  canvasY     Float    @default(0)
+  canvasW     Float    @default(280)
+  canvasH     Float    @default(140)
+  parentNodeId String?
+  parentNode   Node?    @relation("NodeChildren", fields: [parentNodeId], references: [id])
+  childNodes   Node[]   @relation("NodeChildren")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sessions     Session[]
+  decisions    Decision[]
+  outEdges     Edge[]         @relation("EdgeFrom")
+  inEdges      Edge[]         @relation("EdgeTo")
+  stateLogs    NodeStateLog[]
+  plans        Plan[]
+  @@index([projectId, status])
+}
+
+model Edge {
+  id         String   @id @default(cuid())
+  fromNodeId String
+  toNodeId   String
+  fromNode   Node     @relation("EdgeFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode     Node     @relation("EdgeTo", fields: [toNodeId], references: [id], onDelete: Cascade)
+  type       String   @default("sequence")
+  label      String?
+  createdAt  DateTime @default(now())
+}
+
+model Session {
+  id              String    @id @default(cuid())
+  nodeId          String
+  node            Node      @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  claudeSessionId String?
+  title           String?
+  status          String    @default("active")
+  fileChangeCount Int       @default(0)
+  resumeCount     Int       @default(0)
+  logFilePath     String?
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSeconds Int       @default(0)
+  files     SessionFile[]
+  decisions Decision[]
+  @@index([nodeId])
+}
+
+model SessionFile {
+  id         String   @id @default(cuid())
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  filePath   String
+  changeType String
+  detectedAt DateTime @default(now())
+  @@index([sessionId])
+}
+
+model Decision {
+  id              String   @id @default(cuid())
+  nodeId          String
+  node            Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  sessionId       String?
+  session         Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  content         String
+  promotedToNodeId String?
+  createdAt       DateTime @default(now())
+  @@index([nodeId])
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  nodeId      String
+  node        Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  version     Int      @default(1)
+  status      String   @default("draft")
+  content     String
+  prompt      String
+  rawResponse String?
+  reviewNote  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([nodeId])
+}
+
+model NodeStateLog {
+  id              String   @id @default(cuid())
+  nodeId          String
+  node            Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  fromStatus      String?
+  toStatus        String
+  triggerType     String
+  triggerSessionId String?
+  createdAt       DateTime @default(now())
+  @@index([nodeId])
+}

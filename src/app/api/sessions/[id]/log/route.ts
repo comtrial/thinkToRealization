@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { successResponse, notFound } from "@/lib/api-response";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { parseSessionLog } from "@/lib/log-parser";
+import { requireLocal } from "@/lib/api-guards";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,6 +13,9 @@ const LOG_DIR = path.join(process.cwd(), ".devflow-logs");
 
 // GET /api/sessions/:id/log — return raw log + parsed messages
 export async function GET(_req: NextRequest, { params }: Params) {
+  const localGuard = requireLocal();
+  if (localGuard) return localGuard;
+
   const { id } = await params;
   try {
     const session = await prisma.session.findUnique({ where: { id } });

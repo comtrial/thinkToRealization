@@ -7,11 +7,20 @@
     "dev:web": "next dev",
     "dev:ws": "tsx watch server/ws-server.ts",
     "build": "NODE_OPTIONS='--unhandled-rejections=warn' next build",
+    "build:prod": "npm run schema:postgres && npm run build",
+    "build:local": "npm run schema:sqlite && npm run build",
+    "build:ws": "tsc -p server/tsconfig.json",
     "start": "next start",
+    "start:ws": "node server/dist/ws-server.js",
+    "start:all": "concurrently \"next start\" \"node server/dist/ws-server.js\"",
     "lint": "next lint",
+    "schema:sqlite": "tsx scripts/generate-prisma-schema.ts sqlite && npx prisma generate",
+    "schema:postgres": "tsx scripts/generate-prisma-schema.ts postgres && npx prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "npx prisma migrate dev",
-    "db:studio": "npx prisma studio"
+    "db:migrate:prod": "npm run schema:postgres && npx prisma migrate deploy",
+    "db:studio": "npx prisma studio",
+    "postinstall": "npx prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

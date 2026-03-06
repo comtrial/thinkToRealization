@@ -33,6 +33,11 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const intentionalClose = useRef(false)
 
   const connect = useCallback(() => {
+    // Skip WebSocket in deployed environments (HTTPS — no local WS server)
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      return
+    }
+
     // Close any existing connection before creating a new one
     if (wsRef.current) {
       wsRef.current.onclose = null
@@ -77,6 +82,14 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       // Only reconnect if this is still the active connection
       if (wsRef.current !== ws) return
       if (intentionalClose.current) return
+
+      // Stop reconnecting after max attempts (e.g. no WS server in deployed env)
+      const MAX_RECONNECT_ATTEMPTS = 5
+      if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
+        console.info('[WS] Max reconnect attempts reached — running in offline mode')
+        return
+      }
+
       const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
       setTimeout(connect, delay)
       reconnectAttempts.current++

@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import path from "path";
 
 const PORT = 3333;
 
@@ -10,6 +11,7 @@ export default defineConfig({
   workers: 1,
   reporter: "html",
   timeout: 30000,
+  globalSetup: "./e2e/global-setup.ts",
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "on-first-retry",
@@ -25,6 +27,10 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
-    env: { NODE_OPTIONS: "--max-old-space-size=4096" },
+    env: {
+      NODE_OPTIONS: "--max-old-space-size=4096",
+      DATABASE_URL: `file:${path.resolve(__dirname, "prisma/test.db")}`,
+      NODE_ENV: "test",
+    },
   },
 });

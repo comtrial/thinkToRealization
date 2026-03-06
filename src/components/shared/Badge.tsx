@@ -20,15 +20,25 @@ export function StatusBadge({ status }: { status: NodeStatus }) {
   )
 }
 
+const statusColorMap: Record<NodeStatus, string> = {
+  backlog: 'bg-status-backlog',
+  todo: 'bg-status-todo',
+  in_progress: 'bg-status-progress',
+  done: 'bg-status-done',
+  archived: 'bg-status-archived',
+}
+
 export function StatusDot({ status }: { status: NodeStatus }) {
-  const colorMap: Record<NodeStatus, string> = {
-    backlog: 'bg-status-backlog',
-    todo: 'bg-status-todo',
-    in_progress: 'bg-status-progress',
-    done: 'bg-status-done',
-    archived: 'bg-status-archived',
-  }
-  return <div className={cn('w-2 h-2 rounded-full flex-shrink-0', colorMap[status])} />
+  return <div className={cn('w-2 h-2 rounded-full flex-shrink-0', statusColorMap[status])} />
+}
+
+export function StatusCircleIcon({ status, size = 16 }: { status: NodeStatus; size?: number }) {
+  return (
+    <div
+      className={cn('rounded-full flex-shrink-0', statusColorMap[status])}
+      style={{ width: size, height: size }}
+    />
+  )
 }
 
 const typeColorMap: Record<NodeType, string> = {
@@ -43,6 +53,24 @@ const typeColorMap: Record<NodeType, string> = {
 export function TypeColorBar({ type }: { type: NodeType }) {
   return (
     <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] rounded-l-node', typeColorMap[type])} />
+  )
+}
+
+export function PriorityIcon({ priority, size = 16 }: { priority: string; size?: number }) {
+  const colorMap: Record<string, string> = {
+    critical: 'text-red-500',
+    high: 'text-orange-500',
+    medium: 'text-yellow-500',
+    low: 'text-blue-400',
+    none: 'text-text-tertiary',
+  }
+  const color = colorMap[priority] || colorMap.none
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" className={cn('flex-shrink-0', color)} fill="currentColor">
+      <rect x="3" y="10" width="2" height="4" rx="0.5" opacity={priority === 'none' ? 0.3 : 1} />
+      <rect x="7" y="6" width="2" height="8" rx="0.5" opacity={['medium', 'high', 'critical'].includes(priority) ? 1 : 0.3} />
+      <rect x="11" y="2" width="2" height="12" rx="0.5" opacity={['high', 'critical'].includes(priority) ? 1 : 0.3} />
+    </svg>
   )
 }
 

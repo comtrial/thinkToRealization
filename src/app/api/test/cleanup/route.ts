@@ -1,11 +1,23 @@
 import { prisma } from "@/lib/prisma";
+import { walCheckpoint } from "@/lib/db";
 import { successResponse } from "@/lib/api-response";
 
 const E2E_SLUG_PREFIXES = ["__e2e__", "e2e-test-"];
 
+// Safety guard — only allow cleanup in test environment
+const isTestEnv =
+  process.env.NODE_ENV === "test" ||
+  process.env.DATABASE_URL?.includes("test.db");
+
 // POST /api/test/cleanup — delete only E2E test data (projects with test slug prefixes)
 // User's real projects are never touched.
 export async function POST() {
+  if (!isTestEnv) {
+    return new Response(
+      JSON.stringify({ error: "Cleanup only allowed in test environment" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
   try {
     // Find all test projects by slug prefix
     const testProjects = await prisma.project.findMany({
@@ -80,8 +92,8 @@ export async function POST() {
       where: { id: { in: projectIds } },
     });
 
-    // Force SQLite WAL checkpoint to ensure all changes are visible
-    await prisma.$queryRawUnsafe("PRAGMA wal_checkpoint(TRUNCATE)");
+    // WAL checkpoint — only runs on SQLite, no-op on PostgreSQL
+    await walCheckpoint();
 
     return successResponse({ cleaned: true, count: projectIds.length });
   } catch (error) {

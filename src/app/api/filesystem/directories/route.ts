@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { requireLocal } from "@/lib/api-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ function isPathAllowed(targetPath: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  const localGuard = requireLocal();
+  if (localGuard) return localGuard;
+
   const searchParams = request.nextUrl.searchParams;
   const targetPath = searchParams.get("path") || ALLOWED_ROOT;
 

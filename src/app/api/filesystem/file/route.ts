@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { requireLocal } from "@/lib/api-guards";
 
 const HOME_DIR = process.env.HOME || "/Users";
 const ALLOWED_ROOT = process.env.FILESYSTEM_ROOT || HOME_DIR;
@@ -16,6 +17,9 @@ function isPathAllowed(targetPath: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  const localGuard = requireLocal();
+  if (localGuard) return localGuard;
+
   const filePath = request.nextUrl.searchParams.get("path");
   if (!filePath) {
     return errorResponse("VALIDATION_ERROR", "path parameter required", 400);

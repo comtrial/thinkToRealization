@@ -1,0 +1,101 @@
+'use client'
+
+import { cn } from '@/lib/utils'
+import { useUIStore } from '@/stores/ui-store'
+import { useNodeStore } from '@/stores/node-store'
+import { StatusCircleIcon, PriorityIcon } from '@/components/shared/Badge'
+import { formatDistanceToNow } from 'date-fns'
+import { ko } from 'date-fns/locale'
+import type { NodeResponse, NodeType } from '@/lib/types/api'
+
+const typeAbbr: Record<NodeType, string> = {
+  idea: 'IDE', decision: 'DEC', task: 'TSK',
+  issue: 'ISS', milestone: 'MIL', note: 'NOT',
+}
+
+const typeTagStyles: Record<NodeType, string> = {
+  idea: 'bg-type-idea/15 text-type-idea',
+  decision: 'bg-type-decision/15 text-type-decision',
+  task: 'bg-type-task/15 text-type-task',
+  issue: 'bg-type-issue/15 text-type-issue',
+  milestone: 'bg-type-milestone/15 text-type-milestone',
+  note: 'bg-type-note/15 text-type-note',
+}
+
+const typeLabels: Record<NodeType, string> = {
+  idea: 'Idea', decision: 'Decision', task: 'Task',
+  issue: 'Issue', milestone: 'Milestone', note: 'Note',
+}
+
+export function IssueRow({ node }: { node: NodeResponse }) {
+  const openPanel = useUIStore((s) => s.openPanel)
+  const selectNode = useNodeStore((s) => s.selectNode)
+  const selectedNodeId = useNodeStore((s) => s.selectedNode?.id)
+
+  const handleClick = () => {
+    selectNode(node.id)
+    openPanel(node.id)
+  }
+
+  const shortId = `${typeAbbr[node.type]}-${node.id.slice(-4).toUpperCase()}`
+
+  const dateStr = node.updatedAt
+    ? formatDistanceToNow(new Date(node.updatedAt), { addSuffix: false, locale: ko })
+    : null
+
+  return (
+    <button
+      data-testid={`dashboard-card-${node.id}`}
+      onClick={handleClick}
+      className={cn(
+        'w-full flex items-center gap-3 px-4 py-1.5 text-body text-left',
+        'hover:bg-surface-hover transition-colors duration-100',
+        'border-b border-border/40',
+        selectedNodeId === node.id && 'bg-accent-light'
+      )}
+    >
+      {/* Priority */}
+      <PriorityIcon priority={node.priority} size={14} />
+
+      {/* Short ID */}
+      <span className="text-caption text-text-tertiary font-mono w-[56px] flex-shrink-0 truncate">
+        {shortId}
+      </span>
+
+      {/* Status circle */}
+      <StatusCircleIcon status={node.status} size={14} />
+
+      {/* Title */}
+      <span className="text-node-title-sm text-text-primary truncate flex-1 text-left">
+        {node.title}
+      </span>
+
+      {/* Child count (sub-issues) */}
+      {node.childCount > 0 && (
+        <span className="text-caption text-text-tertiary flex-shrink-0">
+          {node.childCount}
+        </span>
+      )}
+
+      {/* Type label tag */}
+      <span className={cn(
+        'text-badge px-1.5 py-0.5 rounded-badge flex-shrink-0 hidden sm:inline-flex',
+        typeTagStyles[node.type]
+      )}>
+        {typeLabels[node.type]}
+      </span>
+
+      {/* Active session indicator */}
+      {node.hasActiveSession && (
+        <div className="w-2 h-2 rounded-full bg-status-progress animate-pulse-dot flex-shrink-0" />
+      )}
+
+      {/* Date */}
+      {dateStr && (
+        <span className="text-caption text-text-tertiary flex-shrink-0 w-[60px] text-right hidden sm:block">
+          {dateStr}
+        </span>
+      )}
+    </button>
+  )
+}

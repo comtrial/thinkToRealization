@@ -28,10 +28,18 @@ yarn-error.log*
 # local env files
 .env
 .env*.local
+.env.production
+.env.test
 
 # playwright
 /playwright-report/
 /test-results/
+
+# test database
+prisma/test.db
+prisma/test.db-shm
+prisma/test.db-wal
+prisma/test.db-journal
 
 # devflow logs
 /.devflow-logs/
@@ -44,3 +52,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# supabase local
+supabase/.temp/
