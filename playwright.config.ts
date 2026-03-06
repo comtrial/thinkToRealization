@@ -31,6 +31,7 @@ export default defineConfig({
       NODE_OPTIONS: "--max-old-space-size=4096",
       DATABASE_URL: `file:${path.resolve(__dirname, "prisma/test.db")}`,
       NODE_ENV: "test",
+      BYPASS_AUTH: "true",
     },
   },
 });

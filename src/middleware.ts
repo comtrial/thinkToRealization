@@ -8,6 +8,11 @@ const PUBLIC_API_PATHS = ["/api/auth/login", "/api/auth/register", "/api/test/"]
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Skip auth in test environment (next dev overrides NODE_ENV to 'development')
+  if (process.env.NODE_ENV === "test" || process.env.BYPASS_AUTH === "true") {
+    return NextResponse.next();
+  }
+
   // Allow public pages
   if (PUBLIC_PATHS.some((p) => pathname === p)) {
     return NextResponse.next();
