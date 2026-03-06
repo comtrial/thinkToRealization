@@ -6,17 +6,22 @@ import * as Tabs from '@radix-ui/react-tabs'
 const tabs = [
   { value: 'overview' as const, label: '개요' },
   { value: 'sessions' as const, label: '세션' },
-  { value: 'files' as const, label: '파일' },
   { value: 'plans' as const, label: '계획서' },
 ]
 
-export function PanelTabs() {
+interface PanelTabsProps {
+  hidden?: boolean
+}
+
+export function PanelTabs({ hidden }: PanelTabsProps) {
   const panelTab = useUIStore((s) => s.panelTab)
   const setPanelTab = useUIStore((s) => s.setPanelTab)
 
+  if (hidden) return null
+
   return (
     <Tabs.Root value={panelTab} onValueChange={(v) => setPanelTab(v as typeof panelTab)}>
-      <Tabs.List className="flex border-b border-border shrink-0">
+      <Tabs.List className="flex border-b border-border/30 shrink-0">
         {tabs.map((tab) => (
           <Tabs.Trigger
             key={tab.value}

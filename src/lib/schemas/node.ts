@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const nodeTypeEnum = z.enum(["idea", "decision", "task", "issue", "milestone", "note"]);
+const nodeTypeEnum = z.enum(["planning", "feature", "issue"]);
 const nodeStatusEnum = z.enum(["backlog", "todo", "in_progress", "done", "archived"]);
 const priorityEnum = z.enum(["none", "low", "medium", "high", "urgent"]);
 

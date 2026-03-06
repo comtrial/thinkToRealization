@@ -5,6 +5,8 @@ import { IssueListSection } from './IssueListSection'
 import { DashboardToolbar } from './DashboardToolbar'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useProject } from '@/components/providers/ProjectProvider'
+import { useUIStore } from '@/stores/ui-store'
+import { useCanvasStore } from '@/stores/canvas-store'
 import type { DashboardResponse } from '@/lib/types/api'
 
 function IssueListSkeleton() {
@@ -69,10 +71,51 @@ export function DashboardView({ projectId }: { projectId: string }) {
     fetchDashboard()
   }, [fetchDashboard])
 
+  // Refetch dashboard when switching TO dashboard tab
+  const activeTab = useUIStore((s) => s.activeTab)
+
+  useEffect(() => {
+    if (activeTab === 'dashboard' && projectId) {
+      fetchDashboard()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
+
+  const handleCreateNode = useCallback(async () => {
+    if (!projectId) return
+    try {
+      const res = await fetch(`/api/projects/${projectId}/nodes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'feature',
+          title: '새 기능개발',
+          canvasX: Math.random() * 300 + 100,
+          canvasY: Math.random() * 300 + 100,
+        }),
+      })
+      if (res.ok) {
+        const { data: newNode } = await res.json()
+        // Add to canvas store
+        useCanvasStore.getState().addNode({
+          id: newNode.id,
+          type: 'baseNode',
+          position: { x: newNode.canvasX, y: newNode.canvasY },
+          data: newNode,
+        })
+        // Refetch dashboard
+        fetchDashboard()
+      }
+    } catch (err) {
+      console.error('Failed to create node:', err)
+    }
+  }, [projectId, fetchDashboard])
+
   if (loading) {
     return (
       <div className="h-full flex flex-col">
-        <DashboardToolbar projectTitle={currentProject?.title} />
+        <DashboardToolbar projectTitle={currentProject?.title} onCreateNode={handleCreateNode} />
         <div className="flex-1 overflow-y-auto">
           <IssueListSkeleton />
         </div>
@@ -83,7 +126,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
   if (error || !data) {
     return (
       <div className="h-full flex flex-col">
-        <DashboardToolbar projectTitle={currentProject?.title} />
+        <DashboardToolbar projectTitle={currentProject?.title} onCreateNode={handleCreateNode} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-body text-text-secondary mb-md">대시보드를 불러올 수 없습니다</p>
@@ -107,7 +150,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
 
   return (
     <div className="h-full flex flex-col">
-      <DashboardToolbar projectTitle={currentProject?.title} />
+      <DashboardToolbar projectTitle={currentProject?.title} onCreateNode={handleCreateNode} />
 
       <div className="flex-1 overflow-y-auto">
         {isEmpty ? (

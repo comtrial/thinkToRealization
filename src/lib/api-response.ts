@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
-export function successResponse<T>(data: T, status = 200) {
+export function successResponse<T>(data: T, statusOrOptions?: number | { status?: number; headers?: Record<string, string> }) {
+  const status = typeof statusOrOptions === 'number' ? statusOrOptions : (statusOrOptions?.status ?? 200);
+  const headers = typeof statusOrOptions === 'object' ? statusOrOptions.headers : undefined;
+
   return NextResponse.json(
     { data, meta: { timestamp: new Date().toISOString() } },
-    { status }
+    { status, headers }
   );
 }
 

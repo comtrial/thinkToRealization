@@ -13,10 +13,10 @@ export type {
 } from "@/lib/types/api";
 
 // Node types & statuses
-export type NodeType = "idea" | "decision" | "task" | "issue" | "milestone" | "note";
+export type NodeType = "planning" | "feature" | "issue";
 export type NodeStatus = "backlog" | "todo" | "in_progress" | "done" | "archived";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
-export type EdgeType = "sequence" | "dependency" | "related" | "regression" | "branch";
+export type EdgeType = "related" | "parent_child" | "sequence" | "dependency" | "regression" | "branch";
 export type SessionStatus = "active" | "paused" | "completed";
 
 export type Project = {

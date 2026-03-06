@@ -1,5 +1,5 @@
 export const NODE_TYPES = [
-  "idea", "decision", "task", "issue", "milestone", "note",
+  "planning", "feature", "issue",
 ] as const;
 
 export const NODE_STATUSES = [
@@ -11,7 +11,7 @@ export const PRIORITIES = [
 ] as const;
 
 export const EDGE_TYPES = [
-  "sequence", "dependency", "related", "regression", "branch",
+  "related", "parent_child", "sequence", "dependency", "regression", "branch",
 ] as const;
 
 export const SESSION_STATUSES = [
@@ -25,11 +25,19 @@ export const ERROR_CODES = {
   PROJECT_NOT_FOUND: "PROJECT_NOT_FOUND",
   EDGE_NOT_FOUND: "EDGE_NOT_FOUND",
   DECISION_NOT_FOUND: "DECISION_NOT_FOUND",
+  COMMENT_NOT_FOUND: "COMMENT_NOT_FOUND",
+  USER_NOT_FOUND: "USER_NOT_FOUND",
+  UNAUTHORIZED: "UNAUTHORIZED",
+  FORBIDDEN: "FORBIDDEN",
+  EMAIL_EXISTS: "EMAIL_EXISTS",
+  INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
   SESSION_ALREADY_ACTIVE: "SESSION_ALREADY_ACTIVE",
   CONFLICT: "CONFLICT",
   DB_WRITE_FAILED: "DB_WRITE_FAILED",
   INTERNAL_ERROR: "INTERNAL_ERROR",
 } as const;
+
+export const NOTIFICATION_TYPES = ["comment", "assignment"] as const;
 
 export const WS_PORT = 3001;
 export const WS_URL =

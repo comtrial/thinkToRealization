@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const edgeTypeEnum = z.enum(["sequence", "dependency", "related", "regression", "branch"]);
+const edgeTypeEnum = z.enum(["related", "parent_child", "sequence", "dependency", "regression", "branch"]);
 
 export const createEdgeSchema = z.object({
   fromNodeId: z.string(),

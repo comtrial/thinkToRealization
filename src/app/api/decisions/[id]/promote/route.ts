@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         data: {
           fromNodeId: decision.nodeId,
           toNodeId: newNode.id,
-          type: "sequence",
+          type: "parent_child",
         },
       });
 

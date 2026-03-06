@@ -35,7 +35,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
   test("Dashboard shows in-progress nodes", async ({ page }) => {
     const node = await createTestNode(projectId, {
       title: "Working on feature",
-      type: "task",
+      type: "feature",
     });
     await fetch(`${API}/nodes/${node.id}/status`, {
       method: "PUT",
@@ -60,7 +60,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
   test("Dashboard shows todo nodes", async ({ page }) => {
     const node = await createTestNode(projectId, {
       title: "Need to do this",
-      type: "task",
+      type: "feature",
     });
     await fetch(`${API}/nodes/${node.id}/status`, {
       method: "PUT",
@@ -82,7 +82,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
   test("Dashboard shows recently done nodes", async ({ page }) => {
     const node = await createTestNode(projectId, {
       title: "Completed task",
-      type: "task",
+      type: "feature",
     });
     // Must transition through in_progress first (backlog → done is not allowed)
     await fetch(`${API}/nodes/${node.id}/status`, {
@@ -110,7 +110,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
   test("Clicking dashboard card switches to canvas tab", async ({ page }) => {
     const node = await createTestNode(projectId, {
       title: "Click me",
-      type: "task",
+      type: "feature",
     });
     await fetch(`${API}/nodes/${node.id}/status`, {
       method: "PUT",
@@ -137,7 +137,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
   test("Dashboard shows mixed statuses correctly", async ({ page }) => {
     const n1 = await createTestNode(projectId, {
       title: "In Progress Task",
-      type: "task",
+      type: "feature",
     });
     await fetch(`${API}/nodes/${n1.id}/status`, {
       method: "PUT",
@@ -150,7 +150,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
 
     const n2 = await createTestNode(projectId, {
       title: "Todo Item",
-      type: "idea",
+      type: "planning",
       canvasX: 200,
       canvasY: 0,
     });
@@ -162,7 +162,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
 
     const n3 = await createTestNode(projectId, {
       title: "Done Item",
-      type: "decision",
+      type: "planning",
       canvasX: 400,
       canvasY: 0,
     });

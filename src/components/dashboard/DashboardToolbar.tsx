@@ -1,13 +1,14 @@
 'use client'
 
-import { Filter, SlidersHorizontal } from 'lucide-react'
+import { Filter, SlidersHorizontal, Plus } from 'lucide-react'
 import { useMobile } from '@/hooks/useMobile'
 
 interface DashboardToolbarProps {
   projectTitle?: string
+  onCreateNode?: () => void
 }
 
-export function DashboardToolbar({ projectTitle }: DashboardToolbarProps) {
+export function DashboardToolbar({ projectTitle, onCreateNode }: DashboardToolbarProps) {
   const isMobile = useMobile()
 
   return (
@@ -19,6 +20,15 @@ export function DashboardToolbar({ projectTitle }: DashboardToolbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        {onCreateNode && (
+          <button
+            onClick={onCreateNode}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-caption text-text-secondary hover:bg-surface-hover rounded-button transition-colors"
+          >
+            <Plus size={14} />
+            <span>새 항목</span>
+          </button>
+        )}
         <button className="flex items-center gap-1.5 px-2.5 py-1 text-caption text-text-secondary
                            rounded-button border border-border hover:bg-surface-hover transition-colors">
           <Filter size={14} />

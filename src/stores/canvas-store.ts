@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Node, Edge, OnNodesChange, OnEdgesChange, OnConnect } from '@xyflow/react'
-import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react'
+import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react'
 
 interface Snapshot {
   nodes: Node[]
@@ -9,9 +9,20 @@ interface Snapshot {
 
 function getMaxHistory(): number {
   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
-    return 15
+    return 10
   }
-  return 30
+  return 15
+}
+
+/** Determine edge type from source handle */
+function edgeTypeFromHandle(sourceHandle: string | null | undefined): string {
+  return sourceHandle === 'bottom' ? 'related' : 'parent_child'
+}
+
+/** Derive sourceHandle/targetHandle from edge type */
+function handlesFromType(type: string): { sourceHandle: string; targetHandle: string } {
+  if (type === 'related') return { sourceHandle: 'bottom', targetHandle: 'top' }
+  return { sourceHandle: 'right', targetHandle: 'left' }
 }
 
 interface CanvasStore {
@@ -21,6 +32,7 @@ interface CanvasStore {
   redoStack: Snapshot[]
   initialViewport: { x: number; y: number; zoom: number } | null
   isZoomedIn: boolean
+  loadedProjectId: string | null
   setIsZoomedIn: (value: boolean) => void
   onNodesChange: OnNodesChange
   onEdgesChange: OnEdgesChange
@@ -79,7 +91,7 @@ async function reconcileWithAPI(prev: Snapshot, next: Snapshot) {
           body: JSON.stringify({
             fromNodeId: edge.source,
             toNodeId: edge.target,
-            type: (edge.data as Record<string, unknown>)?.type || edge.type || 'sequence',
+            type: (edge.data as Record<string, unknown>)?.type || edge.type || 'parent_child',
           }),
         })
       )
@@ -120,14 +132,29 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   redoStack: [],
   initialViewport: null,
   isZoomedIn: true,
+  loadedProjectId: null,
   setIsZoomedIn: (value) => set({ isZoomedIn: value }),
   onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
   onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
   onConnect: async (connection) => {
     // Save snapshot before connecting
     get().pushSnapshot()
-    // Optimistic: add edge locally
-    set({ edges: addEdge(connection, get().edges) })
+
+    // Auto-detect edge type from source handle
+    const edgeType = edgeTypeFromHandle(connection.sourceHandle)
+    const handles = handlesFromType(edgeType)
+
+    // Add edge locally with proper type and handles
+    const tempEdge: Edge = {
+      id: `temp-${Date.now()}`,
+      source: connection.source!,
+      target: connection.target!,
+      sourceHandle: handles.sourceHandle,
+      targetHandle: handles.targetHandle,
+      type: edgeType,
+    }
+    set({ edges: [...get().edges, tempEdge] })
+
     // Persist via API
     try {
       const res = await fetch('/api/edges', {
@@ -136,7 +163,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         body: JSON.stringify({
           fromNodeId: connection.source,
           toNodeId: connection.target,
-          type: 'sequence',
+          type: edgeType,
         }),
       })
       if (res.ok) {
@@ -144,8 +171,14 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         // Update with server-assigned ID
         set((s) => ({
           edges: s.edges.map((e) =>
-            e.source === connection.source && e.target === connection.target && !e.data
-              ? { ...e, id: data.id, type: data.type, data }
+            e.id === tempEdge.id
+              ? {
+                  ...e,
+                  id: data.id,
+                  type: data.type,
+                  data,
+                  ...handlesFromType(data.type),
+                }
               : e
           ),
         }))
@@ -218,6 +251,9 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     await reconcileWithAPI(currentSnapshot, snapshot)
   },
   loadCanvas: async (projectId) => {
+    // Skip if already loaded for this project
+    if (get().loadedProjectId === projectId) return
+
     try {
       const res = await fetch(`/api/projects/${projectId}/canvas`)
       if (!res.ok) return
@@ -228,13 +264,19 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         position: { x: n.canvasX as number, y: n.canvasY as number },
         data: n,
       }))
-      const edges: Edge[] = data.edges.map((e: Record<string, unknown>) => ({
-        id: e.id,
-        source: e.fromNodeId,
-        target: e.toNodeId,
-        type: e.type,
-        data: e,
-      }))
+      const edges: Edge[] = data.edges.map((e: Record<string, unknown>) => {
+        const type = e.type as string
+        const handles = handlesFromType(type)
+        return {
+          id: e.id,
+          source: e.fromNodeId,
+          target: e.toNodeId,
+          type,
+          sourceHandle: handles.sourceHandle,
+          targetHandle: handles.targetHandle,
+          data: e,
+        }
+      })
       const hasViewport = data.viewport && (data.viewport.x !== 0 || data.viewport.y !== 0 || data.viewport.zoom !== 1)
       set({
         nodes,
@@ -242,6 +284,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         initialViewport: hasViewport ? data.viewport : null,
         undoStack: [],
         redoStack: [],
+        loadedProjectId: projectId,
       })
     } catch (err) {
       console.error('Failed to load canvas:', err)

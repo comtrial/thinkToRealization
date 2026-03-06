@@ -33,6 +33,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
         y: project.canvasViewportY,
         zoom: project.canvasViewportZoom,
       },
+    }, {
+      headers: { "Cache-Control": "private, max-age=5, stale-while-revalidate=15" }
     });
   } catch (error) {
     return handlePrismaError(error);

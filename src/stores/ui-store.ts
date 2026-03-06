@@ -7,11 +7,12 @@ interface UIStore {
   setActiveTab: (tab: 'dashboard' | 'canvas') => void
   panelMode: 'closed' | 'peek' | 'full'
   panelNodeId: string | null
-  panelTab: 'overview' | 'sessions' | 'files' | 'plans'
+  panelTab: 'overview' | 'sessions' | 'plans'
   openPanel: (nodeId: string) => void
+  openPanelFull: (nodeId: string) => void
   closePanel: () => void
   toggleFullPage: () => void
-  setPanelTab: (tab: 'overview' | 'sessions' | 'files' | 'plans') => void
+  setPanelTab: (tab: 'overview' | 'sessions' | 'plans') => void
   terminalExpanded: boolean
   terminalHeight: number
   setTerminalExpanded: (expanded: boolean) => void
@@ -29,6 +30,7 @@ export const useUIStore = create<UIStore>((set) => ({
   panelNodeId: null,
   panelTab: 'overview',
   openPanel: (nodeId) => set({ panelMode: 'peek', panelNodeId: nodeId, panelTab: 'overview' }),
+  openPanelFull: (nodeId) => set({ panelMode: 'full', panelNodeId: nodeId, panelTab: 'overview' }),
   closePanel: () => set({ panelMode: 'closed', panelNodeId: null }),
   toggleFullPage: () => set((s) => ({
     panelMode: s.panelMode === 'full' ? 'peek' : 'full',

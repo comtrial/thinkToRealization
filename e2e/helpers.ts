@@ -63,7 +63,7 @@ export async function createTestNode(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      type: "task",
+      type: "feature",
       title: "Test Node",
       status: "backlog",
       canvasX: 0,

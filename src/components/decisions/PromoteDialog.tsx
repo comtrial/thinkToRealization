@@ -9,12 +9,9 @@ import { useNodeStore } from '@/stores/node-store'
 import type { DecisionResponse, NodeType } from '@/lib/types/api'
 
 const nodeTypeOptions: { type: NodeType; label: string }[] = [
-  { type: 'idea', label: '아이디어' },
-  { type: 'task', label: '작업' },
-  { type: 'decision', label: '결정' },
+  { type: 'planning', label: '기획' },
+  { type: 'feature', label: '기능개발' },
   { type: 'issue', label: '이슈' },
-  { type: 'milestone', label: '마일스톤' },
-  { type: 'note', label: '메모' },
 ]
 
 interface PromoteDialogProps {
@@ -23,7 +20,7 @@ interface PromoteDialogProps {
 }
 
 export function PromoteDialog({ decision, onClose }: PromoteDialogProps) {
-  const [selectedType, setSelectedType] = useState<NodeType>('task')
+  const [selectedType, setSelectedType] = useState<NodeType>('feature')
   const [title, setTitle] = useState(
     decision.content.length > 60
       ? decision.content.slice(0, 60) + '...'

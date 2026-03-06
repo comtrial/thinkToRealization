@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, notFound } from "@/lib/api-response";
 import { handlePrismaError } from "@/lib/prisma-error";
-import { nodeWithCounts, toNodeResponse } from "@/lib/node-helpers";
+import { nodeCountsOnly, toNodeResponseLite } from "@/lib/node-helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,32 +16,37 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const [inProgress, todo, backlog, recentDone] = await Promise.all([
       prisma.node.findMany({
         where: { projectId, status: "in_progress" },
-        include: nodeWithCounts,
+        include: nodeCountsOnly,
         orderBy: { updatedAt: "desc" },
+        take: 50,
       }),
       prisma.node.findMany({
         where: { projectId, status: "todo" },
-        include: nodeWithCounts,
+        include: nodeCountsOnly,
         orderBy: { priority: "desc" },
+        take: 50,
       }),
       prisma.node.findMany({
         where: { projectId, status: "backlog" },
-        include: nodeWithCounts,
+        include: nodeCountsOnly,
         orderBy: { priority: "desc" },
+        take: 50,
       }),
       prisma.node.findMany({
         where: { projectId, status: "done" },
-        include: nodeWithCounts,
+        include: nodeCountsOnly,
         orderBy: { updatedAt: "desc" },
         take: 10,
       }),
     ]);
 
     return successResponse({
-      inProgress: inProgress.map(toNodeResponse),
-      todo: todo.map(toNodeResponse),
-      backlog: backlog.map(toNodeResponse),
-      recentDone: recentDone.map(toNodeResponse),
+      inProgress: inProgress.map(toNodeResponseLite),
+      todo: todo.map(toNodeResponseLite),
+      backlog: backlog.map(toNodeResponseLite),
+      recentDone: recentDone.map(toNodeResponseLite),
+    }, {
+      headers: { "Cache-Control": "private, max-age=5, stale-while-revalidate=15" }
     });
   } catch (error) {
     return handlePrismaError(error);

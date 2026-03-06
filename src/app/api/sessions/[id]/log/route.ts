@@ -28,19 +28,25 @@ export async function GET(_req: NextRequest, { params }: Params) {
     try {
       const raw = await fs.readFile(logPath, "utf-8");
       const messages = parseSessionLog(raw);
-      return successResponse({ raw, messages });
+      return successResponse({ raw, messages }, {
+        headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" }
+      });
     } catch {
       // If primary path fails and we have a different fallback, try it
       if (logPath !== logFile) {
         try {
           const raw = await fs.readFile(logFile, "utf-8");
           const messages = parseSessionLog(raw);
-          return successResponse({ raw, messages });
+          return successResponse({ raw, messages }, {
+            headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" }
+          });
         } catch {
           // Both paths failed
         }
       }
-      return successResponse({ raw: "", messages: [] });
+      return successResponse({ raw: "", messages: [] }, {
+        headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" }
+      });
     }
   } catch (error) {
     return handlePrismaError(error);

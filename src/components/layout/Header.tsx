@@ -1,13 +1,26 @@
 'use client'
 
-import { Menu, Search, Settings } from 'lucide-react'
+import { useState } from 'react'
+import { Menu, Search, LogOut } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
 import { useUIStore } from '@/stores/ui-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { ProjectSelector } from './ProjectSelector'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { UserAvatar } from '@/components/shared/UserAvatar'
 import { useMobile } from '@/hooks/useMobile'
 
 export function Header() {
   const { toggleSidebar, activeTab, setActiveTab, toggleCommandPalette } = useUIStore()
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
   const isMobile = useMobile()
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  const handleLogout = async () => {
+    await logout()
+    window.location.href = '/login'
+  }
 
   return (
     <header
@@ -50,7 +63,7 @@ export function Header() {
         ))}
       </nav>
 
-      {/* Right: search + settings */}
+      {/* Right: search + notifications + user */}
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
           onClick={toggleCommandPalette}
@@ -60,9 +73,38 @@ export function Header() {
           {!isMobile && <span className="text-caption text-text-tertiary ml-2">검색</span>}
           {!isMobile && <kbd className="text-[10px] px-1 py-0.5 rounded bg-surface-hover border border-border ml-2">⌘K</kbd>}
         </button>
-        <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover transition-colors">
-          <Settings size={18} className="text-text-secondary" />
-        </button>
+
+        <NotificationBell />
+
+        {/* User menu */}
+        {user && (
+          <Popover.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+            <Popover.Trigger asChild>
+              <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover transition-colors">
+                <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size={26} />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="w-[180px] bg-surface border border-border rounded-dropdown shadow-elevation-2 p-1.5 z-50"
+                sideOffset={8}
+                align="end"
+              >
+                <div className="px-2 py-1.5 border-b border-border mb-1">
+                  <p className="text-caption font-medium text-text-primary truncate">{user.name}</p>
+                  <p className="text-[10px] text-text-tertiary truncate">{user.email}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-button text-caption text-text-secondary hover:bg-surface-hover transition-colors"
+                >
+                  <LogOut size={14} />
+                  <span>로그아웃</span>
+                </button>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        )}
       </div>
     </header>
   )

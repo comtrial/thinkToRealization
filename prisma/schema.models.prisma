@@ -20,6 +20,19 @@ model Project {
   nodes Node[]
 }
 
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  passwordHash  String
+  avatarUrl     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  comments      NodeComment[]
+  notifications Notification[]
+  assignedNodes Node[]         @relation("NodeAssignee")
+}
+
 model Node {
   id          String   @id @default(cuid())
   projectId   String
@@ -36,6 +49,8 @@ model Node {
   parentNodeId String?
   parentNode   Node?    @relation("NodeChildren", fields: [parentNodeId], references: [id])
   childNodes   Node[]   @relation("NodeChildren")
+  assigneeId   String?
+  assignee     User?    @relation("NodeAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   sessions     Session[]
@@ -44,6 +59,7 @@ model Node {
   inEdges      Edge[]         @relation("EdgeTo")
   stateLogs    NodeStateLog[]
   plans        Plan[]
+  comments     NodeComment[]
   @@index([projectId, status])
 }
 
@@ -56,6 +72,8 @@ model Edge {
   type       String   @default("sequence")
   label      String?
   createdAt  DateTime @default(now())
+  @@index([fromNodeId])
+  @@index([toNodeId])
 }
 
 model Session {
@@ -74,6 +92,7 @@ model Session {
   files     SessionFile[]
   decisions Decision[]
   @@index([nodeId])
+  @@index([nodeId, status])
 }
 
 model SessionFile {
@@ -111,6 +130,7 @@ model Plan {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   @@index([nodeId])
+  @@index([nodeId, status])
 }
 
 model NodeStateLog {
@@ -123,4 +143,30 @@ model NodeStateLog {
   triggerSessionId String?
   createdAt       DateTime @default(now())
   @@index([nodeId])
+}
+
+model NodeComment {
+  id        String   @id @default(cuid())
+  nodeId    String
+  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([nodeId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  nodeId    String?
+  actorId   String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([userId, isRead])
 }

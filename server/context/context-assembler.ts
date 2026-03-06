@@ -39,7 +39,7 @@ export async function assembleContext(
     throw new Error(`Node not found: ${nodeId}`);
   }
 
-  // 2. Build parent chain (recursive)
+  // 2. Build parent chain — optimized: fetch all potential ancestors at once
   const contextChain: ContextChainItem[] = [];
 
   // Add current node at depth 0
@@ -51,13 +51,11 @@ export async function assembleContext(
     depth: 0,
   });
 
-  // Walk up the parent chain
-  let currentParentId = node.parentNodeId;
-  let depth = 1;
-
-  while (currentParentId && depth <= MAX_CHAIN_DEPTH) {
-    const parent = await db.node.findUnique({
-      where: { id: currentParentId },
+  // Collect all ancestor IDs in one pass by fetching all project nodes
+  if (node.parentNodeId) {
+    // Single query to get all nodes in the project with their parentNodeId
+    const projectNodes = await db.node.findMany({
+      where: { projectId: node.projectId },
       select: {
         id: true,
         title: true,
@@ -67,18 +65,28 @@ export async function assembleContext(
       },
     });
 
-    if (!parent) break;
+    // Build a lookup map
+    const nodeMap = new Map(projectNodes.map((n) => [n.id, n]));
 
-    contextChain.push({
-      nodeId: parent.id,
-      title: parent.title,
-      type: parent.type,
-      description: parent.description,
-      depth,
-    });
+    // Walk the chain using the map (no more DB calls)
+    let currentParentId: string | null = node.parentNodeId;
+    let depth = 1;
 
-    currentParentId = parent.parentNodeId;
-    depth++;
+    while (currentParentId && depth <= MAX_CHAIN_DEPTH) {
+      const parent = nodeMap.get(currentParentId);
+      if (!parent) break;
+
+      contextChain.push({
+        nodeId: parent.id,
+        title: parent.title,
+        type: parent.type,
+        description: parent.description,
+        depth,
+      });
+
+      currentParentId = parent.parentNodeId;
+      depth++;
+    }
   }
 
   // 3. Read CLAUDE.md content

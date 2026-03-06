@@ -1,8 +1,8 @@
 // v2 API response types - aligned with backend-spec.md
 
-export type NodeType = "idea" | "decision" | "task" | "issue" | "milestone" | "note";
+export type NodeType = "planning" | "feature" | "issue";
 export type NodeStatus = "backlog" | "todo" | "in_progress" | "done" | "archived";
-export type EdgeType = "sequence" | "dependency" | "related" | "regression" | "branch";
+export type EdgeType = "related" | "parent_child" | "sequence" | "dependency" | "regression" | "branch";
 export type SessionStatus = "active" | "paused" | "completed";
 export type PlanStatus = "draft" | "approved" | "rejected" | "revised";
 
@@ -19,9 +19,13 @@ export interface NodeResponse {
   canvasW: number;
   canvasH: number;
   parentNodeId: string | null;
+  assigneeId: string | null;
+  assigneeName: string | null;
+  assigneeAvatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
   // Computed fields
+  commentCount: number;
   sessionCount: number;
   decisionCount: number;
   fileChangeCount: number;
@@ -155,4 +159,32 @@ export interface ApiErrorResponse {
     message: string;
     status: number;
   };
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export interface CommentResponse {
+  id: string;
+  nodeId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: string; name: string; avatarUrl: string | null };
+}
+
+export interface NotificationResponse {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  nodeId: string | null;
+  actorId: string | null;
+  isRead: boolean;
+  createdAt: string;
 }

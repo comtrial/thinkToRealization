@@ -37,13 +37,13 @@ test.describe("UI: Canvas view interactions", () => {
   test("Canvas renders pre-created nodes", async ({ page }) => {
     await createTestNode(projectId, {
       title: "Idea Node",
-      type: "idea",
+      type: "planning",
       canvasX: 100,
       canvasY: 100,
     });
     await createTestNode(projectId, {
       title: "Task Node",
-      type: "task",
+      type: "feature",
       canvasX: 400,
       canvasY: 100,
     });
@@ -60,13 +60,13 @@ test.describe("UI: Canvas view interactions", () => {
   test("Canvas renders edges between nodes", async ({ page }) => {
     const n1 = await createTestNode(projectId, {
       title: "Source",
-      type: "task",
+      type: "feature",
       canvasX: 100,
       canvasY: 100,
     });
     const n2 = await createTestNode(projectId, {
       title: "Target",
-      type: "task",
+      type: "feature",
       canvasX: 400,
       canvasY: 100,
     });
@@ -123,7 +123,7 @@ test.describe("UI: Canvas view interactions", () => {
   test("Click node opens side panel", async ({ page }) => {
     await createTestNode(projectId, {
       title: "Clickable Node",
-      type: "task",
+      type: "feature",
       canvasX: 200,
       canvasY: 200,
     });
@@ -149,13 +149,13 @@ test.describe("UI: Canvas view interactions", () => {
   test("Auto-layout rearranges nodes", async ({ page }) => {
     await createTestNode(projectId, {
       title: "Node A",
-      type: "task",
+      type: "feature",
       canvasX: 0,
       canvasY: 0,
     });
     await createTestNode(projectId, {
       title: "Node B",
-      type: "task",
+      type: "feature",
       canvasX: 0,
       canvasY: 0,
     });

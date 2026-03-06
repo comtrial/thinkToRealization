@@ -17,7 +17,7 @@ test.describe("API: Nodes CRUD", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        type: "task",
+        type: "feature",
         title: "New Task",
         canvasX: 100,
         canvasY: 200,
@@ -26,7 +26,7 @@ test.describe("API: Nodes CRUD", () => {
     const json = await res.json();
     expect(res.status).toBe(201);
     expect(json.data.title).toBe("New Task");
-    expect(json.data.type).toBe("task");
+    expect(json.data.type).toBe("feature");
     expect(json.data.status).toBe("backlog");
   });
 

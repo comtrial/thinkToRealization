@@ -9,6 +9,7 @@ import { useMobile } from '@/hooks/useMobile'
 import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
 import { StatusBadge, StatusDot, TypeColorBar } from '@/components/shared/Badge'
 import { MarkdownRenderer } from '@/components/shared/MarkdownRenderer'
+import { UserAvatar } from '@/components/shared/UserAvatar'
 import type { NodeType, NodeStatus } from '@/lib/types/api'
 
 interface NodeData {
@@ -24,6 +25,9 @@ interface NodeData {
   planCount?: number
   latestPlanStatus?: string | null
   hasActiveSession: boolean
+  assigneeName?: string | null
+  assigneeAvatarUrl?: string | null
+  commentCount?: number
   [key: string]: unknown
 }
 
@@ -40,7 +44,7 @@ function CompactNode({ data }: { data: NodeData }) {
     <div className="w-[200px] h-[52px] flex items-center px-3 gap-2">
       <NodeTypeIcon type={data.type} size={16} />
       <span className="text-node-title-sm text-text-primary truncate flex-1">{data.title}</span>
-      {data.type === 'issue' && data.childCount != null && data.childCount > 0 && (
+      {data.childCount != null && data.childCount > 0 && (
         <span className="text-[10px] px-1 py-0.5 rounded-badge bg-type-issue/20 text-type-issue font-medium">
           {data.childCount}
         </span>
@@ -51,48 +55,52 @@ function CompactNode({ data }: { data: NodeData }) {
 }
 
 function ExpandedNode({ data }: { data: NodeData }) {
-  const isIssue = data.type === 'issue'
   return (
-    <div className="w-[280px] h-[140px] p-3 flex flex-col gap-1">
-      {/* Priority color bar for issues */}
-      {isIssue && data.priority && data.priority !== 'none' && (
+    <div className="w-[280px] h-[140px] p-3 flex flex-col overflow-hidden">
+      {/* Priority color bar */}
+      {data.priority && data.priority !== 'none' && (
         <div className={cn('absolute top-0 left-0 right-0 h-[3px] rounded-t-node', priorityColorMap[data.priority])} />
       )}
-      <div className="flex items-center gap-2">
-        <NodeTypeIcon type={data.type} size={16} />
-        <span className="text-node-title-lg text-text-primary truncate flex-1">{data.title}</span>
+      <div className="flex items-center gap-2 shrink-0 mb-1">
+        <NodeTypeIcon type={data.type} size={14} />
+        <span className="text-[11px] font-semibold text-text-primary truncate flex-1">{data.title}</span>
         <StatusBadge status={data.status} />
       </div>
-      {data.description && (
-        <div className="line-clamp-2 overflow-hidden">
+      {data.description ? (
+        <div className="flex-1 min-h-0 overflow-hidden">
           <MarkdownRenderer content={data.description} compact />
         </div>
+      ) : (
+        <div className="flex gap-3 mt-auto text-caption text-text-tertiary items-center">
+          {data.childCount != null && data.childCount > 0 && (
+            <span className="text-type-issue">하위 {data.childCount}</span>
+          )}
+          {data.sessionCount > 0 && <span>세션 {data.sessionCount}</span>}
+          {data.decisionCount > 0 && <span>결정 {data.decisionCount}</span>}
+          {data.fileChangeCount > 0 && <span>파일 {data.fileChangeCount}</span>}
+          {data.commentCount != null && data.commentCount > 0 && <span>댓글 {data.commentCount}</span>}
+          {data.latestPlanStatus && (
+            <span className={cn(
+              'text-[10px] px-1 py-0.5 rounded-badge ml-auto',
+              data.latestPlanStatus === 'approved' && 'bg-green-100 text-green-700',
+              data.latestPlanStatus === 'draft' && 'bg-gray-100 text-gray-600',
+              data.latestPlanStatus === 'rejected' && 'bg-red-100 text-red-700',
+              data.latestPlanStatus === 'revised' && 'bg-amber-100 text-amber-700',
+            )}>
+              {data.latestPlanStatus === 'approved' ? '\u2713 계획서' : data.latestPlanStatus === 'draft' ? '계획서' : data.latestPlanStatus === 'rejected' ? '수정필요' : '수정됨'}
+            </span>
+          )}
+          {data.assigneeName && (
+            <UserAvatar name={data.assigneeName} avatarUrl={data.assigneeAvatarUrl} size={18} className="ml-auto" />
+          )}
+        </div>
       )}
-      <div className="flex gap-3 mt-auto text-caption text-text-tertiary items-center">
-        {isIssue && data.childCount != null && data.childCount > 0 && (
-          <span className="text-type-issue">하위 {data.childCount}</span>
-        )}
-        {data.sessionCount > 0 && <span>세션 {data.sessionCount}</span>}
-        {data.decisionCount > 0 && <span>결정 {data.decisionCount}</span>}
-        {data.fileChangeCount > 0 && <span>파일 {data.fileChangeCount}</span>}
-        {data.latestPlanStatus && (
-          <span className={cn(
-            'text-[10px] px-1 py-0.5 rounded-badge ml-auto',
-            data.latestPlanStatus === 'approved' && 'bg-green-100 text-green-700',
-            data.latestPlanStatus === 'draft' && 'bg-gray-100 text-gray-600',
-            data.latestPlanStatus === 'rejected' && 'bg-red-100 text-red-700',
-            data.latestPlanStatus === 'revised' && 'bg-amber-100 text-amber-700',
-          )}>
-            {data.latestPlanStatus === 'approved' ? '\u2713 계획서' : data.latestPlanStatus === 'draft' ? '계획서' : data.latestPlanStatus === 'rejected' ? '수정필요' : '수정됨'}
-          </span>
-        )}
-      </div>
     </div>
   )
 }
 
-const handleStyleDesktop = { width: 8, height: 8, background: '#4F46E5', border: 'none' }
-const handleStyleMobile = { width: 20, height: 20, background: '#4F46E5', border: 'none' }
+const handleStyleDesktop = { width: 12, height: 12, background: '#4F46E5', border: 'none' }
+const handleStyleMobile = { width: 30, height: 30, background: '#4F46E5', border: 'none' }
 
 function HandleWithPlus({
   type,
@@ -123,27 +131,36 @@ function HandleWithPlus({
   const showPlus = type === 'source' && (isMobile || hovered)
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onTouchStart={() => setHovered(true)}
-      onDoubleClick={handleDoubleClick}
-    >
+    <>
+      <div
+        className="absolute z-10"
+        style={{
+          ...(position === Position.Right ? { right: -6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24 } : {}),
+          ...(position === Position.Bottom ? { bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 24, height: 24 } : {}),
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onTouchStart={() => setHovered(true)}
+        onDoubleClick={handleDoubleClick}
+      />
       <Handle type={type} position={position} style={handleStyle} id={id} />
       {showPlus && (
         <div
           className={cn(
             'absolute z-20 rounded-full bg-accent text-white flex items-center justify-center font-bold pointer-events-none',
-            isMobile ? 'w-6 h-6 text-xs' : 'w-4 h-4 text-[10px]',
-            position === Position.Right && 'left-2 top-1/2 -translate-y-1/2',
-            position === Position.Bottom && 'top-2 left-1/2 -translate-x-1/2'
+            isMobile ? 'w-7 h-7 text-sm' : 'w-5 h-5 text-xs',
+            position === Position.Right && 'top-1/2 -translate-y-1/2',
+            position === Position.Bottom && 'left-1/2 -translate-x-1/2'
           )}
+          style={{
+            ...(position === Position.Right ? { right: -20 } : {}),
+            ...(position === Position.Bottom ? { bottom: -20 } : {}),
+          }}
         >
           +
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -190,9 +207,9 @@ export const BaseNode = memo(function BaseNode({ id, data, selected }: NodeProps
         <ExpandedNode data={nodeData} />
       </div>
 
-      {/* Handles - target handles stay simple, source handles get "+" on hover/double-click */}
-      <Handle type="target" position={Position.Left} style={handleStyle} />
-      <HandleWithPlus type="source" position={Position.Right} nodeId={id} isMobile={isMobile} />
+      {/* Handles with explicit IDs for edge type auto-detection */}
+      <Handle type="target" position={Position.Left} style={handleStyle} id="left" />
+      <HandleWithPlus type="source" position={Position.Right} id="right" nodeId={id} isMobile={isMobile} />
       <Handle type="target" position={Position.Top} style={handleStyle} id="top" />
       <HandleWithPlus type="source" position={Position.Bottom} id="bottom" nodeId={id} isMobile={isMobile} />
     </div>

@@ -69,7 +69,7 @@ test.describe("UI: Sub-issue canvas interactions", () => {
   test("Sub-issue button not shown for non-issue type nodes", async ({ page }) => {
     // Create a task node (not issue)
     const taskNode = await createTestNode(projectId, {
-      type: "task",
+      type: "feature",
       title: "Regular Task",
       canvasX: 600,
       canvasY: 100,

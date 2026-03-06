@@ -42,12 +42,9 @@ export function StatusCircleIcon({ status, size = 16 }: { status: NodeStatus; si
 }
 
 const typeColorMap: Record<NodeType, string> = {
-  idea: 'bg-type-idea',
-  decision: 'bg-type-decision',
-  task: 'bg-type-task',
+  planning: 'bg-type-idea',
+  feature: 'bg-type-task',
   issue: 'bg-type-issue',
-  milestone: 'bg-type-milestone',
-  note: 'bg-type-note',
 }
 
 export function TypeColorBar({ type }: { type: NodeType }) {

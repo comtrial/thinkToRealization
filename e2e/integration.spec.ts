@@ -33,13 +33,13 @@ test.describe("Integration: Full user workflow", () => {
 
     // 2. Create multiple nodes
     const ideaNode = await createTestNode(project.id, {
-      type: "idea",
+      type: "planning",
       title: "Use React Flow for canvas",
       canvasX: 0,
       canvasY: 0,
     });
     const taskNode = await createTestNode(project.id, {
-      type: "task",
+      type: "feature",
       title: "Implement canvas view",
       canvasX: 300,
       canvasY: 0,
@@ -82,13 +82,13 @@ test.describe("Integration: Full user workflow", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        nodeType: "task",
+        nodeType: "feature",
         title: "Implement dagre auto-layout",
       }),
     });
     expect(promoteRes.status).toBe(201);
     const promoted = (await promoteRes.json()).data;
-    expect(promoted.newNode.type).toBe("task");
+    expect(promoted.newNode.type).toBe("feature");
     expect(promoted.newEdge.fromNodeId).toBe(taskNode.id);
 
     // 7. End session as completed
@@ -342,12 +342,9 @@ test.describe("Integration: Full user workflow", () => {
   test("Node type creation and canvas rendering", async () => {
     const project = await createTestProject("Node Types Test");
     const nodeTypes = [
-      "idea",
-      "decision",
-      "task",
+      "planning",
+      "feature",
       "issue",
-      "milestone",
-      "note",
     ] as const;
 
     for (let i = 0; i < nodeTypes.length; i++) {
@@ -363,7 +360,7 @@ test.describe("Integration: Full user workflow", () => {
     // Verify all nodes appear in canvas
     const canvasRes = await fetch(`${API}/projects/${project.id}/canvas`);
     const canvas = (await canvasRes.json()).data;
-    expect(canvas.nodes.length).toBe(6);
+    expect(canvas.nodes.length).toBe(3);
   });
 
   test("Multiple decisions on same node", async () => {

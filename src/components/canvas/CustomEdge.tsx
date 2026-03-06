@@ -4,12 +4,19 @@ import { BaseEdge, getBezierPath, getSmoothStepPath, EdgeLabelRenderer } from '@
 import type { EdgeProps } from '@xyflow/react'
 import type { EdgeType } from '@/lib/types/api'
 
-const edgeStyles: Record<EdgeType, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
+const edgeStyles: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
+  parent_child: { stroke: '#6366F1', strokeWidth: 2 },
+  related: { stroke: '#94A3B8', strokeWidth: 1.5, strokeDasharray: '6 3' },
+  // Legacy types (backward compat)
   sequence: { stroke: '#94A3B8', strokeWidth: 2 },
   dependency: { stroke: '#94A3B8', strokeWidth: 2, strokeDasharray: '6 3' },
-  related: { stroke: '#CBD5E1', strokeWidth: 1.5 },
   regression: { stroke: '#F87171', strokeWidth: 2 },
   branch: { stroke: '#94A3B8', strokeWidth: 1.5 },
+}
+
+const RELATIONSHIP_LABELS: Record<string, string> = {
+  parent_child: '상위-하위',
+  related: '연관',
 }
 
 export function CustomEdge({
@@ -24,9 +31,9 @@ export function CustomEdge({
   selected,
   markerEnd,
 }: EdgeProps) {
-  const edgeType = (data?.type as EdgeType) || 'sequence'
+  const edgeType = (data?.type as EdgeType) || 'parent_child'
   const label = data?.label as string | undefined
-  const style = edgeStyles[edgeType] || edgeStyles.sequence
+  const style = edgeStyles[edgeType] || edgeStyles.parent_child
 
   const pathFn = edgeType === 'branch' ? getSmoothStepPath : getBezierPath
   const [edgePath, labelX, labelY] = pathFn({
@@ -37,6 +44,8 @@ export function CustomEdge({
     sourcePosition,
     targetPosition,
   })
+
+  const displayLabel = label || RELATIONSHIP_LABELS[edgeType]
 
   return (
     <>
@@ -50,7 +59,7 @@ export function CustomEdge({
           strokeDasharray: style.strokeDasharray,
         }}
       />
-      {label && (
+      {displayLabel && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -60,7 +69,7 @@ export function CustomEdge({
             }}
             className="text-badge text-text-tertiary bg-background px-1.5 py-0.5 rounded-badge border border-border"
           >
-            {label}
+            {displayLabel}
           </div>
         </EdgeLabelRenderer>
       )}

@@ -21,7 +21,6 @@ test.describe("Project Management", () => {
   test("create new project via sidebar + button", async ({ page }) => {
     const ts = Date.now();
     const uniqueTitle = `E2E Sidebar ${ts}`;
-    const uniqueSlug = `__e2e__sidebar-${ts}`;
 
     await page.goto("/");
     await page.waitForLoadState("networkidle");
@@ -34,10 +33,8 @@ test.describe("Project Management", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("새 프로젝트");
 
-    // Fill out the form with e2e-prefixed slug for cleanup
+    // Fill out the form (slug is auto-generated from title)
     await page.getByTestId("project-title-input").fill(uniqueTitle);
-    await page.getByTestId("project-slug-input").fill(uniqueSlug);
-    await page.getByTestId("project-dir-input").fill("/tmp/test-project");
 
     // Submit
     await page.getByTestId("create-project-submit").click();

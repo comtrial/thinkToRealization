@@ -10,12 +10,9 @@ import { ko } from 'date-fns/locale'
 import type { NodeResponse, NodeType } from '@/lib/types/api'
 
 const typeColorBarMap: Record<NodeType, string> = {
-  idea: 'bg-type-idea',
-  decision: 'bg-type-decision',
-  task: 'bg-type-task',
+  planning: 'bg-type-idea',
+  feature: 'bg-type-task',
   issue: 'bg-type-issue',
-  milestone: 'bg-type-milestone',
-  note: 'bg-type-note',
 }
 
 interface DashboardCardProps {

@@ -9,22 +9,17 @@ import { ko } from 'date-fns/locale'
 import type { NodeResponse, NodeType } from '@/lib/types/api'
 
 const typeAbbr: Record<NodeType, string> = {
-  idea: 'IDE', decision: 'DEC', task: 'TSK',
-  issue: 'ISS', milestone: 'MIL', note: 'NOT',
+  planning: 'PLN', feature: 'FEA', issue: 'ISS',
 }
 
 const typeTagStyles: Record<NodeType, string> = {
-  idea: 'bg-type-idea/15 text-type-idea',
-  decision: 'bg-type-decision/15 text-type-decision',
-  task: 'bg-type-task/15 text-type-task',
+  planning: 'bg-type-idea/15 text-type-idea',
+  feature: 'bg-type-task/15 text-type-task',
   issue: 'bg-type-issue/15 text-type-issue',
-  milestone: 'bg-type-milestone/15 text-type-milestone',
-  note: 'bg-type-note/15 text-type-note',
 }
 
 const typeLabels: Record<NodeType, string> = {
-  idea: 'Idea', decision: 'Decision', task: 'Task',
-  issue: 'Issue', milestone: 'Milestone', note: 'Note',
+  planning: '기획', feature: '기능개발', issue: '이슈',
 }
 
 export function IssueRow({ node }: { node: NodeResponse }) {

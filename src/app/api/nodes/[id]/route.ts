@@ -19,6 +19,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       where: { id },
       include: {
         ...nodeWithCounts,
+        sessions: { orderBy: { startedAt: "desc" } },
         decisions: { orderBy: { createdAt: "desc" } },
         outEdges: true,
         inEdges: true,
@@ -26,19 +27,17 @@ export async function GET(_req: NextRequest, { params }: Params) {
     });
     if (!node) return notFound("Node", id);
 
-    const sessions = await prisma.session.findMany({
-      where: { nodeId: id },
-      orderBy: { startedAt: "desc" },
-    });
-
-    const enriched = toNodeResponse(node);
+    // nodeWithCounts.sessions (take:1) is overridden by full sessions above
+    const enriched = toNodeResponse(node as Parameters<typeof toNodeResponse>[0]);
 
     return successResponse({
       ...enriched,
-      sessions,
+      sessions: node.sessions,
       decisions: node.decisions,
       outEdges: node.outEdges,
       inEdges: node.inEdges,
+    }, {
+      headers: { "Cache-Control": "private, max-age=3, stale-while-revalidate=10" }
     });
   } catch (error) {
     return handlePrismaError(error);

@@ -6,7 +6,9 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
-  const client = new PrismaClient();
+  const client = new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query", "warn", "error"] : ["warn", "error"],
+  });
 
   // SQLite-only performance pragmas (skip for PostgreSQL)
   if (isSQLite()) {
@@ -21,7 +23,8 @@ function createPrismaClient(): PrismaClient {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
+// Cache in ALL environments — critical for Vercel serverless to reuse connection
+if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma;
 }
 

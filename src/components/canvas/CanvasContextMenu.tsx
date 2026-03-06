@@ -2,7 +2,7 @@
 
 import { type MutableRefObject, useState, useRef, useCallback, useEffect } from 'react'
 import * as ContextMenu from '@radix-ui/react-context-menu'
-import { Lightbulb, Wrench, Zap, Bug, Flag, StickyNote } from 'lucide-react'
+import { Lightbulb, Code2, Bug } from 'lucide-react'
 import { useMobile } from '@/hooks/useMobile'
 import type { NodeType } from '@/lib/types/api'
 
@@ -14,12 +14,9 @@ interface CanvasContextMenuProps {
 }
 
 const nodeTypeOptions: { type: NodeType; label: string; icon: React.ReactNode }[] = [
-  { type: 'idea', label: '새 아이디어', icon: <Lightbulb size={14} /> },
-  { type: 'task', label: '새 작업', icon: <Wrench size={14} /> },
-  { type: 'decision', label: '새 결정', icon: <Zap size={14} /> },
+  { type: 'planning', label: '새 기획', icon: <Lightbulb size={14} /> },
+  { type: 'feature', label: '새 기능개발', icon: <Code2 size={14} /> },
   { type: 'issue', label: '새 이슈', icon: <Bug size={14} /> },
-  { type: 'milestone', label: '새 마일스톤', icon: <Flag size={14} /> },
-  { type: 'note', label: '새 메모', icon: <StickyNote size={14} /> },
 ]
 
 export { nodeTypeOptions }

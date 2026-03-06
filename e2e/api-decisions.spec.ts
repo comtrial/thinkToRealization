@@ -46,12 +46,12 @@ test.describe("API: Decisions CRUD", () => {
     const res = await fetch(`${API}/decisions/${decision.id}/promote`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nodeType: "task", title: "Promoted Task" }),
+      body: JSON.stringify({ nodeType: "feature", title: "Promoted Feature" }),
     });
     const json = await res.json();
     expect(res.status).toBe(201);
-    expect(json.data.newNode.title).toBe("Promoted Task");
-    expect(json.data.newNode.type).toBe("task");
+    expect(json.data.newNode.title).toBe("Promoted Feature");
+    expect(json.data.newNode.type).toBe("feature");
     expect(json.data.newEdge.fromNodeId).toBe(nodeId);
     expect(json.data.newEdge.toNodeId).toBe(json.data.newNode.id);
     expect(json.data.decision.promotedToNodeId).toBe(json.data.newNode.id);

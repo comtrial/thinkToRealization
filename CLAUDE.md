@@ -452,3 +452,10 @@ Shadow:  elevation-1 ~ elevation-4
 - **Debounced auto-save 패턴**: `useRef`로 debounce timer 관리, `useCallback([selectedNode])`로 save 함수 메모이제이션, 500ms debounce가 로컬 SQLite에 적합
 - **ReactFlow onConnectEnd**: 핸들에서 빈 공간으로 드래그 시 `onConnectEnd`에서 `target.classList.contains('react-flow__handle')` 체크로 기존 연결 vs 새 노드 생성 구분
 - **Decisions API 정렬**: `createdAt: "desc"` — 테스트 시 생성 순서와 표시 순서가 반대임에 주의
+- **Zustand useShallow 패턴**: 전체 스토어 destructuring 금지. `useShallow((s) => ({ data1: s.data1 }))` + 함수는 `useCanvasStore((s) => s.fn)` 개별 셀렉터. 전체 구독은 무관한 상태 변경에도 리렌더 유발
+- **Viewport 콜백 안정화**: `useCallback` deps에 자주 바뀌는 상태(isZoomedIn 등) 넣지 말고 `useRef`로 관리. 콜백 무한 재생성 방지
+- **nodeWithCounts 분리**: Dashboard/Canvas는 `nodeCountsOnly` (카운트만), Detail은 `nodeWithCounts` (세션/플랜 데이터 포함). 서브쿼리 66% 절감
+- **successResponse headers**: `successResponse(data, { headers: { "Cache-Control": "..." } })` 형태로 캐시 헤더 전달. GET 라우트에만 적용, PUT/POST/DELETE에는 미적용
+- **N+1 쿼리 방지 패턴**: 루프 내 개별 findUnique 대신, 프로젝트 전체 노드를 한번에 findMany → Map으로 인메모리 조회 (context-assembler)
+- **Vercel 리전 설정**: vercel.json의 `regions`를 Supabase와 동일 리전으로 (bom1=Mumbai). 크로스리전 지연 제거
+- **PrismaClient globalThis 캐싱**: production 포함 모든 환경에서 `globalForPrisma.prisma = prisma` 설정 필수. Vercel 서버리스에서 매 요청 새 클라이언트 방지

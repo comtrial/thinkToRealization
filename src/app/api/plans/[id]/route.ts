@@ -18,6 +18,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
       content: JSON.parse(plan.content),
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),
+    }, {
+      headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" }
     });
   } catch (error) {
     return handlePrismaError(error);

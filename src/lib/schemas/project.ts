@@ -2,9 +2,9 @@ import { z } from "zod";
 
 export const createProjectSchema = z.object({
   title: z.string().min(1).max(200),
-  slug: z.string().min(1).max(100).regex(/^[a-z0-9_-]+$/, "Slug must be lowercase alphanumeric with hyphens or underscores"),
+  slug: z.string().min(1).max(100).regex(/^[a-z0-9_-]+$/, "Slug must be lowercase alphanumeric with hyphens or underscores").optional(),
   description: z.string().max(2000).optional(),
-  projectDir: z.string().min(1),
+  projectDir: z.string().optional().default(""),
   claudeMdPath: z.string().optional(),
 });
 

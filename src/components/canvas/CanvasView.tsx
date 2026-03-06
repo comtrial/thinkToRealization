@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -9,10 +10,12 @@ import {
   Background,
   BackgroundVariant,
   useReactFlow,
+  reconnectEdge,
   type Viewport,
   type Node,
   type OnMoveEnd,
   type OnConnectEnd,
+  type OnReconnect,
   MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -25,34 +28,60 @@ import { useMobile } from '@/hooks/useMobile'
 import { BaseNode } from './BaseNode'
 import { CustomEdge } from './CustomEdge'
 import { CanvasContextMenu, nodeTypeOptions } from './CanvasContextMenu'
-import type { NodeType } from '@/lib/types/api'
+import type { NodeType, EdgeType } from '@/lib/types/api'
 
 const nodeTypes = { baseNode: BaseNode }
-const edgeTypes = { sequence: CustomEdge, dependency: CustomEdge, related: CustomEdge, regression: CustomEdge, branch: CustomEdge }
+const edgeTypes = {
+  parent_child: CustomEdge,
+  related: CustomEdge,
+  // Legacy types
+  sequence: CustomEdge,
+  dependency: CustomEdge,
+  regression: CustomEdge,
+  branch: CustomEdge,
+}
 const defaultEdgeOptions = { markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#94A3B8' } }
 
 const SAVE_DEBOUNCE_MS = 500
 
+/** Determine edge type from source handle position */
+function edgeTypeFromHandle(sourceHandle: string | null | undefined): EdgeType {
+  return sourceHandle === 'bottom' ? 'related' : 'parent_child'
+}
+
+/** Determine sourceHandle/targetHandle from edge type */
+export function handlesFromEdgeType(type: string): { sourceHandle: string; targetHandle: string } {
+  if (type === 'related') return { sourceHandle: 'bottom', targetHandle: 'top' }
+  // parent_child and all legacy types → horizontal
+  return { sourceHandle: 'right', targetHandle: 'left' }
+}
+
 function CanvasInner({ projectId }: { projectId: string }) {
-  const {
-    nodes,
-    edges,
-    initialViewport,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    isZoomedIn,
-    setIsZoomedIn,
-    loadCanvas,
-    savePositions,
-    saveViewport,
-    setNodes,
-    addNode,
-    pushSnapshot,
-    setEdges,
-  } = useCanvasStore()
+  // Data selectors — only re-render when these values change
+  const { nodes, edges, initialViewport, isZoomedIn } = useCanvasStore(
+    useShallow((s) => ({
+      nodes: s.nodes,
+      edges: s.edges,
+      initialViewport: s.initialViewport,
+      isZoomedIn: s.isZoomedIn,
+    }))
+  )
+
+  // Stable function references — no re-render on subscription
+  const onNodesChange = useCanvasStore((s) => s.onNodesChange)
+  const onEdgesChange = useCanvasStore((s) => s.onEdgesChange)
+  const onConnect = useCanvasStore((s) => s.onConnect)
+  const setIsZoomedIn = useCanvasStore((s) => s.setIsZoomedIn)
+  const loadCanvas = useCanvasStore((s) => s.loadCanvas)
+  const savePositions = useCanvasStore((s) => s.savePositions)
+  const saveViewport = useCanvasStore((s) => s.saveViewport)
+  const setNodes = useCanvasStore((s) => s.setNodes)
+  const addNode = useCanvasStore((s) => s.addNode)
+  const pushSnapshot = useCanvasStore((s) => s.pushSnapshot)
+  const setEdges = useCanvasStore((s) => s.setEdges)
 
   const openPanel = useUIStore((s) => s.openPanel)
+  const openPanelFull = useUIStore((s) => s.openPanelFull)
   const isMobile = useMobile()
   const [fabOpen, setFabOpen] = useState(false)
   const { screenToFlowPosition, fitView, getViewport } = useReactFlow()
@@ -64,14 +93,17 @@ function CanvasInner({ projectId }: { projectId: string }) {
     loadCanvas(projectId)
   }, [projectId, loadCanvas])
 
+  const isZoomedInRef = useRef(isZoomedIn)
+  useEffect(() => { isZoomedInRef.current = isZoomedIn }, [isZoomedIn])
+
   const handleViewportChange = useCallback(
     (viewport: Viewport) => {
       const newIsZoomedIn = viewport.zoom > 0.8
-      if (newIsZoomedIn !== isZoomedIn) {
+      if (newIsZoomedIn !== isZoomedInRef.current) {
         setIsZoomedIn(newIsZoomedIn)
       }
     },
-    [isZoomedIn, setIsZoomedIn]
+    [setIsZoomedIn]
   )
 
   const handleNodesDelete = useCallback(
@@ -124,6 +156,13 @@ function CanvasInner({ projectId }: { projectId: string }) {
     [openPanel]
   )
 
+  const handleNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      openPanelFull(node.id)
+    },
+    [openPanelFull]
+  )
+
   const handleMoveEnd: OnMoveEnd = useCallback(
     (_event, viewport) => {
       saveViewport(projectId, viewport)
@@ -139,7 +178,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type,
-            title: `새 ${type === 'idea' ? '아이디어' : type === 'task' ? '작업' : type === 'decision' ? '결정' : type === 'issue' ? '이슈' : type === 'milestone' ? '마일스톤' : '메모'}`,
+            title: `새 ${type === 'planning' ? '기획' : type === 'feature' ? '기능개발' : '이슈'}`,
             canvasX: position.x,
             canvasY: position.y,
           }),
@@ -182,8 +221,13 @@ function CanvasInner({ projectId }: { projectId: string }) {
         y: sourceNode.position.y + offset.y,
       }
 
-      const newNode = await handleCreateNode('task', position)
+      const sourceType = (sourceNode.data as { type: string }).type as NodeType
+      const newNode = await handleCreateNode(sourceType, position)
       if (!newNode) return
+
+      // Auto-detect edge type from handle position
+      const edgeType = edgeTypeFromHandle(handlePosition === 'right' ? 'right' : 'bottom')
+      const handles = handlesFromEdgeType(edgeType)
 
       try {
         const res = await fetch('/api/edges', {
@@ -192,7 +236,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
           body: JSON.stringify({
             fromNodeId: nodeId,
             toNodeId: newNode.id,
-            type: 'sequence',
+            type: edgeType,
           }),
         })
         if (res.ok) {
@@ -204,6 +248,8 @@ function CanvasInner({ projectId }: { projectId: string }) {
               source: edgeData.fromNodeId,
               target: edgeData.toNodeId,
               type: edgeData.type,
+              sourceHandle: handles.sourceHandle,
+              targetHandle: handles.targetHandle,
               data: edgeData,
             },
           ])
@@ -244,8 +290,12 @@ function CanvasInner({ projectId }: { projectId: string }) {
         y: mouseEvent.clientY,
       })
 
-      const newNode = await handleCreateNode('task', position)
+      const newNode = await handleCreateNode('feature', position)
       if (!newNode) return
+
+      // Auto-detect edge type from source handle
+      const edgeType = edgeTypeFromHandle(connecting.handleId)
+      const handles = handlesFromEdgeType(edgeType)
 
       // Create edge from source to new node
       try {
@@ -255,7 +305,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
           body: JSON.stringify({
             fromNodeId: connecting.nodeId,
             toNodeId: newNode.id,
-            type: 'sequence',
+            type: edgeType,
           }),
         })
         if (res.ok) {
@@ -267,6 +317,8 @@ function CanvasInner({ projectId }: { projectId: string }) {
               source: edgeData.fromNodeId,
               target: edgeData.toNodeId,
               type: edgeData.type,
+              sourceHandle: handles.sourceHandle,
+              targetHandle: handles.targetHandle,
               data: edgeData,
             },
           ])
@@ -276,6 +328,83 @@ function CanvasInner({ projectId }: { projectId: string }) {
       }
     },
     [screenToFlowPosition, handleCreateNode, setEdges]
+  )
+
+  // Edge reconnection handler
+  const handleReconnect: OnReconnect = useCallback(
+    (oldEdge, newConnection) => {
+      pushSnapshot()
+
+      // Determine new edge type from source handle
+      const newType = edgeTypeFromHandle(newConnection.sourceHandle)
+      const handles = handlesFromEdgeType(newType)
+
+      // Apply reconnection locally
+      const updatedEdges = reconnectEdge(oldEdge, newConnection, useCanvasStore.getState().edges)
+      // Set correct type and handles on the reconnected edge
+      const finalEdges = updatedEdges.map((e) => {
+        if (
+          e.source === newConnection.source &&
+          e.target === newConnection.target &&
+          (e.sourceHandle === newConnection.sourceHandle || e.id === oldEdge.id)
+        ) {
+          return {
+            ...e,
+            type: newType,
+            sourceHandle: handles.sourceHandle,
+            targetHandle: handles.targetHandle,
+            data: { ...e.data, type: newType, fromNodeId: newConnection.source, toNodeId: newConnection.target },
+          }
+        }
+        return e
+      })
+      setEdges(finalEdges)
+
+      // Persist: delete old + create new if source/target changed, otherwise just update type
+      const sourceChanged = oldEdge.source !== newConnection.source || oldEdge.target !== newConnection.target
+      const oldType = (oldEdge.data as Record<string, unknown>)?.type as string
+      const typeChanged = oldType !== newType
+
+      if (sourceChanged) {
+        // Delete old edge, create new one
+        fetch(`/api/edges/${oldEdge.id}`, { method: 'DELETE' })
+          .then(() =>
+            fetch('/api/edges', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fromNodeId: newConnection.source,
+                toNodeId: newConnection.target,
+                type: newType,
+              }),
+            })
+          )
+          .then(async (res) => {
+            if (res.ok) {
+              const { data } = await res.json()
+              // Update local edge with server ID
+              setEdges(
+                useCanvasStore.getState().edges.map((e) =>
+                  e.source === newConnection.source &&
+                  e.target === newConnection.target &&
+                  e.type === newType
+                    ? { ...e, id: data.id, data }
+                    : e
+                )
+              )
+            }
+          })
+          .catch((err) => console.error('Failed to reconnect edge:', err))
+      } else if (typeChanged) {
+        // Same endpoints, just type changed (handle position change on same node)
+        fetch(`/api/edges/${oldEdge.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: newType }),
+        }).catch((err) => console.error('Failed to update edge type:', err))
+      }
+    },
+    [pushSnapshot, setEdges]
   )
 
   const handleAutoLayout = useCallback(() => {
@@ -347,7 +476,11 @@ function CanvasInner({ projectId }: { projectId: string }) {
           onViewportChange={handleViewportChange}
           onNodeDragStop={handleNodeDragStop}
           onNodeClick={handleNodeClick}
+          onNodeDoubleClick={handleNodeDoubleClick}
           onMoveEnd={handleMoveEnd}
+          onReconnect={handleReconnect}
+          edgesReconnectable
+          reconnectRadius={20}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           defaultEdgeOptions={defaultEdgeOptions}
@@ -369,8 +502,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
               nodeColor={(node) => {
                 const type = (node.data as Record<string, unknown>)?.type as string
                 const colors: Record<string, string> = {
-                  idea: '#FBBF24', task: '#3B82F6', decision: '#8B5CF6',
-                  issue: '#F87171', milestone: '#10B981', note: '#A3A3A3',
+                  planning: '#FBBF24', feature: '#3B82F6', issue: '#F87171',
                 }
                 return colors[type] || '#A3A3A3'
               }}

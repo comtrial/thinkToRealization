@@ -19,7 +19,7 @@ test.describe("UX Improvements: Side Panel", () => {
 
     const node = await createTestNode(projectId, {
       title: "UX Test Node",
-      type: "task",
+      type: "feature",
       description: "**Bold text** and *italic text*",
       canvasX: 200,
       canvasY: 200,
@@ -137,7 +137,7 @@ test.describe("UX Improvements: Canvas", () => {
     const project = await createTestProject("MiniMap Project");
     await createTestNode(project.id, {
       title: "Node A",
-      type: "task",
+      type: "feature",
       canvasX: 100,
       canvasY: 100,
     });
@@ -162,7 +162,7 @@ test.describe("UX Improvements: Canvas", () => {
     const project = await createTestProject("Handle Drag Project");
     await createTestNode(project.id, {
       title: "Source Node",
-      type: "task",
+      type: "feature",
       canvasX: 200,
       canvasY: 200,
     });

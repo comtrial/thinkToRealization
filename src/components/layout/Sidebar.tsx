@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ListTodo, Plus, ChevronDown, Check, FolderOpen, X, Bug, Inbox, LayoutGrid, MoreHorizontal } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useUIStore } from '@/stores/ui-store'
@@ -56,7 +56,16 @@ export function Sidebar() {
   const [issueStatusFilter, setIssueStatusFilter] = useState<NodeStatus | 'all'>('all')
   const isMobile = useMobile()
   const canvasNodes = useCanvasStore((s) => s.nodes)
+  const loadCanvas = useCanvasStore((s) => s.loadCanvas)
+  const loadedProjectId = useCanvasStore((s) => s.loadedProjectId)
   const isCollapsed = !isMobile && !sidebarOpen
+
+  // Ensure canvas data is loaded when sidebar needs it
+  useEffect(() => {
+    if (currentProject && loadedProjectId !== currentProject.id) {
+      loadCanvas(currentProject.id)
+    }
+  }, [currentProject, loadedProjectId, loadCanvas])
 
   const issueNodes = useMemo(() => {
     const issues = canvasNodes.filter((n) => {

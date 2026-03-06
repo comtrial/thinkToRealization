@@ -17,7 +17,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
       },
     });
     if (!project) return notFound("Project", id);
-    return successResponse(project);
+    return successResponse(project, {
+      headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" }
+    });
   } catch (error) {
     return handlePrismaError(error);
   }

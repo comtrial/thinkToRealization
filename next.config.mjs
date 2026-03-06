@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: { unoptimized: true },
   experimental: {
-    // node-pty is server-side only (exclude from bundling)
     serverComponentsExternalPackages: ["node-pty"],
+    optimizePackageImports: ["lucide-react", "date-fns"],
   },
 };
 

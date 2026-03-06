@@ -20,7 +20,7 @@ test.describe("UI: Side panel interactions", () => {
 
     const node = await createTestNode(projectId, {
       title: "Panel Test Node",
-      type: "task",
+      type: "feature",
       canvasX: 0,
       canvasY: 0,
     });
@@ -46,11 +46,10 @@ test.describe("UI: Side panel interactions", () => {
     await expect(panel).toContainText("Panel Test Node", { timeout: 5000 });
   });
 
-  test("Side panel has tabs: Overview, Sessions, Files", async ({ page }) => {
+  test("Side panel has tabs: Overview, Sessions", async ({ page }) => {
     const panel = page.getByTestId("side-panel");
     await expect(panel.getByText("개요")).toBeVisible();
     await expect(panel.getByText("세션")).toBeVisible();
-    await expect(panel.getByText("파일")).toBeVisible();
   });
 
   test("Overview tab shows node property selectors", async ({ page }) => {
@@ -88,9 +87,6 @@ test.describe("UI: Side panel interactions", () => {
     const panel = page.getByTestId("side-panel");
 
     await panel.getByText("세션").click();
-    await page.waitForTimeout(500);
-
-    await panel.getByText("파일").click();
     await page.waitForTimeout(500);
 
     await panel.getByText("개요").click();

@@ -51,8 +51,8 @@ export function CommandPalette() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'task' as NodeType,
-          title: '새 작업',
+          type: 'feature' as NodeType,
+          title: '새 기능개발',
           canvasX: 100 + Math.random() * 200,
           canvasY: 100 + Math.random() * 200,
         }),

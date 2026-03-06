@@ -2,14 +2,90 @@
 
 import { useUIStore } from '@/stores/ui-store'
 import { PanelTabs } from './PanelTabs'
-import { NodeDetailPanel } from './NodeDetailPanel'
+import { NodeDetailPanel, NodeProperties } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
 import { useNodeStore } from '@/stores/node-store'
 import { X, Maximize2, Minimize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useMobile } from '@/hooks/useMobile'
+import type { SessionResponse } from '@/lib/types/api'
 // ESC key handling is centralized in useKeyboardShortcuts
+
+function SessionsSection({
+  sessions,
+  viewingSessionId,
+  setViewingSessionId,
+}: {
+  sessions: SessionResponse[]
+  viewingSessionId: string | null
+  setViewingSessionId: (id: string | null) => void
+}) {
+  if (viewingSessionId) {
+    return (
+      <div>
+        <button
+          onClick={() => setViewingSessionId(null)}
+          className="text-caption text-accent hover:underline mb-3"
+        >
+          &larr; 세션 목록으로
+        </button>
+        <SessionLogViewer sessionId={viewingSessionId} />
+      </div>
+    )
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <p className="text-caption text-text-tertiary">
+        아직 세션이 없습니다.
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {sessions.map((session) => (
+        <div
+          key={session.id}
+          className="p-3 rounded-node border border-border hover:bg-surface-hover transition-colors"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-node-title-sm text-text-primary">
+              {session.title || '제목 없는 세션'}
+            </span>
+            <span
+              className={[
+                'text-badge px-1.5 py-0.5 rounded-badge',
+                session.status === 'active'
+                  ? 'bg-green-100 text-green-700'
+                  : session.status === 'paused'
+                  ? 'bg-yellow-100 text-yellow-700'
+                  : 'bg-gray-100 text-gray-600',
+              ].join(' ')}
+            >
+              {session.status === 'active'
+                ? '진행 중'
+                : session.status === 'paused'
+                ? '일시정지'
+                : '완료'}
+            </span>
+          </div>
+          <div className="text-caption text-text-tertiary mb-2">
+            {new Date(session.startedAt).toLocaleDateString('ko-KR')}
+            {session.endedAt && ` - ${new Date(session.endedAt).toLocaleDateString('ko-KR')}`}
+          </div>
+          <button
+            onClick={() => setViewingSessionId(session.id)}
+            className="text-caption text-accent hover:underline"
+          >
+            로그 보기
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function SidePanel() {
   const panelMode = useUIStore((s) => s.panelMode)
@@ -53,7 +129,7 @@ export function SidePanel() {
           style={{ top: 'var(--header-height)' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
+          <div className="flex items-center justify-between px-4 h-14 border-b border-border/50 shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <button
                 data-testid="panel-close-btn"
@@ -90,75 +166,20 @@ export function SidePanel() {
               </div>
             )}
             {panelTab === 'overview' && !isLoading && selectedNode && (
-              <NodeDetailPanel />
+              <>
+                <NodeDetailPanel />
+                <div className="px-4 pb-4">
+                  <NodeProperties />
+                </div>
+              </>
             )}
             {panelTab === 'sessions' && (
               <div className="p-4 flex flex-col gap-3">
-                {viewingSessionId ? (
-                  <div>
-                    <button
-                      onClick={() => setViewingSessionId(null)}
-                      className="text-caption text-accent hover:underline mb-3 min-h-[44px]"
-                    >
-                      &larr; 세션 목록으로
-                    </button>
-                    <SessionLogViewer sessionId={viewingSessionId} />
-                  </div>
-                ) : (
-                  <>
-                    {sessions.length === 0 ? (
-                      <p className="text-caption text-text-tertiary">
-                        아직 세션이 없습니다.
-                      </p>
-                    ) : (
-                      sessions.map((session) => (
-                        <div
-                          key={session.id}
-                          className="p-3 rounded-node border border-border hover:bg-surface-hover transition-colors"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-node-title-sm text-text-primary">
-                              {session.title || '제목 없는 세션'}
-                            </span>
-                            <span
-                              className={[
-                                'text-badge px-1.5 py-0.5 rounded-badge',
-                                session.status === 'active'
-                                  ? 'bg-green-100 text-green-700'
-                                  : session.status === 'paused'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-gray-100 text-gray-600',
-                              ].join(' ')}
-                            >
-                              {session.status === 'active'
-                                ? '진행 중'
-                                : session.status === 'paused'
-                                ? '일시정지'
-                                : '완료'}
-                            </span>
-                          </div>
-                          <div className="text-caption text-text-tertiary mb-2">
-                            {new Date(session.startedAt).toLocaleDateString('ko-KR')}
-                            {session.endedAt && ` - ${new Date(session.endedAt).toLocaleDateString('ko-KR')}`}
-                          </div>
-                          <button
-                            onClick={() => setViewingSessionId(session.id)}
-                            className="text-caption text-accent hover:underline min-h-[44px]"
-                          >
-                            로그 보기
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-            {panelTab === 'files' && (
-              <div className="p-4">
-                <p className="text-caption text-text-tertiary">
-                  세션에서 변경된 파일 목록이 여기에 표시됩니다.
-                </p>
+                <SessionsSection
+                  sessions={sessions}
+                  viewingSessionId={viewingSessionId}
+                  setViewingSessionId={setViewingSessionId}
+                />
               </div>
             )}
             {panelTab === 'plans' && <PlanTab />}
@@ -191,7 +212,7 @@ export function SidePanel() {
         ].join(' ')}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-4 h-14 border-b border-border/50 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <button
               data-testid="panel-close-btn"
@@ -217,90 +238,67 @@ export function SidePanel() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <PanelTabs />
+        {/* Tabs — hidden in full mode */}
+        <PanelTabs hidden={panelMode === 'full'} />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {panelTab === 'overview' && isLoading && (
+        {panelMode === 'full' ? (
+          /* Full mode: 2-column layout */
+          isLoading ? (
             <div className="flex items-center justify-center py-12">
               <span className="text-caption text-text-tertiary">로딩 중...</span>
             </div>
-          )}
-          {panelTab === 'overview' && !isLoading && selectedNode && (
-            <NodeDetailPanel />
-          )}
-          {panelTab === 'sessions' && (
-            <div className="p-4 flex flex-col gap-3">
-              {viewingSessionId ? (
-                <div>
-                  <button
-                    onClick={() => setViewingSessionId(null)}
-                    className="text-caption text-accent hover:underline mb-3"
-                  >
-                    &larr; 세션 목록으로
-                  </button>
-                  <SessionLogViewer sessionId={viewingSessionId} />
+          ) : selectedNode ? (
+            <div className="flex-1 flex overflow-hidden">
+              {/* Main content - left column */}
+              <div className="flex-1 overflow-y-auto">
+                <NodeDetailPanel />
+                {/* Sessions inline */}
+                <div className="px-4 pb-4">
+                  <label className="text-caption text-text-tertiary mb-2 block">
+                    세션 ({sessions.length})
+                  </label>
+                  <SessionsSection
+                    sessions={sessions}
+                    viewingSessionId={viewingSessionId}
+                    setViewingSessionId={setViewingSessionId}
+                  />
                 </div>
-              ) : (
-                <>
-                  {sessions.length === 0 ? (
-                    <p className="text-caption text-text-tertiary">
-                      아직 세션이 없습니다.
-                    </p>
-                  ) : (
-                    sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="p-3 rounded-node border border-border hover:bg-surface-hover transition-colors"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-node-title-sm text-text-primary">
-                            {session.title || '제목 없는 세션'}
-                          </span>
-                          <span
-                            className={[
-                              'text-badge px-1.5 py-0.5 rounded-badge',
-                              session.status === 'active'
-                                ? 'bg-green-100 text-green-700'
-                                : session.status === 'paused'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-gray-100 text-gray-600',
-                            ].join(' ')}
-                          >
-                            {session.status === 'active'
-                              ? '진행 중'
-                              : session.status === 'paused'
-                              ? '일시정지'
-                              : '완료'}
-                          </span>
-                        </div>
-                        <div className="text-caption text-text-tertiary mb-2">
-                          {new Date(session.startedAt).toLocaleDateString('ko-KR')}
-                          {session.endedAt && ` - ${new Date(session.endedAt).toLocaleDateString('ko-KR')}`}
-                        </div>
-                        <button
-                          onClick={() => setViewingSessionId(session.id)}
-                          className="text-caption text-accent hover:underline"
-                        >
-                          로그 보기
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </>
-              )}
+              </div>
+              {/* Properties sidebar - right column */}
+              <div className="w-[240px] border-l border-border/50 p-4 overflow-y-auto shrink-0">
+                <NodeProperties />
+              </div>
             </div>
-          )}
-          {panelTab === 'files' && (
-            <div className="p-4">
-              <p className="text-caption text-text-tertiary">
-                세션에서 변경된 파일 목록이 여기에 표시됩니다.
-              </p>
-            </div>
-          )}
-          {panelTab === 'plans' && <PlanTab />}
-        </div>
+          ) : null
+        ) : (
+          /* Peek mode: tab-based layout */
+          <div className="flex-1 overflow-y-auto">
+            {panelTab === 'overview' && isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <span className="text-caption text-text-tertiary">로딩 중...</span>
+              </div>
+            )}
+            {panelTab === 'overview' && !isLoading && selectedNode && (
+              <>
+                <NodeDetailPanel />
+                <div className="px-4 pb-4">
+                  <NodeProperties />
+                </div>
+              </>
+            )}
+            {panelTab === 'sessions' && (
+              <div className="p-4 flex flex-col gap-3">
+                <SessionsSection
+                  sessions={sessions}
+                  viewingSessionId={viewingSessionId}
+                  setViewingSessionId={setViewingSessionId}
+                />
+              </div>
+            )}
+            {panelTab === 'plans' && <PlanTab />}
+          </div>
+        )}
       </aside>
     </>
   )

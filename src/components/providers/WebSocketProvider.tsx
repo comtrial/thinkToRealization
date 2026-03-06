@@ -83,14 +83,17 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       if (wsRef.current !== ws) return
       if (intentionalClose.current) return
 
+      // Never reconnect in deployed (HTTPS) environments
+      if (typeof window !== 'undefined' && window.location.protocol === 'https:') return
+
       // Stop reconnecting after max attempts (e.g. no WS server in deployed env)
-      const MAX_RECONNECT_ATTEMPTS = 5
+      const MAX_RECONNECT_ATTEMPTS = 3
       if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
         console.info('[WS] Max reconnect attempts reached — running in offline mode')
         return
       }
 
-      const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
+      const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 15000)
       setTimeout(connect, delay)
       reconnectAttempts.current++
     }

@@ -13,7 +13,7 @@ interface NodeStore {
   addDecision: (nodeId: string, content: string, sessionId?: string) => Promise<DecisionResponse | null>
   removeDecision: (decisionId: string) => Promise<void>
   promoteDecision: (decisionId: string, nodeType: string, title: string) => Promise<void>
-  addSubIssue: (parentNodeId: string, projectId: string) => Promise<void>
+  addSubNode: (parentNodeId: string, projectId: string, parentType: string) => Promise<void>
 }
 
 export const useNodeStore = create<NodeStore>((set, get) => ({
@@ -29,13 +29,13 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
 
     set({ isLoading: true })
     try {
-      const [nodeRes, sessionsRes, decisionsRes] = await Promise.all([
+      const [nodeRes, decisionsRes] = await Promise.all([
         fetch(`/api/nodes/${nodeId}`),
-        fetch(`/api/nodes/${nodeId}/sessions`),
         fetch(`/api/nodes/${nodeId}/decisions`),
       ])
-      const node = nodeRes.ok ? (await nodeRes.json()).data : null
-      const sessions = sessionsRes.ok ? (await sessionsRes.json()).data : []
+      const nodeData = nodeRes.ok ? (await nodeRes.json()).data : null
+      const node = nodeData ?? null
+      const sessions = node?.sessions ?? []
       const decisions = decisionsRes.ok ? (await decisionsRes.json()).data : []
       set({ selectedNode: node, sessions, decisions, isLoading: false })
     } catch (err) {
@@ -89,7 +89,7 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
       console.error('Failed to remove decision:', err)
     }
   },
-  addSubIssue: async (parentNodeId, projectId) => {
+  addSubNode: async (parentNodeId, projectId, parentType) => {
     try {
       // Find parent node position from canvas
       const canvasStore = useCanvasStore.getState()
@@ -97,17 +97,17 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
       const parentX = parentCanvasNode?.position.x ?? 0
       const parentY = parentCanvasNode?.position.y ?? 0
 
-      // Create child issue node positioned below parent
+      // Create child node positioned to the right of parent (parent_child = horizontal)
       const res = await fetch(`/api/projects/${projectId}/nodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'issue',
-          title: '새 하위 이슈',
+          type: parentType,
+          title: `새 하위 ${parentType === 'planning' ? '기획' : parentType === 'feature' ? '기능' : '이슈'}`,
           status: 'backlog',
           parentNodeId,
-          canvasX: parentX,
-          canvasY: parentY + 200,
+          canvasX: parentX + 350,
+          canvasY: parentY,
         }),
       })
       if (!res.ok) return
@@ -123,14 +123,14 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
         data: newNode,
       })
 
-      // Create parent→child edge (type=dependency)
+      // Create parent→child edge (horizontal = parent_child)
       const edgeRes = await fetch('/api/edges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fromNodeId: parentNodeId,
           toNodeId: newNode.id,
-          type: 'dependency',
+          type: 'parent_child',
         }),
       })
       if (edgeRes.ok) {
@@ -142,12 +142,14 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
             source: edgeData.fromNodeId,
             target: edgeData.toNodeId,
             type: edgeData.type,
+            sourceHandle: 'right',
+            targetHandle: 'left',
             data: edgeData,
           },
         ])
       }
     } catch (err) {
-      console.error('Failed to add sub-issue:', err)
+      console.error('Failed to add sub-node:', err)
     }
   },
   promoteDecision: async (decisionId, nodeType, title) => {
@@ -175,6 +177,10 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
             data: data.newNode,
           })
           if (data.newEdge) {
+            const edgeType = data.newEdge.type as string
+            const handles = edgeType === 'related'
+              ? { sourceHandle: 'bottom', targetHandle: 'top' }
+              : { sourceHandle: 'right', targetHandle: 'left' }
             canvasStore.setEdges([
               ...canvasStore.edges,
               {
@@ -182,6 +188,7 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
                 source: data.newEdge.fromNodeId,
                 target: data.newEdge.toNodeId,
                 type: data.newEdge.type,
+                ...handles,
                 data: data.newEdge,
               },
             ])

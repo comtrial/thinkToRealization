@@ -17,7 +17,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
       },
     });
     if (!session) return notFound("Session", id);
-    return successResponse(session);
+    return successResponse(session, {
+      headers: { "Cache-Control": "private, max-age=5, stale-while-revalidate=15" }
+    });
   } catch (error) {
     return handlePrismaError(error);
   }

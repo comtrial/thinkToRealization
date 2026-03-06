@@ -27,24 +27,24 @@ class RecoveryManager {
       `[recovery] Found ${staleSessions.length} stale session(s). Recovering...`
     );
 
-    for (const session of staleSessions) {
-      const now = new Date();
-      const durationDelta = Math.floor(
-        (now.getTime() - session.startedAt.getTime()) / 1000
-      );
+    // Batch all recoveries in a single transaction
+    await prisma.$transaction(async (tx) => {
+      for (const session of staleSessions) {
+        const now = new Date();
+        const durationDelta = Math.floor(
+          (now.getTime() - session.startedAt.getTime()) / 1000
+        );
 
-      await prisma.$transaction([
-        // Mark session as paused
-        prisma.session.update({
+        await tx.session.update({
           where: { id: session.id },
           data: {
             status: "paused",
             endedAt: now,
             durationSeconds: session.durationSeconds + durationDelta,
           },
-        }),
-        // Create state log entry
-        prisma.nodeStateLog.create({
+        });
+
+        await tx.nodeStateLog.create({
           data: {
             nodeId: session.nodeId,
             fromStatus: session.node.status,
@@ -52,22 +52,20 @@ class RecoveryManager {
             triggerType: "recovery",
             triggerSessionId: session.id,
           },
-        }),
-        // If node is in_progress, revert to todo
-        ...(session.node.status === "in_progress"
-          ? [
-              prisma.node.update({
-                where: { id: session.nodeId },
-                data: { status: "todo" },
-              }),
-            ]
-          : []),
-      ]);
+        });
 
-      console.log(
-        `[recovery] Session ${session.id} (node: ${session.nodeId}) marked as paused.`
-      );
-    }
+        if (session.node.status === "in_progress") {
+          await tx.node.update({
+            where: { id: session.nodeId },
+            data: { status: "todo" },
+          });
+        }
+
+        console.log(
+          `[recovery] Session ${session.id} (node: ${session.nodeId}) marked as paused.`
+        );
+      }
+    });
 
     return staleSessions.length;
   }

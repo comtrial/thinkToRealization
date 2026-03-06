@@ -7,7 +7,7 @@ export const createDecisionSchema = z.object({
 });
 
 export const promoteDecisionSchema = z.object({
-  nodeType: z.enum(["idea", "decision", "task", "issue", "milestone", "note"]),
+  nodeType: z.enum(["planning", "feature", "issue"]),
   title: z.string().min(1).max(200),
 });
 

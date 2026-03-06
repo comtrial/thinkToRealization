@@ -244,7 +244,6 @@ test.describe("Full user journey: end-to-end flow", () => {
     await expect(page.getByRole("tab", { name: "세션" })).toBeVisible({
       timeout: 3000,
     });
-    await expect(page.getByText("파일")).toBeVisible({ timeout: 3000 });
     await expect(page.getByText("계획서")).toBeVisible({ timeout: 3000 });
   });
 
@@ -356,7 +355,7 @@ test.describe("Full user journey: end-to-end flow", () => {
       canvasY: 0,
     });
     const task = await createTestNode(project.id, {
-      type: "task",
+      type: "feature",
       title: "Implementation Task",
       canvasX: 300,
       canvasY: 0,

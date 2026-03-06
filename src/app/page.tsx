@@ -16,12 +16,26 @@ import { useMobile } from '@/hooks/useMobile'
 
 const CanvasView = dynamic(
   () => import('@/components/canvas/CanvasView').then(m => ({ default: m.CanvasView })),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-background">
+        <div className="text-caption text-text-secondary animate-pulse">캔버스 로딩 중...</div>
+      </div>
+    ),
+  }
 )
 
 const TerminalPanel = dynamic(
   () => import('@/components/terminal/TerminalPanel').then(m => ({ default: m.TerminalPanel })),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-terminal-bg">
+        <div className="text-caption text-terminal-text animate-pulse">터미널 로딩 중...</div>
+      </div>
+    ),
+  }
 )
 
 function TerminalSection() {

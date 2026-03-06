@@ -11,7 +11,9 @@ export async function GET() {
       where: { isActive: true },
       orderBy: { updatedAt: "desc" },
     });
-    return successResponse(projects);
+    return successResponse(projects, {
+      headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" }
+    });
   } catch (error) {
     return handlePrismaError(error);
   }
@@ -32,7 +34,31 @@ export async function POST(req: NextRequest) {
     const parsed = createProjectSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
-    const project = await prisma.project.create({ data: parsed.data });
+    // Auto-generate slug from title if not provided
+    let slug = parsed.data.slug;
+    if (!slug) {
+      const baseSlug = parsed.data.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        || `project-${Date.now()}`;
+
+      // Check for collision, append timestamp if needed
+      const existing = await prisma.project.findUnique({ where: { slug: baseSlug } });
+      slug = existing ? `${baseSlug}-${Date.now()}` : baseSlug;
+    }
+
+    const project = await prisma.project.create({
+      data: {
+        title: parsed.data.title,
+        slug,
+        description: parsed.data.description,
+        projectDir: parsed.data.projectDir,
+        claudeMdPath: parsed.data.claudeMdPath,
+      },
+    });
     return successResponse(project, 201);
   } catch (error) {
     return handlePrismaError(error);
