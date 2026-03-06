@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) return notFound("Project", projectId);
 
-    const [inProgress, todo, recentDone] = await Promise.all([
+    const [inProgress, todo, backlog, recentDone] = await Promise.all([
       prisma.node.findMany({
         where: { projectId, status: "in_progress" },
         include: nodeWithCounts,
@@ -21,6 +21,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
       }),
       prisma.node.findMany({
         where: { projectId, status: "todo" },
+        include: nodeWithCounts,
+        orderBy: { priority: "desc" },
+      }),
+      prisma.node.findMany({
+        where: { projectId, status: "backlog" },
         include: nodeWithCounts,
         orderBy: { priority: "desc" },
       }),
@@ -35,6 +40,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     return successResponse({
       inProgress: inProgress.map(toNodeResponse),
       todo: todo.map(toNodeResponse),
+      backlog: backlog.map(toNodeResponse),
       recentDone: recentDone.map(toNodeResponse),
     });
   } catch (error) {

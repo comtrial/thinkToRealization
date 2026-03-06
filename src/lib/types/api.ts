@@ -135,6 +135,7 @@ export interface CanvasResponse {
 export interface DashboardResponse {
   inProgress: NodeResponse[];
   todo: NodeResponse[];
+  backlog: NodeResponse[];
   recentDone: NodeResponse[];
 }
 
