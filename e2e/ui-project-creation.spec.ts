@@ -5,7 +5,6 @@ const API = "http://localhost:3333/api";
 
 test.describe("UI: Project creation with directory selector", () => {
   test.beforeEach(async ({ page }) => {
-    await cleanTestData();
     await page.goto("/");
     await page.waitForLoadState("networkidle");
   });

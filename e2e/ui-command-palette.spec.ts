@@ -2,26 +2,14 @@ import { test, expect } from "@playwright/test";
 import {
   cleanTestData,
   createTestProject,
+  selectProjectInSidebar,
 } from "./helpers";
 
 test.describe("UI: Command palette and keyboard shortcuts", () => {
   test.beforeEach(async ({ page }) => {
     await cleanTestData();
     await createTestProject("Shortcut Project");
-
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Retry navigation until correct project shows (handles cache/timing issues)
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const headerText = await page.locator("header").textContent().catch(() => "") || "";
-      if (headerText.includes("Shortcut Project")) break;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-    }
-    await expect(page.locator("header")).toContainText("Shortcut Project", {
-      timeout: 10000,
-    });
+    await selectProjectInSidebar(page, "Shortcut Project");
   });
 
   test("Command palette opens with Cmd+K", async ({ page }) => {

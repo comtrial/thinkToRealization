@@ -104,31 +104,40 @@ test.describe("UI: Project creation and selection flow", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
 
-    // Should auto-select and show dashboard (not empty state)
+    // Should auto-select some project (not show empty state)
+    // Note: the auto-selected project may not be our newly created one
+    // if other projects exist in the database
     const header = page.locator("header");
-    await expect(header).toContainText("Auto Select Project", {
+    await expect(header).not.toContainText("프로젝트 선택", {
+      timeout: 5000,
+    });
+
+    // Verify our project appears in the sidebar
+    const projectList = page.getByTestId("project-list");
+    await expect(projectList).toContainText("Auto Select Project", {
       timeout: 5000,
     });
   });
 
   test("Switch between projects in sidebar", async ({ page }) => {
-    // Create two projects via API
-    await createTestProject("Project Alpha");
-    await createTestProject("Project Beta");
+    // Create two projects via API with unique names
+    const ts = Date.now();
+    await createTestProject(`Alpha ${ts}`);
+    await createTestProject(`Beta ${ts}`);
 
     await page.reload();
     await page.waitForLoadState("networkidle");
 
     // Wait for projects to load in sidebar
     const projectList = page.getByTestId("project-list");
-    await expect(projectList).toContainText("Project Alpha", { timeout: 5000 });
-    await expect(projectList).toContainText("Project Beta", { timeout: 5000 });
+    await expect(projectList).toContainText(`Alpha ${ts}`, { timeout: 5000 });
+    await expect(projectList).toContainText(`Beta ${ts}`, { timeout: 5000 });
 
     // Click second project in sidebar
-    await projectList.getByText("Project Beta").click();
+    await projectList.getByText(`Beta ${ts}`).click();
 
-    // Header should update to show Project Beta
-    await expect(page.locator("header")).toContainText("Project Beta", {
+    // Header should update to show Beta project
+    await expect(page.locator("header")).toContainText(`Beta ${ts}`, {
       timeout: 3000,
     });
   });

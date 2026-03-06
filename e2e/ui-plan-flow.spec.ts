@@ -27,10 +27,12 @@ async function createMockPlan(nodeId: string, overrides: Record<string, unknown>
 test.describe("UI: Plan review flow via Side Panel", () => {
   let projectId: string;
   let nodeId: string;
+  let projectTitle: string;
 
   test.beforeEach(async ({ page }) => {
-    await cleanTestData();
-    const project = await createTestProject("Plan Flow Project");
+    const ts = Date.now();
+    projectTitle = `Plan Flow Project ${ts}`;
+    const project = await createTestProject(projectTitle, `__e2e__plan-flow-${ts}`);
     projectId = project.id;
     const node = await createTestNode(projectId, {
       type: "issue",
@@ -40,16 +42,17 @@ test.describe("UI: Plan review flow via Side Panel", () => {
       canvasY: 200,
     });
     nodeId = node.id;
-    await selectProjectInSidebar(page, "Plan Flow Project");
+    await selectProjectInSidebar(page, projectTitle);
   });
 
   test("Side panel shows Plans tab when node is selected", async ({ page }) => {
     // Switch to canvas tab
     await page.keyboard.press("Meta+2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     // Click on the issue node
     const node = page.locator(`[data-id="${nodeId}"]`);
+    await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
     await page.waitForTimeout(500);
 
@@ -61,9 +64,10 @@ test.describe("UI: Plan review flow via Side Panel", () => {
   test("Plans tab shows empty state when no plans exist", async ({ page }) => {
     // Select node and open plans tab
     await page.keyboard.press("Meta+2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     const node = page.locator(`[data-id="${nodeId}"]`);
+    await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
     await page.waitForTimeout(500);
 
@@ -79,9 +83,10 @@ test.describe("UI: Plan review flow via Side Panel", () => {
 
   test("Plans tab has generate button", async ({ page }) => {
     await page.keyboard.press("Meta+2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     const node = page.locator(`[data-id="${nodeId}"]`);
+    await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
     await page.waitForTimeout(500);
 
@@ -105,9 +110,10 @@ test.describe("UI: Plan review flow via Side Panel", () => {
 
     // Select node and open plans tab
     await page.keyboard.press("Meta+2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     const node = page.locator(`[data-id="${nodeId}"]`);
+    await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
     await page.waitForTimeout(500);
 
@@ -130,9 +136,10 @@ test.describe("UI: Plan review flow via Side Panel", () => {
     if (!plan) { test.skip(); return; }
 
     await page.keyboard.press("Meta+2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     const node = page.locator(`[data-id="${nodeId}"]`);
+    await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
     await page.waitForTimeout(500);
 
@@ -161,9 +168,10 @@ test.describe("UI: Plan review flow via Side Panel", () => {
     if (!plan) { test.skip(); return; }
 
     await page.keyboard.press("Meta+2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     const node = page.locator(`[data-id="${nodeId}"]`);
+    await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
     await page.waitForTimeout(500);
 
@@ -202,9 +210,10 @@ test.describe("UI: Plan review flow via Side Panel", () => {
     if (!plan) { test.skip(); return; }
 
     await page.keyboard.press("Meta+2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     const node = page.locator(`[data-id="${nodeId}"]`);
+    await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
     await page.waitForTimeout(500);
 

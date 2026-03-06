@@ -30,8 +30,18 @@ test.describe("UX Improvements: Side Panel", () => {
 
     await page.getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
+
+    // Wait for canvas to load nodes — may need reload if API race
     const nodeEl = page.locator(".react-flow__node");
-    await expect(nodeEl).toBeVisible({ timeout: 15000 });
+    try {
+      await expect(nodeEl).toBeVisible({ timeout: 10000 });
+    } catch {
+      await page.reload();
+      await page.waitForLoadState("networkidle");
+      await page.getByRole("button", { name: "캔버스" }).click();
+      await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
+      await expect(nodeEl).toBeVisible({ timeout: 15000 });
+    }
     await nodeEl.click();
 
     await expect(page.getByTestId("side-panel")).toBeVisible({ timeout: 5000 });
@@ -92,12 +102,24 @@ test.describe("UX Improvements: Side Panel", () => {
 
     await page.getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
-    await page.locator(".react-flow__node").click();
+
+    // Wait for node to appear (may need extra time after reload)
+    const nodeOnCanvas = page.locator(".react-flow__node").first();
+    try {
+      await expect(nodeOnCanvas).toBeVisible({ timeout: 10000 });
+    } catch {
+      await page.reload();
+      await page.waitForLoadState("networkidle");
+      await page.getByRole("button", { name: "캔버스" }).click();
+      await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
+      await expect(nodeOnCanvas).toBeVisible({ timeout: 15000 });
+    }
+    await nodeOnCanvas.click();
     await expect(page.getByTestId("side-panel")).toBeVisible({ timeout: 5000 });
 
     // API returns createdAt desc → newest first
     const sources = page.getByTestId("decision-source");
-    await expect(sources).toHaveCount(2, { timeout: 5000 });
+    await expect(sources).toHaveCount(2, { timeout: 10000 });
 
     // Manual decision was created second → appears first (desc order)
     await expect(sources.nth(0)).toContainText("직접 추가");

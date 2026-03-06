@@ -23,8 +23,59 @@ export async function POST() {
 
     const projectIds = testProjects.map((p) => p.id);
 
-    // Cascade delete handles Node, Edge, Session, SessionFile, Decision, NodeStateLog
-    // because all relations have onDelete: Cascade from Project → Node → ...
+    // Find all nodes belonging to test projects
+    const testNodes = await prisma.node.findMany({
+      where: { projectId: { in: projectIds } },
+      select: { id: true },
+    });
+    const nodeIds = testNodes.map((n) => n.id);
+
+    if (nodeIds.length > 0) {
+      // Find all sessions belonging to test nodes
+      const testSessions = await prisma.session.findMany({
+        where: { nodeId: { in: nodeIds } },
+        select: { id: true },
+      });
+      const sessionIds = testSessions.map((s) => s.id);
+
+      // Delete bottom-up to avoid FK constraint issues
+      if (sessionIds.length > 0) {
+        await prisma.sessionFile.deleteMany({
+          where: { sessionId: { in: sessionIds } },
+        });
+      }
+      await prisma.decision.deleteMany({
+        where: { nodeId: { in: nodeIds } },
+      });
+      if (sessionIds.length > 0) {
+        await prisma.session.deleteMany({
+          where: { id: { in: sessionIds } },
+        });
+      }
+      await prisma.plan.deleteMany({
+        where: { nodeId: { in: nodeIds } },
+      });
+      await prisma.nodeStateLog.deleteMany({
+        where: { nodeId: { in: nodeIds } },
+      });
+      await prisma.edge.deleteMany({
+        where: {
+          OR: [
+            { fromNodeId: { in: nodeIds } },
+            { toNodeId: { in: nodeIds } },
+          ],
+        },
+      });
+      // Clear parentNodeId references before deleting nodes
+      await prisma.node.updateMany({
+        where: { parentNodeId: { in: nodeIds } },
+        data: { parentNodeId: null },
+      });
+      await prisma.node.deleteMany({
+        where: { id: { in: nodeIds } },
+      });
+    }
+
     await prisma.project.deleteMany({
       where: { id: { in: projectIds } },
     });

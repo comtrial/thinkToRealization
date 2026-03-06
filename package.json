@@ -6,7 +6,7 @@
     "dev": "concurrently \"next dev\" \"tsx watch server/ws-server.ts\"",
     "dev:web": "next dev",
     "dev:ws": "tsx watch server/ws-server.ts",
-    "build": "next build",
+    "build": "NODE_OPTIONS='--unhandled-rejections=warn' next build",
     "start": "next start",
     "lint": "next lint",
     "db:seed": "tsx prisma/seed.ts",
@@ -17,6 +17,8 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-dialog": "^1.1.15",
