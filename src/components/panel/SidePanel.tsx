@@ -6,7 +6,7 @@ import { NodeDetailPanel, NodeProperties } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
 import { useNodeStore } from '@/stores/node-store'
-import { X, Maximize2, Minimize2 } from 'lucide-react'
+import { X, Maximize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useMobile } from '@/hooks/useMobile'
 import type { SessionResponse } from '@/lib/types/api'
@@ -109,7 +109,7 @@ export function SidePanel() {
     }
   }, [panelNodeId, panelMode, selectNode])
 
-  if (panelMode === 'closed') return null
+  if (panelMode === 'closed' || panelMode === 'full') return null
 
   // On mobile, both peek and full modes use fixed positioning to cover the full screen
   if (isMobile) {
@@ -184,89 +184,6 @@ export function SidePanel() {
             )}
             {panelTab === 'plans' && <PlanTab />}
           </div>
-        </aside>
-      </>
-    )
-  }
-
-  // Desktop: Full mode — true fullscreen (fixed, covers everything)
-  if (panelMode === 'full') {
-    return (
-      <>
-        {/* Overlay */}
-        <div
-          className="fixed inset-0 bg-surface-overlay z-40"
-          onClick={closePanel}
-        />
-
-        {/* Full-screen panel */}
-        <aside
-          data-testid="side-panel"
-          className="fixed inset-0 bg-surface z-50 flex flex-col"
-          style={{ top: 'var(--header-height)' }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 h-12 border-b border-border/30 shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                data-testid="panel-close-btn"
-                onClick={closePanel}
-                className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
-                title="닫기 (ESC)"
-              >
-                <X size={16} />
-              </button>
-              {selectedNode && (
-                <span className="text-caption text-text-tertiary truncate">
-                  {selectedNode.projectId}
-                  {' > '}
-                  <span className="text-text-secondary">{selectedNode.title}</span>
-                </span>
-              )}
-            </div>
-            <button
-              data-testid="panel-fullscreen-btn"
-              onClick={toggleFullPage}
-              className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
-              title="축소"
-            >
-              <Minimize2 size={16} />
-            </button>
-          </div>
-
-          {/* Content: 2-column layout */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <span className="text-caption text-text-tertiary">로딩 중...</span>
-            </div>
-          ) : selectedNode ? (
-            <div className="flex-1 flex overflow-hidden">
-              {/* Main content — left column, centered with max-width */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="max-w-[780px] mx-auto">
-                  <NodeDetailPanel />
-                  {/* Sessions inline */}
-                  <div className="px-8 pb-8">
-                    <label className="text-caption text-text-tertiary mb-2 block">
-                      세션 ({sessions.length})
-                    </label>
-                    <SessionsSection
-                      sessions={sessions}
-                      viewingSessionId={viewingSessionId}
-                      setViewingSessionId={setViewingSessionId}
-                    />
-                  </div>
-                </div>
-              </div>
-              {/* Properties sidebar — right column */}
-              <div className="w-[260px] border-l border-border/30 overflow-y-auto shrink-0">
-                <div className="p-5">
-                  <span className="text-caption text-text-tertiary font-medium block mb-4">Properties</span>
-                  <NodeProperties />
-                </div>
-              </div>
-            </div>
-          ) : null}
         </aside>
       </>
     )

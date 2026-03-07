@@ -7,6 +7,7 @@ import { useUIStore } from '@/stores/ui-store'
 import { useSessionStore } from '@/stores/session-store'
 import { useProject } from '@/components/providers/ProjectProvider'
 import { DashboardView } from '@/components/dashboard/DashboardView'
+import { NodeDetailFullView } from '@/components/panel/NodeDetailFullView'
 import { CommandPalette } from '@/components/command/CommandPalette'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SessionEndPrompt } from '@/components/terminal/SessionEndPrompt'
@@ -152,10 +153,16 @@ function TerminalSection() {
 
 function MainContent() {
   const activeTab = useUIStore((s) => s.activeTab)
+  const panelMode = useUIStore((s) => s.panelMode)
   const { currentProject } = useProject()
 
   if (!currentProject) {
     return <EmptyState variant="no-project" className="h-full" />
+  }
+
+  // Full mode: node detail replaces the main content area (like a tab switch)
+  if (panelMode === 'full') {
+    return <NodeDetailFullView />
   }
 
   return (

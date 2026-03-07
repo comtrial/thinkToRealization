@@ -132,18 +132,15 @@ function HandleWithPlus({
 
   return (
     <>
-      <div
-        className="absolute z-10"
-        style={{
-          ...(position === Position.Right ? { right: -6, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24 } : {}),
-          ...(position === Position.Bottom ? { bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 24, height: 24 } : {}),
-        }}
+      <Handle
+        type={type}
+        position={position}
+        style={handleStyle}
+        id={id}
+        onDoubleClick={handleDoubleClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        onTouchStart={() => setHovered(true)}
-        onDoubleClick={handleDoubleClick}
       />
-      <Handle type={type} position={position} style={handleStyle} id={id} />
       {showPlus && (
         <div
           className={cn(
