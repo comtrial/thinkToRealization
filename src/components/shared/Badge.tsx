@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import type { NodeStatus, NodeType } from '@/lib/types/api'
+import type { NodeStatus } from '@/lib/types/api'
 
 const statusConfig: Record<NodeStatus, { label: string; className: string }> = {
   backlog: { label: 'Backlog', className: 'bg-status-backlog/20 text-status-backlog' },
@@ -41,15 +41,15 @@ export function StatusCircleIcon({ status, size = 16 }: { status: NodeStatus; si
   )
 }
 
-const typeColorMap: Record<NodeType, string> = {
+const typeColorMap: Record<string, string> = {
   planning: 'bg-type-idea',
   feature: 'bg-type-task',
   issue: 'bg-type-issue',
 }
 
-export function TypeColorBar({ type }: { type: NodeType }) {
+export function TypeColorBar({ type }: { type: string }) {
   return (
-    <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] rounded-l-node', typeColorMap[type])} />
+    <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] rounded-l-node', typeColorMap[type] ?? 'bg-gray-400')} />
   )
 }
 

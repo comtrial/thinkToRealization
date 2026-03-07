@@ -7,9 +7,9 @@ import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
 import { StatusBadge } from '@/components/shared/Badge'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import type { NodeResponse, NodeType } from '@/lib/types/api'
+import type { NodeResponse } from '@/lib/types/api'
 
-const typeColorBarMap: Record<NodeType, string> = {
+const typeColorBarMap: Record<string, string> = {
   planning: 'bg-type-idea',
   feature: 'bg-type-task',
   issue: 'bg-type-issue',
@@ -47,7 +47,7 @@ export function DashboardCard({ node, compact = false }: DashboardCardProps) {
           'overflow-hidden'
         )}
       >
-        <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] rounded-l-node', typeColorBarMap[node.type])} />
+        <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] rounded-l-node', typeColorBarMap[node.type] ?? 'bg-gray-400')} />
         <NodeTypeIcon type={node.type} size={16} />
         <span className="text-node-title-sm text-text-primary truncate flex-1">{node.title}</span>
         {lastWorkTime && (
@@ -68,7 +68,7 @@ export function DashboardCard({ node, compact = false }: DashboardCardProps) {
         'overflow-hidden'
       )}
     >
-      <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] rounded-l-node', typeColorBarMap[node.type])} />
+      <div className={cn('absolute left-0 top-0 bottom-0 w-[3px] rounded-l-node', typeColorBarMap[node.type] ?? 'bg-gray-400')} />
       <div className="flex items-center gap-sm">
         <NodeTypeIcon type={node.type} size={16} />
         <span className="text-node-title-lg text-text-primary truncate flex-1">{node.title}</span>

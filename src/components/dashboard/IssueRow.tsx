@@ -6,19 +6,19 @@ import { useNodeStore } from '@/stores/node-store'
 import { StatusCircleIcon, PriorityIcon } from '@/components/shared/Badge'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import type { NodeResponse, NodeType } from '@/lib/types/api'
+import type { NodeResponse } from '@/lib/types/api'
 
-const typeAbbr: Record<NodeType, string> = {
+const typeAbbr: Record<string, string> = {
   planning: 'PLN', feature: 'FEA', issue: 'ISS',
 }
 
-const typeTagStyles: Record<NodeType, string> = {
+const typeTagStyles: Record<string, string> = {
   planning: 'bg-type-idea/15 text-type-idea',
   feature: 'bg-type-task/15 text-type-task',
   issue: 'bg-type-issue/15 text-type-issue',
 }
 
-const typeLabels: Record<NodeType, string> = {
+const typeLabels: Record<string, string> = {
   planning: '기획', feature: '기능개발', issue: '이슈',
 }
 
@@ -32,7 +32,7 @@ export function IssueRow({ node }: { node: NodeResponse }) {
     openPanel(node.id)
   }
 
-  const shortId = `${typeAbbr[node.type]}-${node.id.slice(-4).toUpperCase()}`
+  const shortId = `${typeAbbr[node.type] ?? 'GEN'}-${node.id.slice(-4).toUpperCase()}`
 
   const dateStr = node.updatedAt
     ? formatDistanceToNow(new Date(node.updatedAt), { addSuffix: false, locale: ko })
@@ -75,9 +75,9 @@ export function IssueRow({ node }: { node: NodeResponse }) {
       {/* Type label tag */}
       <span className={cn(
         'text-badge px-1.5 py-0.5 rounded-badge flex-shrink-0 hidden sm:inline-flex',
-        typeTagStyles[node.type]
+        typeTagStyles[node.type] ?? 'bg-gray-100 text-gray-600'
       )}>
-        {typeLabels[node.type]}
+        {typeLabels[node.type] ?? node.type}
       </span>
 
       {/* Active session indicator */}
