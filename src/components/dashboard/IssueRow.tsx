@@ -24,12 +24,18 @@ const typeLabels: Record<string, string> = {
 
 export function IssueRow({ node }: { node: NodeResponse }) {
   const openPanel = useUIStore((s) => s.openPanel)
+  const openPanelFull = useUIStore((s) => s.openPanelFull)
   const selectNode = useNodeStore((s) => s.selectNode)
   const selectedNodeId = useNodeStore((s) => s.selectedNode?.id)
 
   const handleClick = () => {
     selectNode(node.id)
     openPanel(node.id)
+  }
+
+  const handleDoubleClick = () => {
+    selectNode(node.id)
+    openPanelFull(node.id)
   }
 
   const shortId = `${typeAbbr[node.type] ?? 'GEN'}-${node.id.slice(-4).toUpperCase()}`
@@ -42,6 +48,7 @@ export function IssueRow({ node }: { node: NodeResponse }) {
     <button
       data-testid={`dashboard-card-${node.id}`}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       className={cn(
         'w-full flex items-center gap-3 px-4 py-1.5 text-body text-left',
         'hover:bg-surface-hover transition-colors duration-100',
