@@ -25,7 +25,6 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
     // Guard: skip if already loading the same node
     const current = get()
     if (current.isLoading && current.selectedNode?.id === nodeId) return
-    if (current.selectedNode?.id === nodeId && !current.isLoading) return
 
     set({ isLoading: true })
     try {
@@ -97,6 +96,10 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
       const parentX = parentCanvasNode?.position.x ?? 0
       const parentY = parentCanvasNode?.position.y ?? 0
 
+      // Count existing children to offset Y position and avoid stacking
+      const existingChildEdges = canvasStore.edges.filter((e) => e.source === parentNodeId)
+      const childYOffset = existingChildEdges.length * 100
+
       // Create child node positioned to the right of parent (parent_child = horizontal)
       const res = await fetch(`/api/projects/${projectId}/nodes`, {
         method: 'POST',
@@ -107,7 +110,7 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
           status: 'backlog',
           parentNodeId,
           canvasX: parentX + 350,
-          canvasY: parentY,
+          canvasY: parentY + childYOffset,
         }),
       })
       if (!res.ok) return

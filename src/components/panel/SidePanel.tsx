@@ -189,117 +189,151 @@ export function SidePanel() {
     )
   }
 
-  // Desktop layout
-  return (
-    <>
-      {/* Overlay for full mode */}
-      {panelMode === 'full' && (
+  // Desktop: Full mode — true fullscreen (fixed, covers everything)
+  if (panelMode === 'full') {
+    return (
+      <>
+        {/* Overlay */}
         <div
           className="fixed inset-0 bg-surface-overlay z-40"
           onClick={closePanel}
         />
-      )}
 
-      {/* Panel */}
-      <aside
-        data-testid="side-panel"
-        className={[
-          'absolute top-0 right-0 h-full bg-surface border-l border-border z-30',
-          'flex flex-col',
-          'transition-all duration-panel ease-devflow',
-          panelMode === 'peek' ? 'w-[40%] min-w-[400px] max-w-[50%]' : '',
-          panelMode === 'full' ? 'w-[80%] max-w-[900px] shadow-elevation-3 z-50' : '',
-        ].join(' ')}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 h-14 border-b border-border/50 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
+        {/* Full-screen panel */}
+        <aside
+          data-testid="side-panel"
+          className="fixed inset-0 bg-surface z-50 flex flex-col"
+          style={{ top: 'var(--header-height)' }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 h-12 border-b border-border/30 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                data-testid="panel-close-btn"
+                onClick={closePanel}
+                className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
+                title="닫기 (ESC)"
+              >
+                <X size={16} />
+              </button>
+              {selectedNode && (
+                <span className="text-caption text-text-tertiary truncate">
+                  {selectedNode.projectId}
+                  {' > '}
+                  <span className="text-text-secondary">{selectedNode.title}</span>
+                </span>
+              )}
+            </div>
             <button
-              data-testid="panel-close-btn"
-              onClick={closePanel}
+              data-testid="panel-fullscreen-btn"
+              onClick={toggleFullPage}
               className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
-              title="닫기 (ESC)"
+              title="축소"
             >
-              <X size={16} />
+              <Minimize2 size={16} />
             </button>
-            {selectedNode && (
-              <h2 className="text-node-title-lg text-text-primary truncate">
-                {selectedNode.title}
-              </h2>
-            )}
           </div>
-          <button
-            data-testid="panel-fullscreen-btn"
-            onClick={toggleFullPage}
-            className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
-            title={panelMode === 'full' ? '축소' : '전체 화면'}
-          >
-            {panelMode === 'full' ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-        </div>
 
-        {/* Tabs — hidden in full mode */}
-        <PanelTabs hidden={panelMode === 'full'} />
-
-        {/* Content */}
-        {panelMode === 'full' ? (
-          /* Full mode: 2-column layout */
-          isLoading ? (
+          {/* Content: 2-column layout */}
+          {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <span className="text-caption text-text-tertiary">로딩 중...</span>
             </div>
           ) : selectedNode ? (
             <div className="flex-1 flex overflow-hidden">
-              {/* Main content - left column */}
+              {/* Main content — left column, centered with max-width */}
               <div className="flex-1 overflow-y-auto">
-                <NodeDetailPanel />
-                {/* Sessions inline */}
-                <div className="px-4 pb-4">
-                  <label className="text-caption text-text-tertiary mb-2 block">
-                    세션 ({sessions.length})
-                  </label>
-                  <SessionsSection
-                    sessions={sessions}
-                    viewingSessionId={viewingSessionId}
-                    setViewingSessionId={setViewingSessionId}
-                  />
+                <div className="max-w-[780px] mx-auto">
+                  <NodeDetailPanel />
+                  {/* Sessions inline */}
+                  <div className="px-8 pb-8">
+                    <label className="text-caption text-text-tertiary mb-2 block">
+                      세션 ({sessions.length})
+                    </label>
+                    <SessionsSection
+                      sessions={sessions}
+                      viewingSessionId={viewingSessionId}
+                      setViewingSessionId={setViewingSessionId}
+                    />
+                  </div>
                 </div>
               </div>
-              {/* Properties sidebar - right column */}
-              <div className="w-[240px] border-l border-border/50 p-4 overflow-y-auto shrink-0">
-                <NodeProperties />
-              </div>
-            </div>
-          ) : null
-        ) : (
-          /* Peek mode: tab-based layout */
-          <div className="flex-1 overflow-y-auto">
-            {panelTab === 'overview' && isLoading && (
-              <div className="flex items-center justify-center py-12">
-                <span className="text-caption text-text-tertiary">로딩 중...</span>
-              </div>
-            )}
-            {panelTab === 'overview' && !isLoading && selectedNode && (
-              <>
-                <NodeDetailPanel />
-                <div className="px-4 pb-4">
+              {/* Properties sidebar — right column */}
+              <div className="w-[260px] border-l border-border/30 overflow-y-auto shrink-0">
+                <div className="p-5">
+                  <span className="text-caption text-text-tertiary font-medium block mb-4">Properties</span>
                   <NodeProperties />
                 </div>
-              </>
-            )}
-            {panelTab === 'sessions' && (
-              <div className="p-4 flex flex-col gap-3">
-                <SessionsSection
-                  sessions={sessions}
-                  viewingSessionId={viewingSessionId}
-                  setViewingSessionId={setViewingSessionId}
-                />
               </div>
-            )}
-            {panelTab === 'plans' && <PlanTab />}
+            </div>
+          ) : null}
+        </aside>
+      </>
+    )
+  }
+
+  // Desktop: Peek mode
+  return (
+    <aside
+      data-testid="side-panel"
+      className="absolute top-0 right-0 h-full bg-surface border-l border-border z-30 flex flex-col transition-all duration-panel ease-devflow w-[40%] min-w-[400px] max-w-[50%]"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 h-14 border-b border-border/50 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            data-testid="panel-close-btn"
+            onClick={closePanel}
+            className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
+            title="닫기 (ESC)"
+          >
+            <X size={16} />
+          </button>
+          {selectedNode && (
+            <h2 className="text-node-title-lg text-text-primary truncate">
+              {selectedNode.title}
+            </h2>
+          )}
+        </div>
+        <button
+          data-testid="panel-fullscreen-btn"
+          onClick={toggleFullPage}
+          className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
+          title="전체 화면"
+        >
+          <Maximize2 size={16} />
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <PanelTabs />
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {panelTab === 'overview' && isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <span className="text-caption text-text-tertiary">로딩 중...</span>
           </div>
         )}
-      </aside>
-    </>
+        {panelTab === 'overview' && !isLoading && selectedNode && (
+          <>
+            <NodeDetailPanel />
+            <div className="px-4 pb-4">
+              <NodeProperties />
+            </div>
+          </>
+        )}
+        {panelTab === 'sessions' && (
+          <div className="p-4 flex flex-col gap-3">
+            <SessionsSection
+              sessions={sessions}
+              viewingSessionId={viewingSessionId}
+              setViewingSessionId={setViewingSessionId}
+            />
+          </div>
+        )}
+        {panelTab === 'plans' && <PlanTab />}
+      </div>
+    </aside>
   )
 }

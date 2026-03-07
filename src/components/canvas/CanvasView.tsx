@@ -215,7 +215,14 @@ function CanvasInner({ projectId }: { projectId: string }) {
       const sourceNode = nodes.find((n) => n.id === nodeId)
       if (!sourceNode) return
 
-      const offset = handlePosition === 'right' ? { x: 350, y: 0 } : { x: 0, y: 200 }
+      // Count existing outgoing edges to offset position and avoid stacking
+      const currentEdges = useCanvasStore.getState().edges
+      const existingOutEdges = currentEdges.filter((e) => e.source === nodeId)
+      const childOffset = existingOutEdges.length * 100
+
+      const offset = handlePosition === 'right'
+        ? { x: 350, y: childOffset }
+        : { x: childOffset, y: 200 }
       const position = {
         x: sourceNode.position.x + offset.x,
         y: sourceNode.position.y + offset.y,
@@ -290,7 +297,12 @@ function CanvasInner({ projectId }: { projectId: string }) {
         y: mouseEvent.clientY,
       })
 
-      const newNode = await handleCreateNode('feature', position)
+      // Inherit type from source node instead of always creating 'feature'
+      const sourceNode = nodes.find((n) => n.id === connecting.nodeId)
+      const sourceType = sourceNode
+        ? ((sourceNode.data as { type: string }).type as NodeType)
+        : 'feature'
+      const newNode = await handleCreateNode(sourceType, position)
       if (!newNode) return
 
       // Auto-detect edge type from source handle
@@ -415,8 +427,9 @@ function CanvasInner({ projectId }: { projectId: string }) {
     g.setDefaultEdgeLabel(() => ({}))
     g.setGraph({ rankdir: 'LR', nodesep: 60, ranksep: 100 })
 
-    const nodeWidth = isZoomedIn ? 280 : 200
-    const nodeHeight = isZoomedIn ? 140 : 52
+    // Always use expanded dimensions for consistent layout regardless of zoom
+    const nodeWidth = 280
+    const nodeHeight = 140
 
     nodes.forEach((node) => {
       g.setNode(node.id, { width: nodeWidth, height: nodeHeight })
@@ -447,7 +460,7 @@ function CanvasInner({ projectId }: { projectId: string }) {
       savePositions(positions)
       fitView({ duration: 300 })
     }, 350)
-  }, [nodes, edges, isZoomedIn, setNodes, savePositions, fitView, pushSnapshot])
+  }, [nodes, edges, setNodes, savePositions, fitView, pushSnapshot])
 
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
     contextPosRef.current = { x: event.clientX, y: event.clientY }

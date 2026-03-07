@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useNodeStore } from '@/stores/node-store'
 import { useCanvasStore } from '@/stores/canvas-store'
-import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
 import { TiptapEditor } from '@/components/shared/TiptapEditor'
 import { AssigneePicker } from '@/components/shared/AssigneePicker'
 import { CommentSection } from '@/components/comments/CommentSection'
@@ -34,29 +33,24 @@ const TYPE_OPTIONS: { value: NodeType; label: string }[] = [
 
 type SaveStatus = 'idle' | 'saving' | 'saved'
 
-function ArrowSelect({
+function PropertySelect({
+  label,
   options,
   value,
   onChange,
 }: {
+  label: string
   options: { value: string; label: string }[]
   value: string
   onChange: (value: string) => void
 }) {
-  const idx = options.findIndex((o) => o.value === value)
   return (
-    <div className="flex items-center gap-1">
-      <button
-        onClick={() => idx > 0 && onChange(options[idx - 1].value)}
-        disabled={idx <= 0}
-        className="p-0.5 rounded hover:bg-surface-hover text-text-tertiary disabled:opacity-30 transition-colors"
-      >
-        <ChevronLeft size={14} />
-      </button>
+    <div className="flex flex-col gap-1">
+      <label className="text-[11px] text-text-tertiary">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="text-caption px-2 py-1 rounded-button border border-border bg-surface hover:bg-surface-hover text-text-primary flex-1"
+        className="text-caption px-2 py-1.5 rounded-button border border-border/60 bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent/50"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -64,13 +58,6 @@ function ArrowSelect({
           </option>
         ))}
       </select>
-      <button
-        onClick={() => idx < options.length - 1 && onChange(options[idx + 1].value)}
-        disabled={idx >= options.length - 1}
-        className="p-0.5 rounded hover:bg-surface-hover text-text-tertiary disabled:opacity-30 transition-colors"
-      >
-        <ChevronRight size={14} />
-      </button>
     </div>
   )
 }
@@ -120,35 +107,25 @@ export function NodeProperties() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Status */}
-      <div className="flex flex-col gap-1">
-        <label className="text-caption text-text-tertiary">상태</label>
-        <ArrowSelect
-          options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          value={selectedNode.status}
-          onChange={(v) => updateNodeStatus(selectedNode.id, v)}
-        />
-      </div>
-
-      {/* Priority */}
-      <div className="flex flex-col gap-1">
-        <label className="text-caption text-text-tertiary">우선순위</label>
-        <ArrowSelect
-          options={PRIORITY_OPTIONS}
-          value={selectedNode.priority}
-          onChange={handlePriorityChange}
-        />
-      </div>
-
-      {/* Type */}
-      <div className="flex flex-col gap-1">
-        <label className="text-caption text-text-tertiary">타입</label>
-        <ArrowSelect
-          options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          value={selectedNode.type}
-          onChange={handleTypeChange}
-        />
-      </div>
+      {/* Status / Priority / Type — compact vertical list */}
+      <PropertySelect
+        label="Status"
+        options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        value={selectedNode.status}
+        onChange={(v) => updateNodeStatus(selectedNode.id, v)}
+      />
+      <PropertySelect
+        label="Priority"
+        options={PRIORITY_OPTIONS}
+        value={selectedNode.priority}
+        onChange={handlePriorityChange}
+      />
+      <PropertySelect
+        label="Type"
+        options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        value={selectedNode.type}
+        onChange={handleTypeChange}
+      />
 
       {/* Assignee */}
       <AssigneePicker
@@ -185,13 +162,15 @@ export function NodeProperties() {
       />
 
       {/* Dates */}
-      <div className="text-caption text-text-tertiary flex flex-col gap-1 mt-2 pt-3 border-t border-border">
-        <span>
-          생성: {new Date(selectedNode.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-        </span>
-        <span>
-          수정: {new Date(selectedNode.updatedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-        </span>
+      <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 mt-1 pt-3 border-t border-border/40">
+        <div className="flex justify-between">
+          <span>Created</span>
+          <span>{new Date(selectedNode.createdAt).toLocaleDateString('ko-KR')}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Updated</span>
+          <span>{new Date(selectedNode.updatedAt).toLocaleDateString('ko-KR')}</span>
+        </div>
       </div>
     </div>
   )
@@ -294,10 +273,9 @@ export function NodeDetailPanel() {
   }
 
   return (
-    <div className="p-4 flex flex-col gap-5">
-      {/* Type + Title */}
-      <div className="flex items-center gap-2">
-        <NodeTypeIcon type={selectedNode.type} size={20} />
+    <div className="px-8 pt-8 pb-4 flex flex-col gap-6">
+      {/* Title — large, like Linear */}
+      <div>
         {editingTitle ? (
           <input
             ref={titleInputRef}
@@ -311,41 +289,30 @@ export function NodeDetailPanel() {
                 setEditingTitle(false)
               }
             }}
-            className="flex-1 text-section-header text-text-primary bg-transparent border-b-2 border-accent outline-none"
+            className="w-full text-2xl font-semibold text-text-primary bg-transparent border-b-2 border-accent outline-none"
           />
         ) : (
-          <h3
-            className="flex-1 text-section-header text-text-primary cursor-pointer hover:text-accent transition-colors"
+          <h1
+            className="text-2xl font-semibold text-text-primary cursor-pointer hover:text-accent transition-colors"
             onClick={() => setEditingTitle(true)}
           >
             {selectedNode.title}
-          </h3>
+          </h1>
         )}
       </div>
 
-      {/* Sub-node button — all types */}
-      <button
-        onClick={() => useNodeStore.getState().addSubNode(selectedNode.id, selectedNode.projectId, selectedNode.type)}
-        className="flex items-center gap-1.5 text-caption text-accent hover:bg-accent/10 px-2 py-1.5 rounded-button transition-colors w-fit"
-      >
-        <Plus size={14} />
-        <span>하위 {selectedNode.type === 'planning' ? '기획' : selectedNode.type === 'feature' ? '기능' : '이슈'} 추가</span>
-      </button>
-
-      {/* Description - Notion-like inline markdown editor */}
+      {/* Description — Notion-like inline markdown editor */}
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-caption text-text-tertiary">설명</label>
-          {saveStatus !== 'idle' && (
+        {saveStatus !== 'idle' && (
+          <div className="flex justify-end mb-1">
             <span
               data-testid="save-status"
-              className={`text-caption ${saveStatus === 'saving' ? 'text-text-tertiary' : 'text-green-600'}`}
+              className={`text-[11px] ${saveStatus === 'saving' ? 'text-text-tertiary' : 'text-green-600'}`}
             >
               {saveStatus === 'saving' ? '저장 중...' : '저장됨'}
             </span>
-          )}
-        </div>
-
+          </div>
+        )}
         <TiptapEditor
           key={selectedNode.id}
           content={selectedNode.description || ''}
@@ -354,29 +321,36 @@ export function NodeDetailPanel() {
         />
       </div>
 
+      {/* Sub-node button — below description, like Linear's "+ Add sub-issues" */}
+      <div className="border-t border-border/30 pt-3">
+        <button
+          onClick={() => useNodeStore.getState().addSubNode(selectedNode.id, selectedNode.projectId, selectedNode.type)}
+          className="flex items-center gap-1.5 text-caption text-text-tertiary hover:text-accent px-1 py-1 rounded-button transition-colors"
+        >
+          <Plus size={14} />
+          <span>Add sub-issues</span>
+        </button>
+      </div>
+
       {/* Decisions */}
-      <div>
-        <label className="text-caption text-text-tertiary mb-2 block">
-          결정사항 ({decisions.length})
-        </label>
-        {decisions.length === 0 ? (
-          <p className="text-caption text-text-tertiary">
-            아직 결정사항이 없습니다.
-          </p>
-        ) : (
+      {decisions.length > 0 && (
+        <div>
+          <label className="text-caption text-text-tertiary mb-2 block">
+            결정사항 ({decisions.length})
+          </label>
           <div className="flex flex-col gap-2">
             {decisions.map((d) => {
               const sessionTitle = getSessionTitle(d.sessionId)
               return (
                 <div
                   key={d.id}
-                  className="p-2 rounded-badge bg-surface-hover text-caption text-text-primary"
+                  className="p-2.5 rounded-lg bg-surface-hover/60 text-caption text-text-primary"
                 >
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-accent">{'\u2B50'}</span>
                     <span
                       data-testid="decision-source"
-                      className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-tertiary"
+                      className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface border border-border/60 text-text-tertiary"
                     >
                       {d.sessionId
                         ? `세션: ${sessionTitle || d.sessionId.slice(0, 8)}`
@@ -388,10 +362,10 @@ export function NodeDetailPanel() {
               )
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Comments */}
+      {/* Activity / Comments — Linear style */}
       <CommentSection nodeId={selectedNode.id} />
     </div>
   )

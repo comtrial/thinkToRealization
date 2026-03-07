@@ -33,6 +33,8 @@ interface CanvasStore {
   initialViewport: { x: number; y: number; zoom: number } | null
   isZoomedIn: boolean
   loadedProjectId: string | null
+  _pendingReload: boolean
+  invalidateCanvas: () => void
   setIsZoomedIn: (value: boolean) => void
   onNodesChange: OnNodesChange
   onEdgesChange: OnEdgesChange
@@ -133,6 +135,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   initialViewport: null,
   isZoomedIn: true,
   loadedProjectId: null,
+  _pendingReload: false,
+  invalidateCanvas: () => set({ _pendingReload: true }),
   setIsZoomedIn: (value) => set({ isZoomedIn: value }),
   onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
   onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
@@ -251,8 +255,9 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     await reconcileWithAPI(currentSnapshot, snapshot)
   },
   loadCanvas: async (projectId) => {
-    // Skip if already loaded for this project
-    if (get().loadedProjectId === projectId) return
+    // Skip if already loaded for this project (use forceReload to bypass)
+    if (get().loadedProjectId === projectId && !get()._pendingReload) return
+    set({ _pendingReload: false })
 
     try {
       const res = await fetch(`/api/projects/${projectId}/canvas`)

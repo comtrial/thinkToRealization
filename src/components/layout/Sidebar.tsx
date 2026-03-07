@@ -58,6 +58,7 @@ export function Sidebar() {
   const canvasNodes = useCanvasStore((s) => s.nodes)
   const loadCanvas = useCanvasStore((s) => s.loadCanvas)
   const loadedProjectId = useCanvasStore((s) => s.loadedProjectId)
+  const invalidateCanvas = useCanvasStore((s) => s.invalidateCanvas)
   const isCollapsed = !isMobile && !sidebarOpen
 
   // Ensure canvas data is loaded when sidebar needs it
@@ -93,7 +94,10 @@ export function Sidebar() {
           label="캔버스"
           active={activeTab === 'canvas'}
           collapsed={isCollapsed}
-          onClick={() => setActiveTab('canvas')}
+          onClick={() => {
+            if (activeTab !== 'canvas') invalidateCanvas()
+            setActiveTab('canvas')
+          }}
         />
         <SidebarItem icon={<MoreHorizontal size={16} />} label="More" collapsed={isCollapsed} />
       </div>
