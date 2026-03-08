@@ -6,6 +6,21 @@ import { ProjectProvider } from "./ProjectProvider"
 import { ToastProvider } from "@/components/shared/Toast"
 import { useAuthStore } from "@/stores/auth-store"
 
+// Global 401 interceptor — redirect to /login on expired session
+if (typeof window !== "undefined") {
+  const originalFetch = window.fetch
+  window.fetch = async function (...args: Parameters<typeof fetch>) {
+    const res = await originalFetch.apply(this, args)
+    if (res.status === 401) {
+      const url = typeof args[0] === "string" ? args[0] : (args[0] as Request).url
+      // Skip redirect for auth endpoints (login/register/me)
+      if (url.includes("/api/auth/")) return res
+      window.location.href = "/login"
+    }
+    return res
+  }
+}
+
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const fetchUser = useAuthStore((s) => s.fetchUser)
 
