@@ -18,7 +18,8 @@
     "schema:postgres": "tsx scripts/generate-prisma-schema.ts postgres && npx prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "npx prisma migrate dev",
-    "db:migrate:prod": "npm run schema:postgres && npx prisma migrate deploy",
+    "db:check-prod": "tsx scripts/check-prod-migration.ts",
+    "db:migrate:prod": "tsx scripts/check-prod-migration.ts --apply",
     "db:studio": "npx prisma studio",
     "postinstall": "npx prisma generate"
   },

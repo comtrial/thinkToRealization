@@ -455,6 +455,15 @@ Shadow:  elevation-1 ~ elevation-4
    - **주의**: `rm -rf .next` 실행 시 dev 서버가 죽음 → 반드시 재시작 필요
    - **인증 정보**: email=`admin@ttr.local`, password=`devflow123`, cookie=`ttr-session`
    - API 응답에 `data` 필드가 비어있거나 401이면 문제 — 즉시 해결
+5. **프로덕션 DB 마이그레이션 확인 (Prisma 스키마 변경 시 필수)**:
+   - DB 스키마(모델 필드 추가/삭제/변경)가 발생한 경우 반드시 실행:
+   ```bash
+   npm run db:check-prod          # 프로덕션 DB 스키마 drift 확인
+   npm run db:migrate:prod        # drift 발견 시 프로덕션에 적용
+   ```
+   - **로컬은 SQLite, 프로덕션은 Supabase PostgreSQL** — `prisma migrate dev`는 로컬만 적용됨
+   - 프로덕션 마이그레이션을 빠뜨리면 Vercel 배포에서 P2022(column not found) 에러 발생
+   - **스키마 변경 없이 코드만 수정한 경우는 생략 가능**
 
 ---
 

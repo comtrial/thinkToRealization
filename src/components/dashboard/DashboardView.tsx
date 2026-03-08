@@ -41,21 +41,24 @@ function IssueListSkeleton() {
 export function DashboardView({ projectId }: { projectId: string }) {
   const [data, setData] = useState<DashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchDashboard = useCallback(async () => {
-    setError(false)
+    setError(null)
     try {
       const res = await fetch(`/api/projects/${projectId}/dashboard`)
       if (res.ok) {
         const json = await res.json()
         setData(json.data)
       } else {
-        setError(true)
+        const body = await res.json().catch(() => null)
+        const msg = body?.error?.message || `HTTP ${res.status}`
+        console.error('Dashboard API error:', res.status, body)
+        setError(msg)
       }
     } catch (err) {
       console.error('Failed to load dashboard:', err)
-      setError(true)
+      setError('네트워크 오류')
     } finally {
       setLoading(false)
     }
@@ -64,7 +67,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
   useEffect(() => {
     setLoading(true)
     setData(null)
-    setError(false)
+    setError(null)
     fetchDashboard()
   }, [fetchDashboard])
 
@@ -125,7 +128,8 @@ export function DashboardView({ projectId }: { projectId: string }) {
       <div className="h-full flex flex-col">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-body text-text-secondary mb-md">대시보드를 불러올 수 없습니다</p>
+            <p className="text-body text-text-secondary mb-2">대시보드를 불러올 수 없습니다</p>
+            {error && <p className="text-caption text-text-tertiary mb-md">{error}</p>}
             <button
               onClick={fetchDashboard}
               className="px-4 py-2 rounded-button text-body text-accent border border-accent hover:bg-accent-light transition-colors"
