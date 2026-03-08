@@ -34,7 +34,7 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { error: { code: "UNAUTHORIZED", message: "로그인이 필요합니다", status: 401 } },
-        { status: 401 }
+        { status: 401, headers: { "Cache-Control": "no-store" } }
       );
     }
     return NextResponse.redirect(new URL("/login", req.url));
@@ -51,7 +51,7 @@ export async function middleware(req: NextRequest) {
     const response = pathname.startsWith("/api/")
       ? NextResponse.json(
           { error: { code: "UNAUTHORIZED", message: "세션이 만료되었습니다", status: 401 } },
-          { status: 401 }
+          { status: 401, headers: { "Cache-Control": "no-store" } }
         )
       : NextResponse.redirect(new URL("/login", req.url));
     response.cookies.delete(sessionOptions.cookieName);

@@ -34,14 +34,37 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/**
+ * Conditionally mounts ProjectProvider + WebSocketProvider only when authenticated.
+ * When user logs in (null → non-null), these providers freshly mount and auto-fetch data.
+ * On public pages (login/register), these providers are skipped entirely.
+ */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user)
+  const isLoading = useAuthStore((s) => s.isLoading)
+
+  // Still checking auth — render children directly (login page must be visible)
+  if (isLoading) return <>{children}</>
+
+  // Not authenticated — skip project/WS providers (no pointless 401 requests)
+  if (!user) return <>{children}</>
+
+  // Authenticated — wrap with providers that require auth
+  return (
+    <ProjectProvider>
+      <WebSocketProvider>
+        {children}
+      </WebSocketProvider>
+    </ProjectProvider>
+  )
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthInitializer>
-      <ProjectProvider>
-        <WebSocketProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </WebSocketProvider>
-      </ProjectProvider>
+      <AuthGate>
+        <ToastProvider>{children}</ToastProvider>
+      </AuthGate>
     </AuthInitializer>
   )
 }

@@ -154,7 +154,16 @@ function TerminalSection() {
 function MainContent() {
   const activeTab = useUIStore((s) => s.activeTab)
   const panelMode = useUIStore((s) => s.panelMode)
-  const { currentProject } = useProject()
+  const { currentProject, loading } = useProject()
+
+  // Show loading while auth check or project fetch is in progress
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-caption text-text-secondary animate-pulse">로딩 중...</div>
+      </div>
+    )
+  }
 
   if (!currentProject) {
     return <EmptyState variant="no-project" className="h-full" />

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuthStore } from '@/stores/auth-store'
 
 export default function LoginPage() {
@@ -46,7 +47,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              autoFocus
+              autoComplete="email"
               className="px-3 py-2 rounded-button border border-border bg-surface text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
               placeholder="email@example.com"
             />
@@ -76,7 +77,7 @@ export default function LoginPage() {
 
         <p className="text-caption text-text-tertiary text-center mt-6">
           계정이 없으신가요?{' '}
-          <a href="/register" className="text-accent hover:underline">회원가입</a>
+          <Link href="/register" className="text-accent hover:underline">회원가입</Link>
         </p>
       </div>
     </div>
