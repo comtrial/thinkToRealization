@@ -19,6 +19,8 @@ interface UIStore {
   setTerminalHeight: (height: number) => void
   commandPaletteOpen: boolean
   toggleCommandPalette: () => void
+  dashboardVersion: number
+  invalidateDashboard: () => void
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -42,4 +44,6 @@ export const useUIStore = create<UIStore>((set) => ({
   setTerminalHeight: (height) => set({ terminalHeight: height }),
   commandPaletteOpen: false,
   toggleCommandPalette: () => set((s) => ({ commandPaletteOpen: !s.commandPaletteOpen })),
+  dashboardVersion: 0,
+  invalidateDashboard: () => set((s) => ({ dashboardVersion: s.dashboardVersion + 1 })),
 }))

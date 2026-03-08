@@ -132,14 +132,20 @@ function HandleWithPlus({
 
   return (
     <>
-      <Handle
-        type={type}
-        position={position}
-        style={handleStyle}
-        id={id}
-        onDoubleClick={handleDoubleClick}
+      <Handle type={type} position={position} style={handleStyle} id={id} />
+      {/* Overlay div above Handle to capture hover/dblclick without ReactFlow intercepting */}
+      <div
+        data-testid={`handle-overlay-${id}`}
+        className="absolute"
+        style={{
+          zIndex: 30,
+          ...(position === Position.Right
+            ? { right: -8, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, cursor: 'crosshair' }
+            : { bottom: -8, left: '50%', transform: 'translateX(-50%)', width: 28, height: 28, cursor: 'crosshair' }),
+        }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        onDoubleClick={handleDoubleClick}
       />
       {showPlus && (
         <div

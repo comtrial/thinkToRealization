@@ -64,9 +64,15 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const existing = await prisma.node.findUnique({ where: { id } });
     if (!existing) return notFound("Node", id);
 
+    // Convert dueDate string to Date object for Prisma
+    const data = { ...parsed.data } as Record<string, unknown>;
+    if ('dueDate' in data) {
+      data.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;
+    }
+
     const updated = await prisma.node.update({
       where: { id },
-      data: parsed.data,
+      data,
       include: nodeWithCounts,
     });
 

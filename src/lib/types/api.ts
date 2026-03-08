@@ -22,6 +22,7 @@ export interface NodeResponse {
   assigneeId: string | null;
   assigneeName: string | null;
   assigneeAvatarUrl: string | null;
+  dueDate: string | null;
   createdAt: string;
   updatedAt: string;
   // Computed fields

@@ -71,15 +71,16 @@ export function DashboardView({ projectId }: { projectId: string }) {
     fetchDashboard()
   }, [fetchDashboard])
 
-  // Refetch dashboard when switching TO dashboard tab
+  // Refetch dashboard when switching TO dashboard tab or when data is invalidated
   const activeTab = useUIStore((s) => s.activeTab)
+  const dashboardVersion = useUIStore((s) => s.dashboardVersion)
 
   useEffect(() => {
     if (activeTab === 'dashboard' && projectId) {
       fetchDashboard()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
+  }, [activeTab, dashboardVersion])
 
 
   const handleCreateNode = useCallback(async () => {

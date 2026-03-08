@@ -4,11 +4,11 @@ import { cn } from '@/lib/utils'
 import type { NodeStatus } from '@/lib/types/api'
 
 const statusConfig: Record<NodeStatus, { label: string; className: string }> = {
-  backlog: { label: 'Backlog', className: 'bg-status-backlog/20 text-status-backlog' },
-  todo: { label: 'Todo', className: 'bg-status-todo/20 text-[#92700C]' },
-  in_progress: { label: 'In Progress', className: 'bg-status-progress/20 text-status-progress' },
-  done: { label: 'Done', className: 'bg-status-done/20 text-[#15803D]' },
-  archived: { label: 'Archived', className: 'bg-status-archived/20 text-status-archived' },
+  backlog: { label: 'Backlog', className: 'bg-status-backlog/15 text-[#64748B]' },
+  todo: { label: 'Todo', className: 'bg-status-todo/15 text-[#475569]' },
+  in_progress: { label: 'In Progress', className: 'bg-status-progress/15 text-[#CA8A04]' },
+  done: { label: 'Done', className: 'bg-status-done/15 text-[#7C3AED]' },
+  archived: { label: 'Archived', className: 'bg-status-archived/15 text-[#94A3B8]' },
 }
 
 export function StatusBadge({ status }: { status: NodeStatus }) {

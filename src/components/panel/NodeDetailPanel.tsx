@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronRight, Trash2 } from 'lucide-react'
 import { useNodeStore } from '@/stores/node-store'
 import { useCanvasStore } from '@/stores/canvas-store'
+import { useUIStore } from '@/stores/ui-store'
 import { TiptapEditor } from '@/components/shared/TiptapEditor'
 import { AssigneePicker } from '@/components/shared/AssigneePicker'
 import { CommentSection } from '@/components/comments/CommentSection'
-import type { NodeType, NodeStatus } from '@/lib/types/api'
+import type { NodeType, NodeStatus, EdgeResponse } from '@/lib/types/api'
 
 const STATUS_OPTIONS: { value: NodeStatus; label: string; color: string }[] = [
   { value: 'backlog', label: 'Backlog', color: 'bg-status-backlog' },
@@ -31,7 +32,13 @@ const TYPE_OPTIONS: { value: NodeType; label: string }[] = [
   { value: 'issue', label: '이슈' },
 ]
 
-type SaveStatus = 'idle' | 'saving' | 'saved'
+const STATUS_DOT_COLORS: Record<string, string> = {
+  backlog: 'bg-status-backlog',
+  todo: 'bg-status-todo',
+  in_progress: 'bg-status-progress',
+  done: 'bg-status-done',
+  archived: 'bg-status-archived',
+}
 
 function PropertySelect({
   label,
@@ -105,29 +112,54 @@ export function NodeProperties() {
     }
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Status / Priority / Type — compact vertical list */}
-      <PropertySelect
-        label="Status"
-        options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-        value={selectedNode.status}
-        onChange={(v) => updateNodeStatus(selectedNode.id, v)}
-      />
-      <PropertySelect
-        label="Priority"
-        options={PRIORITY_OPTIONS}
-        value={selectedNode.priority}
-        onChange={handlePriorityChange}
-      />
-      <PropertySelect
-        label="Type"
-        options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-        value={selectedNode.type}
-        onChange={handleTypeChange}
-      />
+  const handleDueDateChange = async (dateStr: string) => {
+    const newDueDate = dateStr ? new Date(dateStr).toISOString() : null
+    try {
+      const res = await fetch(`/api/nodes/${selectedNode.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueDate: newDueDate }),
+      })
+      if (res.ok) {
+        useNodeStore.setState((s) => ({
+          selectedNode: s.selectedNode ? { ...s.selectedNode, dueDate: newDueDate } : null,
+        }))
+        useCanvasStore.getState().updateNodeData(selectedNode.id, { dueDate: newDueDate })
+      }
+    } catch (err) {
+      console.error('Failed to update due date:', err)
+    }
+  }
 
-      {/* Assignee */}
+  const dueDateValue = selectedNode.dueDate
+    ? new Date(selectedNode.dueDate).toISOString().split('T')[0]
+    : ''
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Status / Priority / Type — single row */}
+      <div className="flex items-end gap-3">
+        <PropertySelect
+          label="Status"
+          options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          value={selectedNode.status}
+          onChange={(v) => updateNodeStatus(selectedNode.id, v)}
+        />
+        <PropertySelect
+          label="Priority"
+          options={PRIORITY_OPTIONS}
+          value={selectedNode.priority}
+          onChange={handlePriorityChange}
+        />
+        <PropertySelect
+          label="Type"
+          options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          value={selectedNode.type}
+          onChange={handleTypeChange}
+        />
+      </div>
+
+      {/* Assignee — own row */}
       <AssigneePicker
         assigneeId={selectedNode.assigneeId}
         assigneeName={selectedNode.assigneeName}
@@ -161,6 +193,17 @@ export function NodeProperties() {
         }}
       />
 
+      {/* Due Date */}
+      <div className="flex flex-col gap-1">
+        <label className="text-[11px] text-text-tertiary">Due Date</label>
+        <input
+          type="date"
+          value={dueDateValue}
+          onChange={(e) => handleDueDateChange(e.target.value)}
+          className="text-caption px-2 py-1.5 rounded-button border border-border/60 bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent/50"
+        />
+      </div>
+
       {/* Dates */}
       <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 mt-1 pt-3 border-t border-border/40">
         <div className="flex justify-between">
@@ -176,6 +219,95 @@ export function NodeProperties() {
   )
 }
 
+// Hierarchy section: parent + children
+function NodeHierarchy() {
+  const selectedNode = useNodeStore((s) => s.selectedNode)
+  const selectNode = useNodeStore((s) => s.selectNode)
+  const openPanel = useUIStore((s) => s.openPanel)
+  const canvasNodes = useCanvasStore((s) => s.nodes)
+
+  if (!selectedNode) return null
+
+  // Look up parent node data from canvas
+  const parentNodeId = selectedNode.parentNodeId
+  const parentCanvasNode = parentNodeId
+    ? canvasNodes.find((n) => n.id === parentNodeId)
+    : null
+  const parentTitle = parentCanvasNode
+    ? (parentCanvasNode.data as Record<string, unknown>)?.title as string
+    : null
+
+  // Derive child nodes from outEdges (parent_child type)
+  const nodeWithEdges = selectedNode as unknown as {
+    outEdges?: EdgeResponse[]
+  }
+  const childEdges = (nodeWithEdges.outEdges ?? []).filter(
+    (e) => e.type === 'parent_child'
+  )
+  const childNodes = childEdges
+    .map((edge) => {
+      const canvasNode = canvasNodes.find((n) => n.id === edge.toNodeId)
+      if (!canvasNode) return null
+      const data = canvasNode.data as Record<string, unknown>
+      return {
+        id: edge.toNodeId,
+        title: (data.title as string) || '(untitled)',
+        status: (data.status as string) || 'backlog',
+      }
+    })
+    .filter(Boolean) as { id: string; title: string; status: string }[]
+
+  const handleNavigate = (nodeId: string) => {
+    selectNode(nodeId)
+    openPanel(nodeId)
+  }
+
+  if (!parentNodeId && childNodes.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Parent issue */}
+      {parentNodeId && (
+        <div className="flex items-center gap-1 text-caption text-text-secondary">
+          <span className="text-[11px] text-text-tertiary">상위 이슈</span>
+          <ChevronRight size={12} className="text-text-tertiary" />
+          <button
+            onClick={() => handleNavigate(parentNodeId)}
+            className="hover:text-accent hover:underline transition-colors truncate max-w-[260px]"
+          >
+            {parentTitle || parentNodeId.slice(0, 8)}
+          </button>
+        </div>
+      )}
+
+      {/* Child issues */}
+      {childNodes.length > 0 && (
+        <div>
+          <span className="text-[11px] text-text-tertiary block mb-1.5">
+            하위 이슈 ({childNodes.length})
+          </span>
+          <div className="flex flex-col gap-1">
+            {childNodes.map((child) => (
+              <button
+                key={child.id}
+                onClick={() => handleNavigate(child.id)}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-caption text-text-primary hover:bg-surface-hover transition-colors text-left group"
+              >
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_COLORS[child.status] || 'bg-gray-400'}`}
+                />
+                <span className="truncate group-hover:text-accent transition-colors">
+                  {child.title}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function NodeDetailPanel() {
   const selectedNode = useNodeStore((s) => s.selectedNode)
   const decisions = useNodeStore((s) => s.decisions)
@@ -183,15 +315,12 @@ export function NodeDetailPanel() {
 
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState('')
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const titleInputRef = useRef<HTMLInputElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout>()
-  const savedTimerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     if (selectedNode) {
       setTitleValue(selectedNode.title)
-      setSaveStatus('idle')
     }
   }, [selectedNode])
 
@@ -206,13 +335,11 @@ export function NodeDetailPanel() {
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
     }
   }, [])
 
   const saveDescription = useCallback(async (value: string) => {
     if (!selectedNode) return
-    setSaveStatus('saving')
     try {
       const res = await fetch(`/api/nodes/${selectedNode.id}`, {
         method: 'PUT',
@@ -225,13 +352,9 @@ export function NodeDetailPanel() {
           selectedNode: s.selectedNode ? { ...s.selectedNode, description: data.description } : null,
         }))
         useCanvasStore.getState().updateNodeData(selectedNode.id, { description: data.description })
-        setSaveStatus('saved')
-        if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
-        savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
       }
     } catch (err) {
       console.error('Failed to update description:', err)
-      setSaveStatus('idle')
     }
   }, [selectedNode])
 
@@ -257,6 +380,7 @@ export function NodeDetailPanel() {
             selectedNode: s.selectedNode ? { ...s.selectedNode, title: data.title } : null,
           }))
           useCanvasStore.getState().updateNodeData(selectedNode.id, { title: data.title })
+          useUIStore.getState().invalidateDashboard()
         }
       } catch (err) {
         console.error('Failed to update title:', err)
@@ -301,18 +425,11 @@ export function NodeDetailPanel() {
         )}
       </div>
 
+      {/* Hierarchy — parent / children */}
+      <NodeHierarchy />
+
       {/* Description — Notion-like inline markdown editor */}
       <div>
-        {saveStatus !== 'idle' && (
-          <div className="flex justify-end mb-1">
-            <span
-              data-testid="save-status"
-              className={`text-[11px] ${saveStatus === 'saving' ? 'text-text-tertiary' : 'text-green-600'}`}
-            >
-              {saveStatus === 'saving' ? '저장 중...' : '저장됨'}
-            </span>
-          </div>
-        )}
         <TiptapEditor
           key={selectedNode.id}
           content={selectedNode.description || ''}
@@ -324,11 +441,15 @@ export function NodeDetailPanel() {
       {/* Sub-node button — below description, like Linear's "+ Add sub-issues" */}
       <div className="border-t border-border/30 pt-3">
         <button
-          onClick={() => useNodeStore.getState().addSubNode(selectedNode.id, selectedNode.projectId, selectedNode.type)}
+          onClick={async () => {
+            await useNodeStore.getState().addSubNode(selectedNode.id, selectedNode.projectId, selectedNode.type)
+            // Re-fetch node detail to refresh hierarchy (child list)
+            await useNodeStore.getState().selectNode(selectedNode.id)
+          }}
           className="flex items-center gap-1.5 text-caption text-text-tertiary hover:text-accent px-1 py-1 rounded-button transition-colors"
         >
           <Plus size={14} />
-          <span>Add sub-issues</span>
+          <span>하위 기획/기능/이슈 추가</span>
         </button>
       </div>
 
@@ -367,6 +488,31 @@ export function NodeDetailPanel() {
 
       {/* Activity / Comments — Linear style */}
       <CommentSection nodeId={selectedNode.id} />
+
+      {/* Delete node */}
+      <div className="border-t border-border/30 pt-4 mt-2">
+        <button
+          onClick={async () => {
+            const confirmed = window.confirm('이 노드를 삭제하시겠습니까? 삭제된 노드는 archived 상태로 변경됩니다.')
+            if (!confirmed) return
+            try {
+              const res = await fetch(`/api/nodes/${selectedNode.id}`, { method: 'DELETE' })
+              if (res.ok) {
+                useCanvasStore.getState().removeNode(selectedNode.id)
+                useUIStore.getState().closePanel()
+                useNodeStore.getState().clearSelection()
+                useUIStore.getState().invalidateDashboard()
+              }
+            } catch (err) {
+              console.error('Failed to delete node:', err)
+            }
+          }}
+          className="flex items-center gap-1.5 text-caption text-red-500 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-button transition-colors w-full justify-center border border-red-200 hover:border-red-300"
+        >
+          <Trash2 size={14} />
+          <span>노드 삭제</span>
+        </button>
+      </div>
     </div>
   )
 }

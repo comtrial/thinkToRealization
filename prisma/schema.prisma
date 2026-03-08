@@ -64,6 +64,7 @@ model Node {
   childNodes   Node[]         @relation("NodeChildren")
   assigneeId   String?
   assignee     User?          @relation("NodeAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  dueDate      DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   sessions     Session[]

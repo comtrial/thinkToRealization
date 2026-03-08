@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useCanvasStore } from '@/stores/canvas-store'
+import { useUIStore } from '@/stores/ui-store'
 import type { NodeResponse, SessionResponse, DecisionResponse } from '@/lib/types/api'
 
 interface NodeStore {
@@ -55,6 +56,7 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
         set((s) => ({ selectedNode: s.selectedNode ? { ...s.selectedNode, status: data.status } : null }))
         // Also update canvas node data
         useCanvasStore.getState().updateNodeData(nodeId, { status: data.status })
+        useUIStore.getState().invalidateDashboard()
       }
     } catch (err) {
       console.error('Failed to update status:', err)

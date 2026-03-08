@@ -27,6 +27,7 @@ export const updateNodeSchema = z.object({
   canvasW: z.number().optional(),
   canvasH: z.number().optional(),
   parentNodeId: z.string().nullable().optional(),
+  dueDate: z.string().datetime().nullable().optional(),
 });
 
 export const updateNodeStatusSchema = z.object({
