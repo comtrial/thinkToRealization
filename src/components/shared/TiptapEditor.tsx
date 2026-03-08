@@ -60,7 +60,7 @@ export function TiptapEditor({ content, onUpdate, placeholder, className }: Tipt
       data-testid="tiptap-editor"
       className={cn(
         'tiptap-editor rounded-node border border-transparent',
-        'hover:border-border focus-within:border-accent/50 transition-colors',
+        'focus-within:border-accent/50 transition-colors',
         className
       )}
     >

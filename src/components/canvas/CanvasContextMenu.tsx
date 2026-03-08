@@ -137,7 +137,7 @@ function DesktopContextMenu({
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content
-          className="min-w-[180px] bg-surface rounded-dropdown border border-border shadow-elevation-2 py-1 z-50"
+          className="min-w-[180px] bg-surface rounded-dropdown border border-border shadow-elevation-2 py-1 z-50 animate-in fade-in-0 zoom-in-95"
           onContextMenu={(e) => e.preventDefault()}
         >
           {nodeTypeOptions.map(({ type, label, icon }) => (

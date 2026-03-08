@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ListTodo, Plus, ChevronDown, Check, FolderOpen, X, Bug, Inbox, LayoutGrid, MoreHorizontal } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { useUIStore } from '@/stores/ui-store'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { useProject } from '@/components/providers/ProjectProvider'
@@ -17,21 +18,27 @@ interface SidebarItemProps {
   active?: boolean
   collapsed?: boolean
   onClick?: () => void
+  badge?: number
 }
 
-function SidebarItem({ icon, label, active, collapsed, onClick }: SidebarItemProps) {
+function SidebarItem({ icon, label, active, collapsed, onClick, badge }: SidebarItemProps) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-button text-body transition-colors ${
+      className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-button text-body transition-colors focus-ring ${
         active
-          ? 'bg-surface-active text-text-primary font-medium'
+          ? 'bg-surface-active text-text-primary font-medium border-l-2 border-accent'
           : 'text-text-secondary hover:bg-surface-hover'
       } ${collapsed ? 'justify-center px-0' : ''}`}
       title={collapsed ? label : undefined}
     >
       {icon}
       {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && badge != null && badge > 0 && (
+        <span className="text-micro px-1.5 py-0.5 rounded-badge bg-accent/10 text-accent font-medium ml-auto">
+          {badge}
+        </span>
+      )}
     </button>
   )
 }
@@ -68,6 +75,9 @@ export function Sidebar() {
     }
   }, [currentProject, loadedProjectId, loadCanvas])
 
+  const inProgressCount = useMemo(() => canvasNodes.filter(n => (n.data as Record<string, unknown>).status === 'in_progress').length, [canvasNodes])
+  const totalNodeCount = canvasNodes.length
+
   const issueNodes = useMemo(() => {
     const issues = canvasNodes.filter((n) => {
       const data = n.data as Record<string, unknown>
@@ -80,6 +90,7 @@ export function Sidebar() {
   const sidebarContent = (
     <div className="flex-1 py-2 flex flex-col overflow-y-auto">
       {/* Workspace navigation */}
+      {!isCollapsed && <div className="px-3 mb-1 text-micro font-medium uppercase tracking-wider text-text-tertiary">Workspace</div>}
       <div className="flex flex-col gap-0.5 px-2 mb-3">
         <SidebarItem icon={<Inbox size={16} />} label="Inbox" collapsed={isCollapsed} />
         <SidebarItem
@@ -88,6 +99,7 @@ export function Sidebar() {
           active={activeTab === 'dashboard'}
           collapsed={isCollapsed}
           onClick={() => setActiveTab('dashboard')}
+          badge={inProgressCount}
         />
         <SidebarItem
           icon={<LayoutGrid size={16} />}
@@ -98,6 +110,7 @@ export function Sidebar() {
             if (activeTab !== 'canvas') invalidateCanvas()
             setActiveTab('canvas')
           }}
+          badge={totalNodeCount}
         />
         <SidebarItem icon={<MoreHorizontal size={16} />} label="More" collapsed={isCollapsed} />
       </div>
@@ -108,12 +121,13 @@ export function Sidebar() {
           <div className="h-px bg-border mx-3 mb-3" />
 
           {/* Project dropdown */}
+          {!isCollapsed && <div className="px-3 mb-1 text-micro font-medium uppercase tracking-wider text-text-tertiary">Project</div>}
           <div className="px-2 mb-3">
             <Popover.Root open={projectDropdownOpen} onOpenChange={setProjectDropdownOpen}>
               <Popover.Trigger asChild>
                 <button
                   data-testid="project-list"
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-button text-body text-text-primary hover:bg-surface-hover transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-button text-body text-text-primary hover:bg-surface-hover transition-colors focus-ring"
                 >
                   <FolderOpen size={16} className="text-text-secondary flex-shrink-0" />
                   <span className="truncate flex-1 text-left">
@@ -145,7 +159,18 @@ export function Sidebar() {
                                 : 'text-text-secondary hover:bg-surface-hover'
                             }`}
                           >
-                            <span className="truncate flex-1 text-left">{project.title}</span>
+                            <Tooltip.Provider delayDuration={500}>
+                              <Tooltip.Root>
+                                <Tooltip.Trigger asChild>
+                                  <span className="truncate flex-1 text-left">{project.title}</span>
+                                </Tooltip.Trigger>
+                                <Tooltip.Portal>
+                                  <Tooltip.Content className="text-caption bg-surface-active text-text-primary px-2 py-1 rounded-badge shadow-elevation-2 z-[100]" sideOffset={4}>
+                                    {project.title}
+                                  </Tooltip.Content>
+                                </Tooltip.Portal>
+                              </Tooltip.Root>
+                            </Tooltip.Provider>
                             {selected && <Check size={12} className="text-accent flex-shrink-0" />}
                           </button>
                         </li>
@@ -173,7 +198,7 @@ export function Sidebar() {
               <div className="flex items-center gap-1.5 px-3 mb-1">
                 <Bug size={14} className="text-type-issue" />
                 <span className="text-caption text-text-tertiary font-medium">이슈</span>
-                <span className="text-[10px] text-text-tertiary ml-auto">{issueNodes.length}</span>
+                <span className="text-micro text-text-tertiary ml-auto">{issueNodes.length}</span>
               </div>
               {/* Status filter */}
               <div className="flex gap-1 px-3 mb-2 flex-wrap">
@@ -181,7 +206,7 @@ export function Sidebar() {
                   <button
                     key={f.value}
                     onClick={() => setIssueStatusFilter(f.value)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded-badge transition-colors ${
+                    className={`text-micro px-1.5 py-0.5 rounded-badge transition-colors focus-ring ${
                       issueStatusFilter === f.value
                         ? 'bg-accent/10 text-accent font-medium'
                         : 'text-text-tertiary hover:bg-surface-hover'
@@ -194,7 +219,7 @@ export function Sidebar() {
               {/* Issue items */}
               <div className="flex flex-col gap-0.5 px-1">
                 {issueNodes.length === 0 ? (
-                  <p className="text-[10px] text-text-tertiary px-2 py-1">이슈가 없습니다</p>
+                  <p className="text-micro text-text-tertiary px-2 py-1">이슈가 없습니다</p>
                 ) : (
                   issueNodes.map((node) => {
                     const data = node.data as Record<string, unknown>
@@ -205,12 +230,23 @@ export function Sidebar() {
                           openPanel(node.id)
                           if (isMobile) toggleSidebar()
                         }}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-button text-left hover:bg-surface-hover transition-colors w-full"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-button text-left hover:bg-surface-hover transition-colors w-full focus-ring"
                       >
                         <StatusDot status={data.status as NodeStatus} />
-                        <span className="text-caption text-text-primary truncate flex-1">
-                          {data.title as string}
-                        </span>
+                        <Tooltip.Provider delayDuration={500}>
+                          <Tooltip.Root>
+                            <Tooltip.Trigger asChild>
+                              <span className="text-caption text-text-primary truncate flex-1">
+                                {data.title as string}
+                              </span>
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                              <Tooltip.Content className="text-caption bg-surface-active text-text-primary px-2 py-1 rounded-badge shadow-elevation-2 z-[100]" sideOffset={4}>
+                                {data.title as string}
+                              </Tooltip.Content>
+                            </Tooltip.Portal>
+                          </Tooltip.Root>
+                        </Tooltip.Provider>
                       </button>
                     )
                   })

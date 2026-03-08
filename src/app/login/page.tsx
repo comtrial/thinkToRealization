@@ -28,7 +28,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-text-primary text-center mb-1">DevFlow</h1>
+        <h1 className="text-2xl font-bold text-text-primary text-center mb-1">ThinkToRealization</h1>
         <p className="text-caption text-text-secondary text-center mb-8">로그인하여 계속하세요</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -47,7 +47,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              className="px-3 py-2 rounded-button border border-border bg-surface text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+              className="px-3 py-2 rounded-button border border-border bg-surface text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
               placeholder="email@example.com"
             />
           </div>
@@ -60,7 +60,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="px-3 py-2 rounded-button border border-border bg-surface text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+              className="px-3 py-2 rounded-button border border-border bg-surface text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
               placeholder="6자 이상"
             />
           </div>

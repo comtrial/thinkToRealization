@@ -39,8 +39,13 @@ const config: Config = {
         'status-backlog': '#94A3B8',
         'status-todo': '#64748B',
         'status-progress': '#EAB308',
-        'status-done': '#8B5CF6',
+        'status-done': '#22C55E',
         'status-archived': '#CBD5E1',
+        'status-backlog-text': '#64748B',
+        'status-todo-text': '#475569',
+        'status-progress-text': '#CA8A04',
+        'status-done-text': '#16A34A',
+        'status-archived-text': '#94A3B8',
         'type-idea': '#FBBF24',
         'type-decision': '#8B5CF6',
         'type-task': '#3B82F6',
@@ -66,6 +71,7 @@ const config: Config = {
         body: ['14px', { lineHeight: '22px', fontWeight: '400' }],
         caption: ['12px', { lineHeight: '16px', fontWeight: '400' }],
         badge: ['11px', { lineHeight: '14px', fontWeight: '500' }],
+        'micro': ['10px', { lineHeight: '12px', fontWeight: '500' }],
         terminal: ['13px', { lineHeight: '20px', fontWeight: '400' }],
       },
       spacing: {
@@ -92,7 +98,7 @@ const config: Config = {
         dropdown: '8px',
       },
       transitionTimingFunction: {
-        devflow: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)',
+        ttr: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)',
       },
       transitionDuration: {
         panel: '250ms',

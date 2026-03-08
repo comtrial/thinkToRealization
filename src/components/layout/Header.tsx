@@ -31,13 +31,13 @@ export function Header() {
       <div className="flex items-center gap-1 md:gap-3 min-w-0 flex-shrink">
         <button
           onClick={toggleSidebar}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover transition-colors flex-shrink-0"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover transition-colors flex-shrink-0 focus-ring"
           aria-label="Toggle sidebar"
         >
           <Menu size={18} className="text-text-secondary" />
         </button>
         {!isMobile && (
-          <span className="text-node-title-lg text-text-primary font-semibold flex-shrink-0">DevFlow</span>
+          <span className="text-node-title-lg text-text-primary font-semibold flex-shrink-0">ThinkToRealization</span>
         )}
         <ProjectSelector />
       </div>
@@ -49,7 +49,7 @@ export function Header() {
             key={tab}
             data-active={activeTab === tab ? 'true' : undefined}
             onClick={() => setActiveTab(tab)}
-            className={`px-2 md:px-3 py-1.5 text-caption md:text-body rounded-button transition-colors relative min-h-[44px] ${
+            className={`px-2 md:px-3 py-1.5 text-caption md:text-body rounded-button transition-colors relative min-h-[44px] focus-ring ${
               activeTab === tab
                 ? 'text-text-primary'
                 : 'text-text-secondary hover:text-text-primary'
@@ -67,11 +67,11 @@ export function Header() {
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
           onClick={toggleCommandPalette}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button border border-border hover:bg-surface-hover transition-colors"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button border border-border hover:bg-surface-hover transition-colors focus-ring"
         >
           <Search size={14} className="text-text-tertiary" />
           {!isMobile && <span className="text-caption text-text-tertiary ml-2">검색</span>}
-          {!isMobile && <kbd className="text-[10px] px-1 py-0.5 rounded bg-surface-hover border border-border ml-2">⌘K</kbd>}
+          {!isMobile && <kbd className="text-micro px-1 py-0.5 rounded bg-surface-hover border border-border ml-2">⌘K</kbd>}
         </button>
 
         <NotificationBell />
@@ -80,7 +80,7 @@ export function Header() {
         {user && (
           <Popover.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
             <Popover.Trigger asChild>
-              <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover transition-colors">
+              <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover transition-colors focus-ring">
                 <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size={26} />
               </button>
             </Popover.Trigger>
@@ -92,7 +92,7 @@ export function Header() {
               >
                 <div className="px-2 py-1.5 border-b border-border mb-1">
                   <p className="text-caption font-medium text-text-primary truncate">{user.name}</p>
-                  <p className="text-[10px] text-text-tertiary truncate">{user.email}</p>
+                  <p className="text-micro text-text-tertiary truncate">{user.email}</p>
                 </div>
                 <button
                   onClick={handleLogout}

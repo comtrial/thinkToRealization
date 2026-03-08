@@ -94,8 +94,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="예: DevFlow v2"
-                className="px-3 py-2 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent"
+                placeholder="예: 새 프로젝트"
+                className="px-3 py-2 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring"
                 required
               />
             </label>
@@ -107,7 +107,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="프로젝트에 대한 간단한 설명"
                 rows={2}
-                className="px-3 py-2 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent resize-none"
+                className="px-3 py-2 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 resize-none focus-ring"
               />
             </label>
 
@@ -119,7 +119,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="px-4 py-2 text-body text-text-secondary rounded-button hover:bg-surface-hover transition-colors"
+                  className="px-4 py-2 text-body text-text-secondary rounded-button hover:bg-surface-hover transition-colors focus-ring"
                 >
                   취소
                 </button>
@@ -128,7 +128,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 data-testid="create-project-submit"
                 type="submit"
                 disabled={submitting || !title.trim()}
-                className="px-4 py-2 text-body text-white bg-accent rounded-button hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-body text-white bg-accent rounded-button hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed focus-ring"
               >
                 {submitting ? '생성 중...' : '생성'}
               </button>

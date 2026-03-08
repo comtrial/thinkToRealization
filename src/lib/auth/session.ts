@@ -12,7 +12,7 @@ export const sessionOptions: SessionOptions = {
   password:
     process.env.IRON_SESSION_PASSWORD ??
     "devflow-local-dev-secret-at-least-32-chars-long!!",
-  cookieName: "devflow-session",
+  cookieName: "ttr-session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,

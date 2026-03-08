@@ -45,7 +45,7 @@ function CompactNode({ data }: { data: NodeData }) {
       <NodeTypeIcon type={data.type} size={16} />
       <span className="text-node-title-sm text-text-primary truncate flex-1">{data.title}</span>
       {data.childCount != null && data.childCount > 0 && (
-        <span className="text-[10px] px-1 py-0.5 rounded-badge bg-type-issue/20 text-type-issue font-medium">
+        <span className="text-micro px-1 py-0.5 rounded-badge bg-type-issue/20 text-type-issue font-medium">
           {data.childCount}
         </span>
       )}
@@ -81,7 +81,7 @@ function ExpandedNode({ data }: { data: NodeData }) {
           {data.commentCount != null && data.commentCount > 0 && <span>댓글 {data.commentCount}</span>}
           {data.latestPlanStatus && (
             <span className={cn(
-              'text-[10px] px-1 py-0.5 rounded-badge ml-auto',
+              'text-micro px-1 py-0.5 rounded-badge ml-auto',
               data.latestPlanStatus === 'approved' && 'bg-green-100 text-green-700',
               data.latestPlanStatus === 'draft' && 'bg-gray-100 text-gray-600',
               data.latestPlanStatus === 'rejected' && 'bg-red-100 text-red-700',
@@ -99,8 +99,8 @@ function ExpandedNode({ data }: { data: NodeData }) {
   )
 }
 
-const handleStyleDesktop = { width: 12, height: 12, background: '#4F46E5', border: 'none' }
-const handleStyleMobile = { width: 30, height: 30, background: '#4F46E5', border: 'none' }
+const handleStyleDesktop = { width: 12, height: 12, background: 'var(--color-accent)', border: 'none' }
+const handleStyleMobile = { width: 30, height: 30, background: 'var(--color-accent)', border: 'none' }
 
 function HandleWithPlus({
   type,

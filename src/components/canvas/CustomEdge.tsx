@@ -5,13 +5,13 @@ import type { EdgeProps } from '@xyflow/react'
 import type { EdgeType } from '@/lib/types/api'
 
 const edgeStyles: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
-  parent_child: { stroke: '#6366F1', strokeWidth: 2 },
-  related: { stroke: '#94A3B8', strokeWidth: 1.5, strokeDasharray: '6 3' },
+  parent_child: { stroke: 'var(--color-accent)', strokeWidth: 2 },
+  related: { stroke: 'var(--color-border-hover)', strokeWidth: 1.5, strokeDasharray: '6 3' },
   // Legacy types (backward compat)
-  sequence: { stroke: '#94A3B8', strokeWidth: 2 },
-  dependency: { stroke: '#94A3B8', strokeWidth: 2, strokeDasharray: '6 3' },
+  sequence: { stroke: 'var(--color-border-hover)', strokeWidth: 2 },
+  dependency: { stroke: 'var(--color-border-hover)', strokeWidth: 2, strokeDasharray: '6 3' },
   regression: { stroke: '#F87171', strokeWidth: 2 },
-  branch: { stroke: '#94A3B8', strokeWidth: 1.5 },
+  branch: { stroke: 'var(--color-border-hover)', strokeWidth: 1.5 },
 }
 
 const RELATIONSHIP_LABELS: Record<string, string> = {

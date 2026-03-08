@@ -57,7 +57,7 @@ function PropertySelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="text-caption px-2 py-1.5 rounded-button border border-border/60 bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent/50"
+        className="text-caption px-2 py-1.5 rounded-button border border-border bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -87,6 +87,7 @@ export function NodeProperties() {
           selectedNode: s.selectedNode ? { ...s.selectedNode, priority: newPriority } : null,
         }))
         useCanvasStore.getState().updateNodeData(selectedNode.id, { priority: newPriority })
+        useUIStore.getState().invalidateDashboard()
       }
     } catch (err) {
       console.error('Failed to update priority:', err)
@@ -106,6 +107,7 @@ export function NodeProperties() {
           selectedNode: s.selectedNode ? { ...s.selectedNode, type: typedNewType } : null,
         }))
         useCanvasStore.getState().updateNodeData(selectedNode.id, { type: typedNewType })
+        useUIStore.getState().invalidateDashboard()
       }
     } catch (err) {
       console.error('Failed to update type:', err)
@@ -186,6 +188,7 @@ export function NodeProperties() {
                 assigneeName: data.assignee?.name ?? null,
                 assigneeAvatarUrl: data.assignee?.avatarUrl ?? null,
               })
+              useUIStore.getState().invalidateDashboard()
             }
           } catch (err) {
             console.error('Failed to update assignee:', err)
@@ -200,12 +203,12 @@ export function NodeProperties() {
           type="date"
           value={dueDateValue}
           onChange={(e) => handleDueDateChange(e.target.value)}
-          className="text-caption px-2 py-1.5 rounded-button border border-border/60 bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent/50"
+          className="text-caption px-2 py-1.5 rounded-button border border-border bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring"
         />
       </div>
 
       {/* Dates */}
-      <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 mt-1 pt-3 border-t border-border/40">
+      <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 mt-1 pt-3 border-t border-border/30">
         <div className="flex justify-between">
           <span>Created</span>
           <span>{new Date(selectedNode.createdAt).toLocaleDateString('ko-KR')}</span>
@@ -471,7 +474,7 @@ export function NodeDetailPanel() {
                     <span className="text-accent">{'\u2B50'}</span>
                     <span
                       data-testid="decision-source"
-                      className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface border border-border/60 text-text-tertiary"
+                      className="text-micro px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-tertiary"
                     >
                       {d.sessionId
                         ? `세션: ${sessionTitle || d.sessionId.slice(0, 8)}`

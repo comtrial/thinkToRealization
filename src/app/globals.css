@@ -81,6 +81,17 @@ body {
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--color-surface-hover) 25%, var(--color-surface-active) 50%, var(--color-surface-hover) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
 /* cmdk styles */
 [cmdk-group-heading] {
   padding: 4px 12px;
@@ -234,6 +245,12 @@ body {
 .hljs-variable { color: #9CDCFE; }
 .hljs-literal { color: #569CD6; }
 .hljs-meta { color: #C586C0; }
+
+/* Unified focus ring */
+.focus-ring {
+  @apply focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none;
+  --tw-ring-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {

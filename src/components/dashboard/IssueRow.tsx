@@ -53,6 +53,7 @@ export function IssueRow({ node }: { node: NodeResponse }) {
         'w-full flex items-center gap-3 px-4 py-1.5 text-body text-left',
         'hover:bg-surface-hover transition-colors duration-100',
         'border-b border-border/40',
+        'focus-ring',
         selectedNodeId === node.id && 'bg-accent-light'
       )}
     >
