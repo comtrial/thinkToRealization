@@ -15,6 +15,9 @@ if (typeof window !== "undefined") {
       const url = typeof args[0] === "string" ? args[0] : (args[0] as Request).url
       // Skip redirect for auth endpoints (login/register/me)
       if (url.includes("/api/auth/")) return res
+      // Skip redirect if already on public pages (prevents infinite reload loop)
+      const path = window.location.pathname
+      if (path === "/login" || path === "/register") return res
       window.location.href = "/login"
     }
     return res
