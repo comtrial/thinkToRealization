@@ -2,10 +2,10 @@
 
 import { useUIStore } from '@/stores/ui-store'
 import { useNodeStore } from '@/stores/node-store'
-import { NodeDetailPanel } from './NodeDetailPanel'
+import { NodeDetailPanel, NodeProperties } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
-import { X, Minimize2 } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { SessionResponse } from '@/lib/types/api'
 
@@ -87,7 +87,6 @@ function SessionsSection({
 export function NodeDetailFullView() {
   const panelNodeId = useUIStore((s) => s.panelNodeId)
   const closePanel = useUIStore((s) => s.closePanel)
-  const toggleFullPage = useUIStore((s) => s.toggleFullPage)
   const selectedNode = useNodeStore((s) => s.selectedNode)
   const sessions = useNodeStore((s) => s.sessions)
   const isLoading = useNodeStore((s) => s.isLoading)
@@ -105,59 +104,50 @@ export function NodeDetailFullView() {
   if (!panelNodeId) return null
 
   return (
-    <div className="h-full flex flex-col bg-surface" data-testid="side-panel">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 h-12 border-b border-border/30 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            data-testid="panel-close-btn"
-            onClick={closePanel}
-            className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
-            title="닫기 (ESC)"
-          >
-            <X size={16} />
-          </button>
-          {selectedNode && (
-            <span className="text-caption text-text-tertiary truncate">
-              {selectedNode.projectId}
-              {' > '}
-              <span className="text-text-secondary">{selectedNode.title}</span>
-            </span>
-          )}
-        </div>
-        <button
-          data-testid="panel-fullscreen-btn"
-          onClick={toggleFullPage}
-          className="p-1 rounded-button hover:bg-surface-hover text-text-secondary"
-          title="축소"
-        >
-          <Minimize2 size={16} />
-        </button>
-      </div>
+    <div className="h-full flex flex-col bg-surface relative" data-testid="side-panel">
+      {/* Close button — floating top-left */}
+      <button
+        data-testid="panel-close-btn"
+        onClick={closePanel}
+        className="absolute top-3 left-4 z-10 p-1.5 rounded-button hover:bg-surface-hover text-text-secondary transition-colors"
+        title="닫기 (ESC)"
+      >
+        <X size={16} />
+      </button>
 
-      {/* Content: 2-column layout */}
+      {/* Content: 2-column layout (main + properties sidebar) */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <span className="text-caption text-text-tertiary">로딩 중...</span>
         </div>
       ) : selectedNode ? (
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[780px] mx-auto">
-            <NodeDetailPanel />
-            {/* Sessions */}
-            <div className="px-8 pb-8">
-              <label className="text-caption text-text-tertiary mb-2 block">
-                세션 ({sessions.length})
-              </label>
-              <SessionsSection
-                sessions={sessions}
-                viewingSessionId={viewingSessionId}
-                setViewingSessionId={setViewingSessionId}
-              />
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left: main content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-[780px] mx-auto">
+              <NodeDetailPanel showProperties={false} />
+              {/* Sessions */}
+              <div className="px-8 pb-8">
+                <label className="text-caption text-text-tertiary mb-2 block">
+                  세션 ({sessions.length})
+                </label>
+                <SessionsSection
+                  sessions={sessions}
+                  viewingSessionId={viewingSessionId}
+                  setViewingSessionId={setViewingSessionId}
+                />
+              </div>
+              {/* Plans */}
+              <div className="px-8 pb-8">
+                <PlanTab />
+              </div>
             </div>
-            {/* Plans */}
-            <div className="px-8 pb-8">
-              <PlanTab />
+          </div>
+          {/* Right: properties sidebar (Linear-style) */}
+          <div className="w-[260px] border-l border-border/30 overflow-y-auto shrink-0">
+            <div className="p-5">
+              <span className="text-caption text-text-tertiary font-medium block mb-4">Properties</span>
+              <NodeProperties vertical />
             </div>
           </div>
         </div>

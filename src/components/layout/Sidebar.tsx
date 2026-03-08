@@ -18,10 +18,9 @@ interface SidebarItemProps {
   active?: boolean
   collapsed?: boolean
   onClick?: () => void
-  badge?: number
 }
 
-function SidebarItem({ icon, label, active, collapsed, onClick, badge }: SidebarItemProps) {
+function SidebarItem({ icon, label, active, collapsed, onClick }: SidebarItemProps) {
   return (
     <button
       onClick={onClick}
@@ -34,11 +33,6 @@ function SidebarItem({ icon, label, active, collapsed, onClick, badge }: Sidebar
     >
       {icon}
       {!collapsed && <span className="truncate">{label}</span>}
-      {!collapsed && badge != null && badge > 0 && (
-        <span className="text-micro px-1.5 py-0.5 rounded-badge bg-accent/10 text-accent font-medium ml-auto">
-          {badge}
-        </span>
-      )}
     </button>
   )
 }
@@ -75,8 +69,6 @@ export function Sidebar() {
     }
   }, [currentProject, loadedProjectId, loadCanvas])
 
-  const inProgressCount = useMemo(() => canvasNodes.filter(n => (n.data as Record<string, unknown>).status === 'in_progress').length, [canvasNodes])
-  const totalNodeCount = canvasNodes.length
 
   const issueNodes = useMemo(() => {
     const issues = canvasNodes.filter((n) => {
@@ -99,7 +91,6 @@ export function Sidebar() {
           active={activeTab === 'dashboard'}
           collapsed={isCollapsed}
           onClick={() => setActiveTab('dashboard')}
-          badge={inProgressCount}
         />
         <SidebarItem
           icon={<LayoutGrid size={16} />}
@@ -110,7 +101,6 @@ export function Sidebar() {
             if (activeTab !== 'canvas') invalidateCanvas()
             setActiveTab('canvas')
           }}
-          badge={totalNodeCount}
         />
         <SidebarItem icon={<MoreHorizontal size={16} />} label="More" collapsed={isCollapsed} />
       </div>
