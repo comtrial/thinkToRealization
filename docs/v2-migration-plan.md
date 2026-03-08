@@ -1,4 +1,4 @@
-# DevFlow v2 마이그레이션 계획서
+# ThinkToRealization v2 마이그레이션 계획서
 
 > v1 (Stage-based Pipeline) → v2 (Node-based Canvas DAG)
 > 작성일: 2026-03-01

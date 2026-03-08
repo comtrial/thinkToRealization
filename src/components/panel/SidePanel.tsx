@@ -2,7 +2,7 @@
 
 import { useUIStore } from '@/stores/ui-store'
 import { PanelTabs } from './PanelTabs'
-import { NodeDetailPanel, NodeProperties } from './NodeDetailPanel'
+import { NodeDetailPanel } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
 import { useNodeStore } from '@/stores/node-store'
@@ -166,12 +166,7 @@ export function SidePanel() {
               </div>
             )}
             {panelTab === 'overview' && !isLoading && selectedNode && (
-              <>
-                <NodeDetailPanel />
-                <div className="px-4 pb-4">
-                  <NodeProperties />
-                </div>
-              </>
+              <NodeDetailPanel />
             )}
             {panelTab === 'sessions' && (
               <div className="p-4 flex flex-col gap-3">
@@ -206,12 +201,7 @@ export function SidePanel() {
           </div>
         )}
         {panelTab === 'overview' && !isLoading && selectedNode && (
-          <>
-            <NodeDetailPanel />
-            <div className="px-4 pb-4">
-              <NodeProperties />
-            </div>
-          </>
+          <NodeDetailPanel />
         )}
         {panelTab === 'sessions' && (
           <div className="p-4 flex flex-col gap-3">

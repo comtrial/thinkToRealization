@@ -1,4 +1,4 @@
-# DevFlow — User Flow Diagrams
+# ThinkToRealization — User Flow Diagrams
 
 PRD 시나리오 A/B/C/D 기반 사용자 흐름도. 각 flow에서 호출되는 API 엔드포인트를 명시합니다.
 
@@ -9,7 +9,7 @@ PRD 시나리오 A/B/C/D 기반 사용자 흐름도. 각 flow에서 호출되는
 ```
 사용자                         시스템                          API
   │                             │                              │
-  │  1. DevFlow 접속 (/)        │                              │
+  │  1. ThinkToRealization 접속 (/)        │                              │
   │ ──────────────────────────> │                              │
   │                             │  프로젝트 목록 조회           │
   │                             │ ───────────────────────────> │ GET /api/projects
@@ -85,7 +85,7 @@ PRD 시나리오 A/B/C/D 기반 사용자 흐름도. 각 flow에서 호출되는
 ```
 사용자                         시스템                          API
   │                             │                              │
-  │  1. DevFlow 접속 (/)        │                              │
+  │  1. ThinkToRealization 접속 (/)        │                              │
   │ ──────────────────────────> │                              │
   │                             │ ───────────────────────────> │ GET /api/projects
   │  <── 대시보드 렌더링 ────── │                              │

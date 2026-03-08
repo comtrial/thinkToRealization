@@ -43,7 +43,7 @@ test.describe("UI: Project creation and selection flow", () => {
     await expect(dialogTitle).toBeVisible({ timeout: 3000 });
 
     // Fill in the form (slug is auto-generated from title)
-    await page.getByPlaceholder("예: DevFlow v2").fill(uniqueName);
+    await page.getByPlaceholder("예: 새 프로젝트").fill(uniqueName);
 
     // Submit form
     await page.getByRole("button", { name: "생성" }).click();
@@ -70,7 +70,7 @@ test.describe("UI: Project creation and selection flow", () => {
     const createBtn = page.getByTestId("create-project-btn");
     await createBtn.click();
 
-    await page.getByPlaceholder("예: DevFlow v2").fill(uniqueTitle);
+    await page.getByPlaceholder("예: 새 프로젝트").fill(uniqueTitle);
     await page
       .getByPlaceholder("프로젝트에 대한 간단한 설명")
       .fill("A test project with description");
@@ -232,7 +232,7 @@ test.describe("UI: Project creation and selection flow", () => {
     await expect(submitBtn).toBeDisabled();
 
     // Fill title — should now be enabled
-    await page.getByPlaceholder("예: DevFlow v2").fill("Test");
+    await page.getByPlaceholder("예: 새 프로젝트").fill("Test");
     await expect(submitBtn).toBeEnabled();
   });
 });

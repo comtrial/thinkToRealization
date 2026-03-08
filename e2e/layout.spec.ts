@@ -10,13 +10,13 @@ test.describe("F-1: Layout (AppShell + Header + Sidebar)", () => {
 
   test("Page loads with AppShell", async ({ page }) => {
     // The page should have rendered without errors
-    await expect(page).toHaveTitle(/DevFlow/);
+    await expect(page).toHaveTitle(/ThinkToRealization/);
   });
 
-  test("Header is visible with DevFlow title", async ({ page }) => {
+  test("Header is visible with ThinkToRealization title", async ({ page }) => {
     const header = page.locator("header");
     await expect(header).toBeVisible();
-    await expect(header).toContainText("DevFlow");
+    await expect(header).toContainText("ThinkToRealization");
   });
 
   test("Sidebar is visible", async ({ page }) => {

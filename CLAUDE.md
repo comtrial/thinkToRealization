@@ -435,14 +435,32 @@ Shadow:  elevation-1 ~ elevation-4
 
 ---
 
-## Post-Edit Workflow (모든 세션에서 수행)
+## Post-Edit Workflow (모든 세션에서 수행 — CRITICAL)
 1. 코드 수정 완료 후 항상 빌드: `source ~/.nvm/nvm.sh && nvm use 22 && cd /Users/choeseung-won/personal-project/thinkToRealization && npm run build`
 2. 빌드 성공 시 Playwright 테스트: `npx playwright test`
 3. 실패 시 수정 → 재빌드 → 재테스트 루프
+4. **데이터 로딩 검증 (필수)**: 빌드/테스트 후 반드시 dev 서버가 살아있는지 + 데이터가 정상 로딩되는지 확인:
+   ```bash
+   # 4-1. Dev 서버 확인 (죽었으면 재시작)
+   curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login || (npm run dev:web &)
+   # 4-2. 로그인 + 데이터 로딩 E2E 검증
+   curl -s -c /tmp/ttr-verify.txt -X POST http://localhost:3000/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"admin@ttr.local","password":"devflow123"}'
+   curl -s -b /tmp/ttr-verify.txt http://localhost:3000/api/projects  # 프로젝트 목록 확인
+   # 4-3. Dashboard + Canvas 데이터 확인 (PROJECT_ID는 위 응답에서 추출)
+   curl -s -b /tmp/ttr-verify.txt http://localhost:3000/api/projects/{PROJECT_ID}/dashboard
+   curl -s -b /tmp/ttr-verify.txt http://localhost:3000/api/projects/{PROJECT_ID}/canvas
+   ```
+   - **주의**: `rm -rf .next` 실행 시 dev 서버가 죽음 → 반드시 재시작 필요
+   - **인증 정보**: email=`admin@ttr.local`, password=`devflow123`, cookie=`ttr-session`
+   - API 응답에 `data` 필드가 비어있거나 401이면 문제 — 즉시 해결
 
 ---
 
 ## Learnings
+- **`.next` 캐시 + dev 서버 사망 패턴**: `rm -rf .next`는 dev 서버를 즉시 죽임. `npm run build`는 별도 프로세스라 dev 서버를 재시작하지 않음. 빌드 후 반드시 dev 서버 생존 확인 + 필요시 재시작. 또한 stale `.next` 캐시는 500 에러(`Cannot find module vendor-chunks/...`) 또는 삭제된 API 라우트 참조 에러를 유발하므로 빌드 실패 시 `rm -rf .next` 후 재빌드
+- **Cookie 이름 변경 시 세션 무효화**: cookie 이름을 변경하면(`devflow-session` → `ttr-session`) 기존 브라우저 세션이 모두 무효화됨. 사용자에게 재로그인 안내 필수
 - **WebSocket Strict Mode 이중 연결**: `onclose` 핸들러에서 `wsRef.current !== ws` 가드 필수. cleanup 시 `ws.onclose = null` 설정 후 close하여 stale close 이벤트 방지
 - **Terminal useEffect deps**: `sendPTYInput`/`sendPTYResize`를 ref로 감싸서 deps에서 제거. 그렇지 않으면 WS context 변경 시 터미널 재생성으로 이중 리스너 발생
 - **Undo/Redo API 동기화**: 스냅샷 복원 후 diff 기반으로 나타난 노드(unarchive)/사라진 노드(archive)/엣지 재생성·삭제/위치 변경을 `Promise.allSettled`로 병렬 처리

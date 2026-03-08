@@ -2,7 +2,7 @@
 
 import { useUIStore } from '@/stores/ui-store'
 import { useNodeStore } from '@/stores/node-store'
-import { NodeDetailPanel, NodeProperties } from './NodeDetailPanel'
+import { NodeDetailPanel } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
 import { X, Minimize2 } from 'lucide-react'
@@ -141,33 +141,23 @@ export function NodeDetailFullView() {
           <span className="text-caption text-text-tertiary">로딩 중...</span>
         </div>
       ) : selectedNode ? (
-        <div className="flex-1 flex overflow-hidden">
-          {/* Main content — left column */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-[780px] mx-auto">
-              <NodeDetailPanel />
-              {/* Sessions */}
-              <div className="px-8 pb-8">
-                <label className="text-caption text-text-tertiary mb-2 block">
-                  세션 ({sessions.length})
-                </label>
-                <SessionsSection
-                  sessions={sessions}
-                  viewingSessionId={viewingSessionId}
-                  setViewingSessionId={setViewingSessionId}
-                />
-              </div>
-              {/* Plans */}
-              <div className="px-8 pb-8">
-                <PlanTab />
-              </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-[780px] mx-auto">
+            <NodeDetailPanel />
+            {/* Sessions */}
+            <div className="px-8 pb-8">
+              <label className="text-caption text-text-tertiary mb-2 block">
+                세션 ({sessions.length})
+              </label>
+              <SessionsSection
+                sessions={sessions}
+                viewingSessionId={viewingSessionId}
+                setViewingSessionId={setViewingSessionId}
+              />
             </div>
-          </div>
-          {/* Properties sidebar — right column */}
-          <div className="w-[260px] border-l border-border/30 overflow-y-auto shrink-0">
-            <div className="p-5">
-              <span className="text-caption text-text-tertiary font-medium block mb-4">Properties</span>
-              <NodeProperties />
+            {/* Plans */}
+            <div className="px-8 pb-8">
+              <PlanTab />
             </div>
           </div>
         </div>

@@ -425,7 +425,7 @@ const config = {
         'dropdown': '8px',
       },
       transitionTimingFunction: {
-        'devflow': 'cubic-bezier(0.25, 0.1, 0.25, 1.0)',
+        'ttr': 'cubic-bezier(0.25, 0.1, 0.25, 1.0)',
       },
       transitionDuration: {
         'panel': '250ms',
@@ -557,7 +557,7 @@ const SidePanel = () => {
       <aside className={cn(
         'absolute top-0 right-0 h-full bg-surface border-l border-border z-30',
         'flex flex-col',
-        'transition-all duration-panel ease-devflow',
+        'transition-all duration-panel ease-ttr',
         panelMode === 'closed' && 'w-0 opacity-0 pointer-events-none',
         panelMode === 'peek' && 'w-[40%] min-w-[400px] max-w-[50%]',
         panelMode === 'full' && 'w-[80%] max-w-[900px] shadow-elevation-3',
@@ -592,7 +592,7 @@ const TerminalSection = () => {
   return (
     <div className={cn(
       'border-t border-border flex flex-col',
-      'transition-all duration-terminal ease-devflow',
+      'transition-all duration-terminal ease-ttr',
       !terminalExpanded && 'max-h-0 border-t-0',
     )}
     style={terminalExpanded ? { height: `${terminalHeight}px` } : undefined}
@@ -914,16 +914,16 @@ const TerminalView = ({ nodeId, sessionId }: Props) => {
 
 | 요소 | 속성 | 듀레이션 | 이징 | 노트 |
 |------|------|---------|------|------|
-| 사이드패널 열림/닫힘 | width, opacity | 250ms | devflow | Main padding-right 동시 애니메이션 |
-| 터미널 확장/접힘 | max-height | 200ms | devflow | 슬라이드업/다운 |
-| 종료 프롬프트 등장 | translateY, opacity | 200ms | devflow | 하단에서 slideUp |
+| 사이드패널 열림/닫힘 | width, opacity | 250ms | ttr | Main padding-right 동시 애니메이션 |
+| 터미널 확장/접힘 | max-height | 200ms | ttr | 슬라이드업/다운 |
+| 종료 프롬프트 등장 | translateY, opacity | 200ms | ttr | 하단에서 slideUp |
 | 종료 프롬프트 사라짐 | opacity | 300ms | ease-out | 3초 타이머 후 |
 | 노드 줌 전환 | opacity | 200ms | ease | Dual-DOM CSS 토글 |
 | 노드 호버 | box-shadow | 150ms | ease | elevation-1 추가 |
 | 노드 드래그 | box-shadow, scale | 0ms (즉시) | - | elevation-4 + scale 1.02 |
 | 노드 상태 변경 | border-color | 300ms | ease | Track A 자동 전이 시 |
-| 사이드바 접기/펼기 | width | 200ms | devflow | 220px → 48px |
-| 캔버스 Auto-Layout | x, y | 300ms | devflow | dagre 결과 적용 시 |
+| 사이드바 접기/펼기 | width | 200ms | ttr | 220px → 48px |
+| 캔버스 Auto-Layout | x, y | 300ms | ttr | dagre 결과 적용 시 |
 | Command Palette | opacity, scale | 150ms | ease | scale 0.95→1.0 + fade |
 | 토스트 알림 | translateY, opacity | 200ms | ease | 우상단에서 등장 |
 | 프레임 노드 귀속 | border-color | 300ms | ease | blue highlight 피드백 |

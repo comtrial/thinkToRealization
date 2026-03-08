@@ -1,4 +1,4 @@
-# DevFlow 프론트엔드 개발 명세서
+# ThinkToRealization 프론트엔드 개발 명세서
 
 **작성자:**
 

@@ -19,17 +19,17 @@ async function main() {
   // Create demo users
   const passwordHash = await bcrypt.hash("devflow123", 10);
   const admin = await prisma.user.create({
-    data: { email: "admin@devflow.local", name: "관리자", passwordHash },
+    data: { email: "admin@ttr.local", name: "관리자", passwordHash },
   });
   const dev = await prisma.user.create({
-    data: { email: "dev@devflow.local", name: "개발자", passwordHash },
+    data: { email: "dev@ttr.local", name: "개발자", passwordHash },
   });
 
   // Create project
   const project = await prisma.project.create({
     data: {
-      title: "DevFlow v2",
-      slug: "devflow-v2",
+      title: "ThinkToRealization v2",
+      slug: "ttr-v2",
       description: "사고 흐름 캔버스 기반 개발 도구",
       projectDir: "/Users/choeseung-won/personal-project/thinkToRealization",
     },

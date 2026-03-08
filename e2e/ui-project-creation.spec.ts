@@ -17,7 +17,7 @@ test.describe("UI: Project creation dialog", () => {
     await expect(page.getByText("새 프로젝트")).toBeVisible({ timeout: 3000 });
 
     // Title input should be visible
-    const titleInput = page.getByPlaceholder("예: DevFlow v2");
+    const titleInput = page.getByPlaceholder("예: 새 프로젝트");
     await expect(titleInput).toBeVisible();
 
     // Description input should be visible
@@ -33,7 +33,7 @@ test.describe("UI: Project creation dialog", () => {
     await createBtn.click();
 
     // Fill title only (slug is auto-generated)
-    await page.getByPlaceholder("예: DevFlow v2").fill(uniqueTitle);
+    await page.getByPlaceholder("예: 새 프로젝트").fill(uniqueTitle);
 
     // Submit
     await page.getByRole("button", { name: "생성" }).click();
@@ -56,7 +56,7 @@ test.describe("UI: Project creation dialog", () => {
     const createBtn = page.getByTestId("create-project-btn");
     await createBtn.click();
 
-    await page.getByPlaceholder("예: DevFlow v2").fill(uniqueTitle);
+    await page.getByPlaceholder("예: 새 프로젝트").fill(uniqueTitle);
     await page
       .getByPlaceholder("프로젝트에 대한 간단한 설명")
       .fill("A test project with description");

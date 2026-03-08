@@ -52,12 +52,12 @@ function PropertySelect({
   onChange: (value: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 min-w-0 flex-1">
       <label className="text-[11px] text-text-tertiary">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="text-caption px-2 py-1.5 rounded-button border border-border bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring"
+        className="text-caption px-2 py-1.5 rounded-button border border-border bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring w-full"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -139,8 +139,8 @@ export function NodeProperties() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Status / Priority / Type — single row */}
-      <div className="flex items-end gap-3">
+      {/* Status / Priority / Type */}
+      <div className="flex items-end gap-3 flex-wrap">
         <PropertySelect
           label="Status"
           options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -161,63 +161,54 @@ export function NodeProperties() {
         />
       </div>
 
-      {/* Assignee — own row */}
-      <AssigneePicker
-        assigneeId={selectedNode.assigneeId}
-        assigneeName={selectedNode.assigneeName}
-        assigneeAvatarUrl={selectedNode.assigneeAvatarUrl}
-        onAssign={async (userId) => {
-          try {
-            const res = await fetch(`/api/nodes/${selectedNode.id}/assignee`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ assigneeId: userId }),
-            })
-            if (res.ok) {
-              const { data } = await res.json()
-              useNodeStore.setState((s) => ({
-                selectedNode: s.selectedNode ? {
-                  ...s.selectedNode,
-                  assigneeId: data.assigneeId,
-                  assigneeName: data.assignee?.name ?? null,
-                  assigneeAvatarUrl: data.assignee?.avatarUrl ?? null,
-                } : null,
-              }))
-              useCanvasStore.getState().updateNodeData(selectedNode.id, {
-                assigneeId: data.assigneeId,
-                assigneeName: data.assignee?.name ?? null,
-                assigneeAvatarUrl: data.assignee?.avatarUrl ?? null,
-              })
-              useUIStore.getState().invalidateDashboard()
-            }
-          } catch (err) {
-            console.error('Failed to update assignee:', err)
-          }
-        }}
-      />
-
-      {/* Due Date */}
-      <div className="flex flex-col gap-1">
-        <label className="text-[11px] text-text-tertiary">Due Date</label>
-        <input
-          type="date"
-          value={dueDateValue}
-          onChange={(e) => handleDueDateChange(e.target.value)}
-          className="text-caption px-2 py-1.5 rounded-button border border-border bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring"
-        />
-      </div>
-
-      {/* Dates */}
-      <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 mt-1 pt-3 border-t border-border/30">
-        <div className="flex justify-between">
-          <span>Created</span>
-          <span>{new Date(selectedNode.createdAt).toLocaleDateString('ko-KR')}</span>
+      {/* Assignee + Due Date — same row */}
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <AssigneePicker
+            assigneeId={selectedNode.assigneeId}
+            assigneeName={selectedNode.assigneeName}
+            assigneeAvatarUrl={selectedNode.assigneeAvatarUrl}
+            onAssign={async (userId) => {
+              try {
+                const res = await fetch(`/api/nodes/${selectedNode.id}/assignee`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ assigneeId: userId }),
+                })
+                if (res.ok) {
+                  const { data } = await res.json()
+                  useNodeStore.setState((s) => ({
+                    selectedNode: s.selectedNode ? {
+                      ...s.selectedNode,
+                      assigneeId: data.assigneeId,
+                      assigneeName: data.assignee?.name ?? null,
+                      assigneeAvatarUrl: data.assignee?.avatarUrl ?? null,
+                    } : null,
+                  }))
+                  useCanvasStore.getState().updateNodeData(selectedNode.id, {
+                    assigneeId: data.assigneeId,
+                    assigneeName: data.assignee?.name ?? null,
+                    assigneeAvatarUrl: data.assignee?.avatarUrl ?? null,
+                  })
+                  useUIStore.getState().invalidateDashboard()
+                }
+              } catch (err) {
+                console.error('Failed to update assignee:', err)
+              }
+            }}
+          />
         </div>
-        <div className="flex justify-between">
-          <span>Updated</span>
-          <span>{new Date(selectedNode.updatedAt).toLocaleDateString('ko-KR')}</span>
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          <label className="text-[11px] text-text-tertiary">Due Date</label>
+          <input
+            type="date"
+            value={dueDateValue}
+            onChange={(e) => handleDueDateChange(e.target.value)}
+            className="text-caption px-2 py-1.5 rounded-button border border-border bg-surface hover:bg-surface-hover text-text-primary cursor-pointer focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring w-full"
+          />
         </div>
       </div>
+
     </div>
   )
 }
@@ -428,6 +419,9 @@ export function NodeDetailPanel() {
         )}
       </div>
 
+      {/* Properties — status, priority, type, assignee, due date */}
+      <NodeProperties />
+
       {/* Hierarchy — parent / children */}
       <NodeHierarchy />
 
@@ -491,6 +485,18 @@ export function NodeDetailPanel() {
 
       {/* Activity / Comments — Linear style */}
       <CommentSection nodeId={selectedNode.id} />
+
+      {/* Dates */}
+      <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 mt-1 pt-3 border-t border-border/30">
+        <div className="flex justify-between">
+          <span>Created</span>
+          <span>{new Date(selectedNode.createdAt).toLocaleDateString('ko-KR')}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Updated</span>
+          <span>{new Date(selectedNode.updatedAt).toLocaleDateString('ko-KR')}</span>
+        </div>
+      </div>
 
       {/* Delete node */}
       <div className="border-t border-border/30 pt-4 mt-2">

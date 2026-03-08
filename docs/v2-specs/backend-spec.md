@@ -1,7 +1,7 @@
 # v2 백엔드 아키텍처 설계서
 
 **작성일:** 2026-03-01
-**기반 문서:** v2 UXUI 설계서 + DevFlow v2 기획안
+**기반 문서:** v2 UXUI 설계서 + ThinkToRealization v2 기획안
 **도출 방법:** 백엔드 아키텍트 2인 심층 토론 → 설계 확정
 ---
 ## 0. 백엔드 아키텍트 팀 구성
@@ -10,7 +10,7 @@
 ---
 ## 1. 아키텍트 토론 기록
 ### 1.1 "Next.js 데스크톱 앱의 프로세스 모델은?"
-**SysArch:** "DevFlow v2는 Electron 앱 안에서 Next.js가 돌아가는 구조다. 여기서 핵심적으로 이해해야 할 건, Electron의 Main Process와 Renderer Process 분리다. PTY(터미널), 파일 시스템 감시, SQLite 접근은 전부 Main Process에서만 가능하다. Renderer(React)는 IPC를 통해 Main에 요청하는 구조."
+**SysArch:** "ThinkToRealization v2는 Electron 앱 안에서 Next.js가 돌아가는 구조다. 여기서 핵심적으로 이해해야 할 건, Electron의 Main Process와 Renderer Process 분리다. PTY(터미널), 파일 시스템 감시, SQLite 접근은 전부 Main Process에서만 가능하다. Renderer(React)는 IPC를 통해 Main에 요청하는 구조."
 
 **DataArch:** "그런데 Next.js App Router의 Server Components와 API Routes는 어디서 돌아가나? Electron 안에서는 Next.js의 서버 사이드가 사실상 Main Process 또는 별도 로컬 서버로 동작한다."
 
@@ -30,7 +30,7 @@
 > **합의:** 이벤트 흐름 = PTY/fs 이벤트 → EventBus (Node.js EventEmitter) → DB Write (Prisma) → WebSocket Push. 비관적 업데이트. DB가 source of truth.
 ---
 ### 1.3 "PTY 매니저를 어떻게 설계하나?"
-**SysArch:** "PTY 매니저는 DevFlow 백엔드의 심장이다. 핵심 제약조건: (1) 노드당 활성 세션 최대 1개, (2) 사이드패널을 닫아도 PTY는 백그라운드 실행, (3) 앱 종료 시 모든 PTY를 paused로 기록, (4) claude --resume 지원."
+**SysArch:** "PTY 매니저는 ThinkToRealization 백엔드의 심장이다. 핵심 제약조건: (1) 노드당 활성 세션 최대 1개, (2) 사이드패널을 닫아도 PTY는 백그라운드 실행, (3) 앱 종료 시 모든 PTY를 paused로 기록, (4) claude --resume 지원."
 
 **DataArch:** "PTY 인스턴스와 DB 세션 레코드의 생명주기를 동기화해야 한다. PTY spawn → sessions 테이블에 INSERT (status: active). PTY exit → sessions 테이블 UPDATE (status: completed). 앱 강제 종료 시? beforeunload에서 모든 active 세션을 paused로 UPDATE."
 
@@ -302,7 +302,7 @@ model NodeStateLog {
 ### 3.3 스키마 설계 노트
 **DataArch의 설계 결정:**
 - `Node.parentNodeId`: 프레임(Group Node) 구현을 위한 자기참조. null이면 캔버스 루트 레벨
-- `Session.claudeSessionId`: Claude CLI의 자체 세션 ID. `claude --resume` 시 이 값 사용. DevFlow의 Session.id와는 별개
+- `Session.claudeSessionId`: Claude CLI의 자체 세션 ID. `claude --resume` 시 이 값 사용. ThinkToRealization의 Session.id와는 별개
 - `Session.logFilePath`: 세션 대화 로그는 DB가 아닌 md 파일에 저장. DB에는 파일 경로만 기록. 이유: 대화 로그는 수십KB~수MB로 커질 수 있고, 검색보다는 열람 위주
 - `NodeStateLog.triggerType`: 모든 상태 변경의 원인을 추적. Track A(session_start, session_end_done 등)와 Track B(user_manual)를 구분
 - `Decision.promotedToNodeId`: 결정사항에서 노드 승격 시 추적. null이면 아직 승격되지 않은 결정

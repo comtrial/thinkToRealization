@@ -1,4 +1,4 @@
-# DevFlow 아키텍처 확장 계획서 — DB 격리 + LLM 추상화 + 배포 구조
+# ThinkToRealization 아키텍처 확장 계획서 — DB 격리 + LLM 추상화 + 배포 구조
 
 ## 현재 아키텍처 문제점
 
@@ -37,7 +37,7 @@ Dev Server + Test Server ──→ 같은 prisma/dev.db
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                        DevFlow v2                                │
+│                        ThinkToRealization v2                                │
 │                                                                  │
 │  ┌─── src/lib/db/ ──────────────────────────────────────────┐   │
 │  │  config.ts   → DB 환경 감지 (sqlite/postgres)             │   │

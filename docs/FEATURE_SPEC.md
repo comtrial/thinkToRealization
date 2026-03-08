@@ -1,8 +1,8 @@
-# DevFlow v0.1 — Feature Specification
+# ThinkToRealization v0.1 — Feature Specification
 
 ## 1. Product Overview
 
-**DevFlow**는 Claude CLI와 함께 프로젝트를 수행하는 개발자의 "사고 흐름"을 시각화하고 구조화하는 **로컬 웹 애플리케이션**입니다.
+**ThinkToRealization**는 Claude CLI와 함께 프로젝트를 수행하는 개발자의 "사고 흐름"을 시각화하고 구조화하는 **로컬 웹 애플리케이션**입니다.
 
 - **URL**: http://localhost:3000
 - **단일 사용자**: 로컬 머신 전용 (인증 없음)
@@ -59,7 +59,7 @@
 | 프로젝트 카드 | `ProjectCard` | 이름, 설명, 진행 바, 현재 단계 배지, 최근 결정사항 |
 | 프로젝트 생성 | `CreateProjectDialog` | 다이얼로그에서 이름/설명 입력 → 6단계 자동 생성 |
 | 최근 활동 | `RecentActivityCard` | 가장 최근 업데이트된 프로젝트의 요약 카드 |
-| 앱 헤더 | `AppHeader` | DevFlow 로고, 네비게이션 |
+| 앱 헤더 | `AppHeader` | ThinkToRealization 로고, 네비게이션 |
 
 ### 4.2 Workspace (`/project/[id]`)
 
@@ -181,7 +181,7 @@
 {
   "data": [{
     "id": "clxyz...",
-    "name": "DevFlow",
+    "name": "ThinkToRealization",
     "status": "active",
     "stages": [...],
     "currentStage": { "name": "아이디어 발산", "status": "active" },

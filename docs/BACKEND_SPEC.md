@@ -13,7 +13,7 @@
 
 **선례:** VS Code Server, Theia IDE, Wetty, ttyd — 모두 xterm.js + node-pty 스택.
 
-DevFlow는 **단일 사용자 로컬 머신**이므로 다중 사용자 격리, 보안, 스케일링 불필요.
+ThinkToRealization는 **단일 사용자 로컬 머신**이므로 다중 사용자 격리, 보안, 스케일링 불필요.
 
 **기술적 쟁점 3가지:**
 

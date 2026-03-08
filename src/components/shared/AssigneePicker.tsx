@@ -28,7 +28,7 @@ export function AssigneePicker({ assigneeId, assigneeName, assigneeAvatarUrl, on
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-caption text-text-tertiary">담당자</label>
+      <label className="text-[11px] text-text-tertiary">담당자</label>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <button className="flex items-center gap-2 px-2 py-1.5 rounded-button border border-border hover:bg-surface-hover transition-colors text-left">
