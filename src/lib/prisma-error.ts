@@ -21,6 +21,14 @@ export function handlePrismaError(error: unknown): NextResponse {
           "Referenced resource does not exist",
           400
         );
+      case "P2022": {
+        const column = (error.meta?.column as string) ?? "unknown";
+        return errorResponse(
+          "SCHEMA_MISMATCH",
+          `Column '${column}' not found. Run 'npx prisma migrate dev' to update the database schema.`,
+          500
+        );
+      }
       default:
         return errorResponse("DB_WRITE_FAILED", `Database error: ${error.code}`, 500);
     }

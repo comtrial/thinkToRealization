@@ -48,8 +48,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const refreshProjects = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/projects");
-      if (!res.ok) return;
+      const res = await fetch("/api/projects", { cache: 'no-store' });
+      if (!res.ok) {
+        console.error(`Projects API failed: ${res.status}`);
+        return;
+      }
       const json = await res.json();
       const list: Project[] = json.data ?? [];
       setProjects(list);

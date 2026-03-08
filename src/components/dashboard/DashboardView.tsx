@@ -42,19 +42,29 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const [data, setData] = useState<DashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [errorDetail, setErrorDetail] = useState('')
 
   const fetchDashboard = useCallback(async () => {
     setError(false)
+    setErrorDetail('')
     try {
-      const res = await fetch(`/api/projects/${projectId}/dashboard`)
+      const res = await fetch(`/api/projects/${projectId}/dashboard`, { cache: 'no-store' })
       if (res.ok) {
         const json = await res.json()
         setData(json.data)
       } else {
+        let detail = `HTTP ${res.status}`
+        try {
+          const json = await res.json()
+          detail = json.error?.message ?? detail
+        } catch { /* ignore parse error */ }
+        console.error(`Dashboard API failed: ${res.status}`, detail)
+        setErrorDetail(detail)
         setError(true)
       }
     } catch (err) {
       console.error('Failed to load dashboard:', err)
+      setErrorDetail('네트워크 오류')
       setError(true)
     } finally {
       setLoading(false)
@@ -125,7 +135,10 @@ export function DashboardView({ projectId }: { projectId: string }) {
       <div className="h-full flex flex-col">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-body text-text-secondary mb-md">대시보드를 불러올 수 없습니다</p>
+            <p className="text-body text-text-secondary mb-sm">대시보드를 불러올 수 없습니다</p>
+            {errorDetail && (
+              <p className="text-micro text-text-tertiary mb-md font-mono">{errorDetail}</p>
+            )}
             <button
               onClick={fetchDashboard}
               className="px-4 py-2 rounded-button text-body text-accent border border-accent hover:bg-accent-light transition-colors"
