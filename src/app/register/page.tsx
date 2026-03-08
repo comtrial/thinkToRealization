@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuthStore } from '@/stores/auth-store'
 
 export default function RegisterPage() {
@@ -47,7 +48,7 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              autoFocus
+              autoComplete="name"
               className="px-3 py-2 rounded-button border border-border bg-surface text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
               placeholder="홍길동"
             />
@@ -91,7 +92,7 @@ export default function RegisterPage() {
 
         <p className="text-caption text-text-tertiary text-center mt-6">
           이미 계정이 있으신가요?{' '}
-          <a href="/login" className="text-accent hover:underline">로그인</a>
+          <Link href="/login" className="text-accent hover:underline">로그인</Link>
         </p>
       </div>
     </div>
