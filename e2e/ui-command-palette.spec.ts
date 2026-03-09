@@ -74,7 +74,7 @@ test.describe("UI: Command palette and keyboard shortcuts", () => {
 
   test("Select dashboard from command palette", async ({ page }) => {
     // Switch to canvas first
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
 
     await page.keyboard.press("Meta+k");
     await expect(page.getByPlaceholder("무엇을 할까요?")).toBeVisible({
@@ -85,19 +85,21 @@ test.describe("UI: Command palette and keyboard shortcuts", () => {
     await input.fill("대시보드");
     await page.keyboard.press("Enter");
 
-    await expect(page.locator("main")).toContainText("돌아왔습니다", {
+    // After selecting dashboard from palette, the dashboard tab should be active
+    const dashTab = page.getByRole("navigation").getByRole("button", { name: "대시보드" });
+    await expect(dashTab).toHaveAttribute("data-active", "true", {
       timeout: 5000,
     });
   });
 
   test("Keyboard shortcut Cmd+1 switches to dashboard", async ({ page }) => {
     // Switch to canvas first
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     await page.keyboard.press("Meta+1");
 
-    const dashTab = page.getByRole("button", { name: "대시보드" });
+    const dashTab = page.getByRole("navigation").getByRole("button", { name: "대시보드" });
     await expect(dashTab).toHaveAttribute("data-active", "true", {
       timeout: 3000,
     });
@@ -113,13 +115,13 @@ test.describe("UI: Command palette and keyboard shortcuts", () => {
     await expect(toggleBtn).toBeVisible();
 
     const sidebar = page.locator("aside");
-    await expect(sidebar).toContainText("My Work");
+    await expect(sidebar).toContainText("Workspace");
 
     await toggleBtn.click();
-    await expect(sidebar.getByText("My Work")).toBeHidden({ timeout: 3000 });
+    await expect(sidebar.getByText("Workspace")).toBeHidden({ timeout: 3000 });
 
     await toggleBtn.click();
-    await expect(sidebar.getByText("My Work")).toBeVisible({ timeout: 3000 });
+    await expect(sidebar.getByText("Workspace")).toBeVisible({ timeout: 3000 });
   });
 
   test("Search button in header opens command palette", async ({ page }) => {

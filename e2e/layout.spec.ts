@@ -25,8 +25,8 @@ test.describe("F-1: Layout (AppShell + Header + Sidebar)", () => {
   });
 
   test("Dashboard tab and Canvas tab exist", async ({ page }) => {
-    const dashboardTab = page.getByRole("button", { name: "대시보드" });
-    const canvasTab = page.getByRole("button", { name: "캔버스" });
+    const dashboardTab = page.getByRole("navigation").getByRole("button", { name: "대시보드" });
+    const canvasTab = page.getByRole("navigation").getByRole("button", { name: "캔버스" });
     await expect(dashboardTab).toBeVisible();
     await expect(canvasTab).toBeVisible();
   });
@@ -38,11 +38,11 @@ test.describe("F-1: Layout (AppShell + Header + Sidebar)", () => {
     await expect(main).toBeVisible();
 
     // Click canvas tab
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(main).toBeVisible();
 
     // Click back to dashboard
-    await page.getByRole("button", { name: "대시보드" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "대시보드" }).click();
     await expect(main).toBeVisible();
   });
 
@@ -50,14 +50,14 @@ test.describe("F-1: Layout (AppShell + Header + Sidebar)", () => {
     const toggleBtn = page.getByRole("button", { name: "Toggle sidebar" });
     await expect(toggleBtn).toBeVisible();
 
-    // Sidebar should have "My Work" text when open
+    // Sidebar should have "Workspace" text when open
     const sidebar = page.locator("aside");
-    await expect(sidebar).toContainText("My Work");
+    await expect(sidebar).toContainText("Workspace");
 
     // Toggle sidebar
     await toggleBtn.click();
 
-    // After collapsing, "My Work" text should be hidden
-    await expect(sidebar.getByText("My Work")).toBeHidden();
+    // After collapsing, "Workspace" text should be hidden
+    await expect(sidebar.getByText("Workspace")).toBeHidden();
   });
 });

@@ -14,49 +14,49 @@ test.describe("Keyboard Shortcuts", () => {
 
   test("Cmd+1 switches to dashboard tab", async ({ page }) => {
     // Switch to canvas first
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(
-      page.locator("button[data-active='true']", { hasText: "캔버스" }),
+      page.locator("header button[data-active='true']", { hasText: "캔버스" }),
     ).toBeVisible();
 
     // Cmd+1 to switch to dashboard
     await page.keyboard.press("Meta+1");
 
     await expect(
-      page.locator("button[data-active='true']", { hasText: "대시보드" }),
+      page.locator("header button[data-active='true']", { hasText: "대시보드" }),
     ).toBeVisible();
   });
 
   test("Cmd+2 switches to canvas tab", async ({ page }) => {
     // Dashboard is default
     await expect(
-      page.locator("button[data-active='true']", { hasText: "대시보드" }),
+      page.locator("header button[data-active='true']", { hasText: "대시보드" }),
     ).toBeVisible();
 
     // Cmd+2 to switch to canvas
     await page.keyboard.press("Meta+2");
 
     await expect(
-      page.locator("button[data-active='true']", { hasText: "캔버스" }),
+      page.locator("header button[data-active='true']", { hasText: "캔버스" }),
     ).toBeVisible();
   });
 
   test("[ key toggles sidebar", async ({ page }) => {
-    // Sidebar should be visible with "My Work"
+    // Sidebar should be visible with "Workspace"
     const sidebar = page.locator("aside").first();
-    await expect(sidebar).toContainText("My Work");
+    await expect(sidebar).toContainText("Workspace");
 
     // Press [ to toggle sidebar
     await page.keyboard.press("[");
 
-    // Sidebar should collapse (My Work hidden)
-    await expect(sidebar.getByText("My Work")).toBeHidden();
+    // Sidebar should collapse (Workspace hidden)
+    await expect(sidebar.getByText("Workspace")).toBeHidden();
 
     // Press [ again to reopen
     await page.keyboard.press("[");
 
-    // Sidebar should show "My Work" again
-    await expect(sidebar.getByText("My Work")).toBeVisible();
+    // Sidebar should show "Workspace" again
+    await expect(sidebar.getByText("Workspace")).toBeVisible();
   });
 
   test("Cmd+K opens command palette", async ({ page }) => {
@@ -80,7 +80,7 @@ test.describe("Keyboard Shortcuts", () => {
     await createTestNode(project.id, { title: "ESC 테스트 노드", canvasX: 200, canvasY: 200 });
 
     // Switch to canvas and click node
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
     const nodeEl = page.locator(".react-flow__node").first();
     await expect(nodeEl).toBeVisible({ timeout: 10000 });
@@ -103,7 +103,7 @@ test.describe("Keyboard Shortcuts", () => {
     await createTestNode(project.id, { title: "풀모드 노드", canvasX: 200, canvasY: 200 });
 
     // Switch to canvas and click node
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
     const nodeEl = page.locator(".react-flow__node").first();
     await expect(nodeEl).toBeVisible({ timeout: 10000 });

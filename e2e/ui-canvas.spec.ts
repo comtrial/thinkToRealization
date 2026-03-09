@@ -18,7 +18,7 @@ test.describe("UI: Canvas view interactions", () => {
     await selectProjectInSidebar(page, "Canvas Project");
 
     // Switch to canvas tab
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
   });
 
@@ -50,7 +50,7 @@ test.describe("UI: Canvas view interactions", () => {
 
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     const nodes = page.locator(".react-flow__node");
@@ -74,7 +74,7 @@ test.describe("UI: Canvas view interactions", () => {
 
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     const edges = page.locator(".react-flow__edge");
@@ -85,30 +85,27 @@ test.describe("UI: Canvas view interactions", () => {
     const canvas = page.locator(".react-flow__pane");
     await canvas.click({ button: "right", position: { x: 300, y: 200 } });
 
-    await expect(page.getByText("새 아이디어")).toBeVisible({ timeout: 3000 });
-    await expect(page.getByText("새 작업")).toBeVisible();
-    await expect(page.getByText("새 결정")).toBeVisible();
+    await expect(page.getByText("새 기획")).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText("새 기능개발")).toBeVisible();
     await expect(page.getByText("새 이슈")).toBeVisible();
-    await expect(page.getByText("새 마일스톤")).toBeVisible();
-    await expect(page.getByText("새 메모")).toBeVisible();
   });
 
   test("Create node via context menu", async ({ page }) => {
     const canvas = page.locator(".react-flow__pane");
     await canvas.click({ button: "right", position: { x: 300, y: 200 } });
 
-    await page.getByText("새 아이디어").click();
+    await page.getByText("새 기획").click();
 
     const nodes = page.locator(".react-flow__node");
     await expect(nodes).toHaveCount(1, { timeout: 5000 });
-    await expect(nodes.first()).toContainText("새 아이디어", { timeout: 3000 });
+    await expect(nodes.first()).toContainText("새 기획", { timeout: 3000 });
   });
 
   test("Create multiple node types via context menu", async ({ page }) => {
     const canvas = page.locator(".react-flow__pane");
 
     await canvas.click({ button: "right", position: { x: 200, y: 200 } });
-    await page.getByText("새 작업").click();
+    await page.getByText("새 기능개발").click();
     await expect(page.locator(".react-flow__node")).toHaveCount(1, {
       timeout: 5000,
     });
@@ -130,7 +127,7 @@ test.describe("UI: Canvas view interactions", () => {
 
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     const node = page.locator(".react-flow__node");
@@ -162,7 +159,7 @@ test.describe("UI: Canvas view interactions", () => {
 
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
     await expect(page.locator(".react-flow__node")).toHaveCount(2, {
       timeout: 10000,

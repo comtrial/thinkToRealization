@@ -4,18 +4,13 @@ import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { useNodeStore } from '@/stores/node-store'
 import { StatusCircleIcon, PriorityIcon } from '@/components/shared/Badge'
+import { NodeTypeIcon } from '@/components/shared/NodeTypeIcon'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import type { NodeResponse } from '@/lib/types/api'
 
 const typeAbbr: Record<string, string> = {
   planning: 'PLN', feature: 'FEA', issue: 'ISS',
-}
-
-const typeTagStyles: Record<string, string> = {
-  planning: 'bg-type-idea/15 text-type-idea',
-  feature: 'bg-type-task/15 text-type-task',
-  issue: 'bg-type-issue/15 text-type-issue',
 }
 
 const typeLabels: Record<string, string> = {
@@ -80,12 +75,9 @@ export function IssueRow({ node }: { node: NodeResponse }) {
         </span>
       )}
 
-      {/* Type label tag */}
-      <span className={cn(
-        'text-badge px-1.5 py-0.5 rounded-badge flex-shrink-0 hidden sm:inline-flex',
-        typeTagStyles[node.type] ?? 'bg-gray-100 text-gray-600'
-      )}>
-        {typeLabels[node.type] ?? node.type}
+      {/* Type icon */}
+      <span className="flex-shrink-0 hidden sm:inline-flex" title={typeLabels[node.type] ?? node.type}>
+        <NodeTypeIcon type={node.type} size={14} />
       </span>
 
       {/* Active session indicator */}

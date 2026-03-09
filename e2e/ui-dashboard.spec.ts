@@ -26,10 +26,12 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     });
   });
 
-  test("Shows welcome message on dashboard", async ({ page }) => {
-    await expect(page.locator("main")).toContainText("돌아왔습니다", {
-      timeout: 5000,
-    });
+  test("Shows empty dashboard hint message", async ({ page }) => {
+    // Empty dashboard shows hint text below the main message
+    await expect(page.locator("main")).toContainText(
+      "캔버스에서 노드를 만들어 시작하세요",
+      { timeout: 5000 },
+    );
   });
 
   test("Dashboard shows in-progress nodes", async ({ page }) => {
@@ -49,7 +51,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
 
-    await expect(page.locator("main")).toContainText("작업 중", {
+    await expect(page.locator("main")).toContainText("In Progress", {
       timeout: 5000,
     });
     await expect(page.locator("main")).toContainText("Working on feature", {
@@ -71,7 +73,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
 
-    await expect(page.locator("main")).toContainText("할 일", {
+    await expect(page.locator("main")).toContainText("Todo", {
       timeout: 5000,
     });
     await expect(page.locator("main")).toContainText("Need to do this", {
@@ -88,7 +90,10 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     await fetch(`${API}/nodes/${node.id}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "in_progress", triggerType: "user_manual" }),
+      body: JSON.stringify({
+        status: "in_progress",
+        triggerType: "user_manual",
+      }),
     });
     await fetch(`${API}/nodes/${node.id}/status`, {
       method: "PUT",
@@ -99,7 +104,7 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
 
-    await expect(page.locator("main")).toContainText("최근 완료", {
+    await expect(page.locator("main")).toContainText("Done", {
       timeout: 5000,
     });
     await expect(page.locator("main")).toContainText("Completed task", {
@@ -128,7 +133,9 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     await expect(card).toBeVisible({ timeout: 5000 });
     await card.click();
 
-    const canvasTab = page.getByRole("button", { name: "캔버스" });
+    const canvasTab = page
+      .getByRole("navigation")
+      .getByRole("button", { name: "캔버스" });
     await expect(canvasTab).toHaveAttribute("data-active", "true", {
       timeout: 3000,
     });
@@ -170,7 +177,10 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     await fetch(`${API}/nodes/${n3.id}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "in_progress", triggerType: "user_manual" }),
+      body: JSON.stringify({
+        status: "in_progress",
+        triggerType: "user_manual",
+      }),
     });
     await fetch(`${API}/nodes/${n3.id}/status`, {
       method: "PUT",
@@ -182,25 +192,34 @@ test.describe("UI: Dashboard rendering and interactions", () => {
     await page.waitForLoadState("networkidle");
 
     const main = page.locator("main");
-    await expect(main).toContainText("작업 중", { timeout: 5000 });
+    await expect(main).toContainText("In Progress", { timeout: 5000 });
     await expect(main).toContainText("In Progress Task");
-    await expect(main).toContainText("할 일");
+    await expect(main).toContainText("Todo");
     await expect(main).toContainText("Todo Item");
-    await expect(main).toContainText("최근 완료");
+    await expect(main).toContainText("Done");
     await expect(main).toContainText("Done Item");
   });
 
   test("Tab switching: dashboard to canvas and back", async ({ page }) => {
-    await expect(page.locator("main")).toContainText("돌아왔습니다", {
-      timeout: 5000,
-    });
+    // Empty dashboard shows empty state message
+    await expect(page.locator("main")).toContainText(
+      "아직 진행 중인 작업이 없습니다",
+      { timeout: 5000 },
+    );
 
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: "캔버스" })
+      .click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole("button", { name: "대시보드" }).click();
-    await expect(page.locator("main")).toContainText("돌아왔습니다", {
-      timeout: 5000,
-    });
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: "대시보드" })
+      .click();
+    await expect(page.locator("main")).toContainText(
+      "아직 진행 중인 작업이 없습니다",
+      { timeout: 5000 },
+    );
   });
 });

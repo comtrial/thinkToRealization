@@ -89,6 +89,7 @@ export function EditorMobileToolbar({ editor }: EditorMobileToolbarProps) {
     <div
       className="editor-mobile-toolbar fixed left-0 right-0 z-50 bg-surface border-t border-border flex items-center px-1 overflow-x-auto"
       style={{ bottom: `${bottomOffset}px`, height: '44px' }}
+      onMouseDown={(e) => e.preventDefault()}
     >
       <div className="flex items-center gap-0.5 flex-nowrap">
         {actions.map((item) => {

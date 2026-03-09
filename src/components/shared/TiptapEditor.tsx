@@ -4,7 +4,7 @@ import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import { useMobile } from '@/hooks/useMobile'
 import { EditorMobileToolbar } from './EditorMobileToolbar'
 import TurndownService from 'turndown'
@@ -35,7 +35,23 @@ function htmlFromMarkdown(md: string): string {
 export function TiptapEditor({ content, onUpdate, placeholder, className, editorRef }: TiptapEditorProps) {
   const isInternalUpdate = useRef(false)
   const [isFocused, setIsFocused] = useState(false)
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMobile = useMobile()
+
+  const handleFocus = useCallback(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+      blurTimeoutRef.current = null
+    }
+    setIsFocused(true)
+  }, [])
+
+  const handleBlur = useCallback(() => {
+    // Delay blur to allow toolbar button taps to re-focus the editor
+    blurTimeoutRef.current = setTimeout(() => {
+      setIsFocused(false)
+    }, 150)
+  }, [])
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -63,8 +79,8 @@ export function TiptapEditor({ content, onUpdate, placeholder, className, editor
       const md = turndown.turndown(html)
       onUpdate(md)
     },
-    onFocus: () => setIsFocused(true),
-    onBlur: () => setIsFocused(false),
+    onFocus: handleFocus,
+    onBlur: handleBlur,
   })
 
   useEffect(() => {
@@ -72,6 +88,13 @@ export function TiptapEditor({ content, onUpdate, placeholder, className, editor
       editorRef.current = editor
     }
   }, [editor, editorRef])
+
+  // Clean up blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current)
+    }
+  }, [])
 
   return (
     <div

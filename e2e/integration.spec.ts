@@ -495,14 +495,14 @@ test.describe("Integration: UI components", () => {
 
     // Press Cmd+2 for canvas tab
     await page.keyboard.press("Meta+2");
-    const canvasTab = page.getByRole("button", { name: "캔버스" });
+    const canvasTab = page.getByRole("navigation").getByRole("button", { name: "캔버스" });
     await expect(canvasTab).toHaveAttribute("data-active", "true", {
       timeout: 3000,
     });
 
     // Press Cmd+1 for dashboard tab
     await page.keyboard.press("Meta+1");
-    const dashTab = page.getByRole("button", { name: "대시보드" });
+    const dashTab = page.getByRole("navigation").getByRole("button", { name: "대시보드" });
     await expect(dashTab).toHaveAttribute("data-active", "true", {
       timeout: 3000,
     });

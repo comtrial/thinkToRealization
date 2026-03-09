@@ -70,6 +70,15 @@ export async function POST() {
       await prisma.nodeStateLog.deleteMany({
         where: { nodeId: { in: nodeIds } },
       });
+      await prisma.nodeComment.deleteMany({
+        where: { nodeId: { in: nodeIds } },
+      });
+      await prisma.attachment.deleteMany({
+        where: { nodeId: { in: nodeIds } },
+      });
+      await prisma.notification.deleteMany({
+        where: { nodeId: { in: nodeIds } },
+      });
       await prisma.edge.deleteMany({
         where: {
           OR: [

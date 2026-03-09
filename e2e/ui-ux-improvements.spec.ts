@@ -28,7 +28,7 @@ test.describe("UX Improvements: Side Panel", () => {
 
     await selectProjectInSidebar(page, "UX Test Project");
 
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     // Wait for canvas to load nodes — may need reload if API race
@@ -38,7 +38,7 @@ test.describe("UX Improvements: Side Panel", () => {
     } catch {
       await page.reload();
       await page.waitForLoadState("networkidle");
-      await page.getByRole("button", { name: "캔버스" }).click();
+      await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
       await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
       await expect(nodeEl).toBeVisible({ timeout: 15000 });
     }
@@ -100,7 +100,7 @@ test.describe("UX Improvements: Side Panel", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     // Wait for node to appear (may need extra time after reload)
@@ -110,7 +110,7 @@ test.describe("UX Improvements: Side Panel", () => {
     } catch {
       await page.reload();
       await page.waitForLoadState("networkidle");
-      await page.getByRole("button", { name: "캔버스" }).click();
+      await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
       await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
       await expect(nodeOnCanvas).toBeVisible({ timeout: 15000 });
     }
@@ -144,7 +144,7 @@ test.describe("UX Improvements: Canvas", () => {
 
     await selectProjectInSidebar(page, "MiniMap Project");
 
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     const minimap = page.locator(".react-flow__minimap");
@@ -169,7 +169,7 @@ test.describe("UX Improvements: Canvas", () => {
 
     await selectProjectInSidebar(page, "Handle Drag Project");
 
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
     await expect(page.locator(".react-flow__node")).toBeVisible({
       timeout: 15000,

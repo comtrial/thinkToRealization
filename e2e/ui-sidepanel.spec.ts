@@ -29,7 +29,7 @@ test.describe("UI: Side panel interactions", () => {
     await selectProjectInSidebar(page, "Panel Project");
 
     // Switch to canvas and wait for node to render
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
 
     // Wait for nodes to load with retries
@@ -102,7 +102,7 @@ test.describe("UI: Side panel interactions", () => {
     await page.reload();
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "캔버스" }).click();
+    await page.getByRole("navigation").getByRole("button", { name: "캔버스" }).click();
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10000 });
     const nodeEl = page.locator(".react-flow__node");
     await expect(nodeEl).toBeVisible({ timeout: 10000 });

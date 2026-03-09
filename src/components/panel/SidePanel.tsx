@@ -6,7 +6,6 @@ import { NodeDetailPanel } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
 import { useNodeStore } from '@/stores/node-store'
-import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useMobile } from '@/hooks/useMobile'
 import type { SessionResponse } from '@/lib/types/api'
@@ -111,7 +110,7 @@ export function SidePanel() {
   // Full mode is handled by NodeDetailFullView in page.tsx — skip SidePanel rendering
   if (panelMode === 'closed' || panelMode === 'full') return null
 
-  // On mobile, peek mode uses fixed positioning to cover the full screen
+  // On mobile, Notion-style: full screen, no tabs, direct content
   if (isMobile) {
     return (
       <>
@@ -128,46 +127,15 @@ export function SidePanel() {
           className="fixed left-0 right-0 bottom-0 bg-surface z-50 flex flex-col"
           style={{ top: 'var(--header-height)' }}
         >
-          {/* Header */}
-          <div className="flex items-center px-4 h-14 border-b border-border/50 shrink-0 gap-2">
-            <button
-              data-testid="panel-close-btn"
-              onClick={closePanel}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary flex-shrink-0"
-              title="닫기 (ESC)"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            {selectedNode && (
-              <h2 className="text-node-title-lg text-text-primary truncate">
-                {selectedNode.title}
-              </h2>
-            )}
-          </div>
-
-          {/* Tabs */}
-          <PanelTabs />
-
-          {/* Content */}
+          {/* Content — no header bar, no tabs, Notion-style direct content */}
           <div className="flex-1 overflow-y-auto pb-safe">
-            {panelTab === 'overview' && isLoading && (
+            {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <span className="text-caption text-text-tertiary">로딩 중...</span>
               </div>
-            )}
-            {panelTab === 'overview' && !isLoading && selectedNode && (
+            ) : selectedNode ? (
               <NodeDetailPanel />
-            )}
-            {panelTab === 'sessions' && (
-              <div className="p-4 flex flex-col gap-3">
-                <SessionsSection
-                  sessions={sessions}
-                  viewingSessionId={viewingSessionId}
-                  setViewingSessionId={setViewingSessionId}
-                />
-              </div>
-            )}
-            {panelTab === 'plans' && <PlanTab />}
+            ) : null}
           </div>
         </aside>
       </>

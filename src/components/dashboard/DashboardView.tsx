@@ -53,19 +53,19 @@ function DashboardTabBar() {
   const setDashboardTab = useUIStore((s) => s.setDashboardTab)
 
   return (
-    <div className="flex items-center gap-1 px-4 py-2 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-20">
+    <div className="flex items-center gap-0.5 px-2 sm:px-4 py-1.5 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-20 overflow-x-auto">
       {DASHBOARD_TABS.map(({ key, label, icon: Icon }) => (
         <button
           key={key}
           onClick={() => setDashboardTab(key)}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-button text-caption font-medium transition-colors duration-100',
+            'flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-button text-[11px] sm:text-caption font-medium transition-colors duration-100 whitespace-nowrap shrink-0',
             dashboardTab === key
               ? 'bg-accent/10 text-accent'
               : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-hover'
           )}
         >
-          <Icon size={14} />
+          <Icon size={13} className="shrink-0" />
           <span>{label}</span>
         </button>
       ))}
