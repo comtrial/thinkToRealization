@@ -99,6 +99,26 @@ export function IssueRow({ node }: { node: NodeResponse }) {
           {dateStr}
         </span>
       )}
+
+      {/* Assignee avatar */}
+      {node.assigneeName ? (
+        node.assigneeAvatarUrl ? (
+          <img
+            src={node.assigneeAvatarUrl}
+            alt={node.assigneeName}
+            className="w-5 h-5 rounded-full flex-shrink-0 ring-1 ring-border/50"
+          />
+        ) : (
+          <div
+            className="w-5 h-5 rounded-full flex-shrink-0 bg-accent/10 text-accent flex items-center justify-center text-[10px] font-medium ring-1 ring-border/50"
+            title={node.assigneeName}
+          >
+            {node.assigneeName.charAt(0).toUpperCase()}
+          </div>
+        )
+      ) : (
+        <div className="w-5 h-5 flex-shrink-0" />
+      )}
     </button>
   )
 }

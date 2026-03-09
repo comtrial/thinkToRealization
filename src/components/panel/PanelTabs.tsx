@@ -27,7 +27,7 @@ export function PanelTabs({ hidden }: PanelTabsProps) {
             key={tab.value}
             value={tab.value}
             className={[
-              'flex-1 py-2.5 text-caption text-center transition-colors relative',
+              'flex-1 py-3 min-h-[44px] text-caption text-center transition-colors relative',
               'hover:text-text-primary',
               panelTab === tab.value
                 ? 'text-text-primary'

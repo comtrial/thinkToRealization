@@ -1,13 +1,17 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Plus, ChevronRight, Trash2 } from 'lucide-react'
+import { Plus, ChevronRight, Trash2, MoreHorizontal, Copy, Archive, ClipboardCopy, Check } from 'lucide-react'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useNodeStore } from '@/stores/node-store'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { useUIStore } from '@/stores/ui-store'
 import { TiptapEditor } from '@/components/shared/TiptapEditor'
 import { AssigneePicker } from '@/components/shared/AssigneePicker'
 import { CommentSection } from '@/components/comments/CommentSection'
+import { useToast } from '@/components/shared/Toast'
+import { useProject } from '@/components/providers/ProjectProvider'
+import { CompactProperties } from './CompactProperties'
 import type { NodeType, NodeStatus, EdgeResponse } from '@/lib/types/api'
 
 const STATUS_OPTIONS: { value: NodeStatus; label: string; color: string }[] = [
@@ -72,8 +76,17 @@ function PropertySelect({
 export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
   const selectedNode = useNodeStore((s) => s.selectedNode)
   const updateNodeStatus = useNodeStore((s) => s.updateNodeStatus)
+  const { addToast } = useToast()
 
   if (!selectedNode) return null
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === selectedNode.status) return
+    const result = await updateNodeStatus(selectedNode.id, newStatus)
+    if (!result.ok) {
+      addToast('error', result.error || '상태 변경 실패')
+    }
+  }
 
   const handlePriorityChange = async (newPriority: string) => {
     try {
@@ -143,6 +156,7 @@ export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
         assigneeId={selectedNode.assigneeId}
         assigneeName={selectedNode.assigneeName}
         assigneeAvatarUrl={selectedNode.assigneeAvatarUrl}
+        projectId={selectedNode.projectId}
         onAssign={async (userId) => {
           try {
             const res = await fetch(`/api/nodes/${selectedNode.id}/assignee`, {
@@ -208,7 +222,7 @@ export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
           label="Status"
           options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           value={selectedNode.status}
-          onChange={(v) => updateNodeStatus(selectedNode.id, v)}
+          onChange={handleStatusChange}
         />
         <PropertySelect
           label="Priority"
@@ -236,7 +250,7 @@ export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
         label="Status"
         options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
         value={selectedNode.status}
-        onChange={(v) => updateNodeStatus(selectedNode.id, v)}
+        onChange={handleStatusChange}
       />
       {assigneeSection}
       <PropertySelect
@@ -347,13 +361,21 @@ function NodeHierarchy() {
 
 export function NodeDetailPanel({ showProperties = true }: { showProperties?: boolean }) {
   const selectedNode = useNodeStore((s) => s.selectedNode)
+  const updateNodeStatus = useNodeStore((s) => s.updateNodeStatus)
   const decisions = useNodeStore((s) => s.decisions)
   const sessions = useNodeStore((s) => s.sessions)
+  const canvasNodes = useCanvasStore((s) => s.nodes)
+  const canvasEdges = useCanvasStore((s) => s.edges)
+  const panelMode = useUIStore((s) => s.panelMode)
+  const { currentProject } = useProject()
+  const { addToast } = useToast()
 
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState('')
+  const [copied, setCopied] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout>()
+  const copiedTimerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     if (selectedNode) {
@@ -372,6 +394,7 @@ export function NodeDetailPanel({ showProperties = true }: { showProperties?: bo
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
     }
   }, [])
 
@@ -399,6 +422,66 @@ export function NodeDetailPanel({ showProperties = true }: { showProperties?: bo
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     debounceTimerRef.current = setTimeout(() => saveDescription(md), 500)
   }, [saveDescription])
+
+  const handleCopyClaudeScript = useCallback(async () => {
+    if (!selectedNode) return
+
+    const childEdges = canvasEdges.filter(
+      (e) => e.source === selectedNode.id && (e.data as Record<string, unknown>)?.type === 'parent_child'
+    )
+    const childNodes = childEdges
+      .map((edge) => {
+        const canvasNode = canvasNodes.find((n) => n.id === edge.target)
+        if (!canvasNode) return null
+        const data = canvasNode.data as Record<string, unknown>
+        return {
+          title: (data.title as string) || '(untitled)',
+          status: (data.status as string) || 'backlog',
+        }
+      })
+      .filter(Boolean) as { title: string; status: string }[]
+
+    const decisionsText = decisions.length > 0
+      ? decisions.map((d) => `- ${d.content}`).join('\n')
+      : 'None'
+
+    const childrenText = childNodes.length > 0
+      ? childNodes.map((n) => `- [${n.status}] ${n.title}`).join('\n')
+      : 'None'
+
+    const descriptionRaw = selectedNode.description || ''
+    const descriptionText = descriptionRaw.replace(/<[^>]*>/g, '').trim() || 'No description'
+
+    const script = `## Context: ${selectedNode.title}
+- Type: ${selectedNode.type}
+- Status: ${selectedNode.status}
+- Priority: ${selectedNode.priority}
+- Project: ${currentProject?.title || 'Unknown'}
+
+## Description
+${descriptionText}
+
+## Decisions Made
+${decisionsText}
+
+## Sub-issues
+${childrenText}
+
+## Instructions
+위 컨텍스트를 참고하여 이 노드에 대한 작업을 진행해주세요.
+프로젝트 경로: ${currentProject?.projectDir || 'Unknown'}`
+
+    try {
+      await navigator.clipboard.writeText(script)
+      addToast('success', '클립보드에 복사되었습니다')
+      setCopied(true)
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err)
+      addToast('error', '클립보드 복사에 실패했습니다')
+    }
+  }, [selectedNode, decisions, canvasNodes, canvasEdges, currentProject, addToast])
 
   if (!selectedNode) return null
 
@@ -434,36 +517,111 @@ export function NodeDetailPanel({ showProperties = true }: { showProperties?: bo
   }
 
   return (
-    <div className="px-8 pt-8 pb-4 flex flex-col gap-6">
-      {/* Title — large, like Linear */}
-      <div>
-        {editingTitle ? (
-          <input
-            ref={titleInputRef}
-            value={titleValue}
-            onChange={(e) => setTitleValue(e.target.value)}
-            onBlur={handleTitleSave}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleTitleSave()
-              if (e.key === 'Escape') {
-                setTitleValue(selectedNode.title)
-                setEditingTitle(false)
-              }
-            }}
-            className="w-full text-2xl font-semibold text-text-primary bg-transparent border-b-2 border-accent outline-none"
-          />
-        ) : (
-          <h1
-            className="text-2xl font-semibold text-text-primary cursor-pointer hover:text-accent transition-colors"
-            onClick={() => setEditingTitle(true)}
-          >
-            {selectedNode.title}
-          </h1>
-        )}
+    <div className="px-4 pt-5 pb-4 md:px-8 md:pt-8 flex flex-col gap-6">
+      {/* Title — large, like Linear + action menu */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleTitleSave()
+                if (e.key === 'Escape') {
+                  setTitleValue(selectedNode.title)
+                  setEditingTitle(false)
+                }
+              }}
+              className="w-full text-xl md:text-2xl font-semibold text-text-primary bg-transparent border-b-2 border-accent outline-none"
+            />
+          ) : (
+            <h1
+              className="text-xl md:text-2xl font-semibold text-text-primary cursor-pointer hover:text-accent transition-colors"
+              onClick={() => setEditingTitle(true)}
+            >
+              {selectedNode.title}
+            </h1>
+          )}
+        </div>
+
+        {/* Copy Claude Script button */}
+        <button
+          onClick={handleCopyClaudeScript}
+          className="shrink-0 p-1.5 rounded-button text-text-tertiary hover:text-accent hover:bg-surface-hover transition-colors"
+          title="Claude 스크립트 복사"
+        >
+          {copied ? <Check size={16} className="text-green-600" /> : <ClipboardCopy size={16} />}
+        </button>
+
+        {/* Action menu (⋯) */}
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button className="flex-shrink-0 p-1.5 rounded-button hover:bg-surface-hover text-text-tertiary hover:text-text-secondary transition-colors mt-1">
+              <MoreHorizontal size={18} />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              className="min-w-[180px] bg-surface border border-border rounded-dropdown shadow-elevation-2 py-1 z-50"
+              sideOffset={4}
+              align="end"
+            >
+              <DropdownMenu.Item
+                className="flex items-center gap-2 px-3 py-2 text-caption text-text-primary hover:bg-surface-hover cursor-pointer outline-none"
+                onSelect={() => {
+                  navigator.clipboard.writeText(selectedNode.id)
+                }}
+              >
+                <Copy size={14} />
+                <span>ID 복사</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="flex items-center gap-2 px-3 py-2 text-caption text-text-primary hover:bg-surface-hover cursor-pointer outline-none"
+                onSelect={async () => {
+                  const isArchived = selectedNode.status === 'archived'
+                  const targetStatus = isArchived ? 'backlog' : 'archived'
+                  const result = await updateNodeStatus(selectedNode.id, targetStatus)
+                  if (!result.ok) {
+                    addToast('error', result.error || '상태 변경 실패')
+                  }
+                }}
+              >
+                <Archive size={14} />
+                <span>{selectedNode.status === 'archived' ? '보관 해제' : '보관처리'}</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="h-px bg-border my-1" />
+              <DropdownMenu.Item
+                className="flex items-center gap-2 px-3 py-2 text-caption text-red-500 hover:bg-red-50 cursor-pointer outline-none"
+                onSelect={async () => {
+                  const confirmed = window.confirm('이 노드를 삭제하시겠습니까?')
+                  if (!confirmed) return
+                  try {
+                    const res = await fetch(`/api/nodes/${selectedNode.id}`, { method: 'DELETE' })
+                    if (res.ok) {
+                      useCanvasStore.getState().removeNode(selectedNode.id)
+                      useUIStore.getState().closePanel()
+                      useNodeStore.getState().clearSelection()
+                      useUIStore.getState().invalidateDashboard()
+                    }
+                  } catch (err) {
+                    console.error('Failed to delete node:', err)
+                  }
+                }}
+              >
+                <Trash2 size={14} />
+                <span>노드 삭제</span>
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
 
-      {/* Properties — status, priority, type, assignee, due date */}
-      {showProperties && <NodeProperties />}
+      {/* Properties — compact chips in peek mode, grid in full mode */}
+      {showProperties && (
+        panelMode === 'peek' ? <CompactProperties /> : <NodeProperties />
+      )}
 
       {/* Description — Notion-like inline markdown editor */}
       <div>
@@ -479,9 +637,12 @@ export function NodeDetailPanel({ showProperties = true }: { showProperties?: bo
       <div className="border-t border-border/30 pt-3">
         <button
           onClick={async () => {
-            await useNodeStore.getState().addSubNode(selectedNode.id, selectedNode.projectId, selectedNode.type)
-            // Re-fetch node detail to refresh hierarchy (child list)
-            await useNodeStore.getState().selectNode(selectedNode.id)
+            const newNodeId = await useNodeStore.getState().addSubNode(selectedNode.id, selectedNode.projectId, selectedNode.type)
+            if (newNodeId) {
+              // Navigate to the new child node's edit view
+              await useNodeStore.getState().selectNode(newNodeId)
+              useUIStore.getState().openPanelFull(newNodeId)
+            }
           }}
           className="flex items-center gap-1.5 text-caption text-text-tertiary hover:text-accent px-1 py-1 rounded-button transition-colors"
         >
@@ -541,30 +702,6 @@ export function NodeDetailPanel({ showProperties = true }: { showProperties?: bo
         </div>
       )}
 
-      {/* Delete node */}
-      <div className="border-t border-border/30 pt-4 mt-2">
-        <button
-          onClick={async () => {
-            const confirmed = window.confirm('이 노드를 삭제하시겠습니까? 삭제된 노드는 archived 상태로 변경됩니다.')
-            if (!confirmed) return
-            try {
-              const res = await fetch(`/api/nodes/${selectedNode.id}`, { method: 'DELETE' })
-              if (res.ok) {
-                useCanvasStore.getState().removeNode(selectedNode.id)
-                useUIStore.getState().closePanel()
-                useNodeStore.getState().clearSelection()
-                useUIStore.getState().invalidateDashboard()
-              }
-            } catch (err) {
-              console.error('Failed to delete node:', err)
-            }
-          }}
-          className="flex items-center gap-1.5 text-caption text-red-500 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-button transition-colors w-full justify-center border border-red-200 hover:border-red-300"
-        >
-          <Trash2 size={14} />
-          <span>노드 삭제</span>
-        </button>
-      </div>
     </div>
   )
 }

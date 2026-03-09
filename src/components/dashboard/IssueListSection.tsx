@@ -12,7 +12,7 @@ interface IssueListSectionProps {
   label: string
   nodes: NodeResponse[]
   defaultOpen?: boolean
-  onAddNode?: () => void
+  onAddNode?: (status: NodeStatus) => void
 }
 
 export function IssueListSection({
@@ -53,7 +53,7 @@ export function IssueListSection({
 
         {onAddNode && (
           <button
-            onClick={(e) => { e.stopPropagation(); onAddNode() }}
+            onClick={(e) => { e.stopPropagation(); onAddNode(status) }}
             className="p-1 rounded-button hover:bg-surface-active text-text-tertiary
                        hover:text-text-secondary transition-colors"
             title="새 항목 추가"

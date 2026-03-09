@@ -43,15 +43,19 @@ export async function PUT(
       },
     });
 
-    // Notify new assignee (if someone else)
-    if (parsed.assigneeId && parsed.assigneeId !== auth.session.userId) {
+    // Notify new assignee (including self-assignment)
+    if (parsed.assigneeId) {
+      const isSelf = parsed.assigneeId === auth.session.userId;
       await createNotification({
         userId: parsed.assigneeId,
         type: "assignment",
         title: "노드 배정",
-        body: `${auth.session.name}님이 '${node.title}' 노드를 배정했습니다`,
+        body: isSelf
+          ? `'${node.title}' 노드가 나에게 배정되었습니다`
+          : `${auth.session.name}님이 '${node.title}' 노드를 배정했습니다`,
         nodeId: node.id,
         actorId: auth.session.userId,
+        allowSelf: true,
       });
     }
 

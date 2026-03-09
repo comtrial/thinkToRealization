@@ -88,6 +88,10 @@ export async function POST() {
       });
     }
 
+    await prisma.projectMember.deleteMany({
+      where: { projectId: { in: projectIds } },
+    });
+
     await prisma.project.deleteMany({
       where: { id: { in: projectIds } },
     });

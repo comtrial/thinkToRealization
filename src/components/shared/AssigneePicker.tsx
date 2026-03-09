@@ -11,20 +11,31 @@ interface AssigneePickerProps {
   assigneeName: string | null
   assigneeAvatarUrl: string | null
   onAssign: (userId: string | null) => void
+  projectId?: string
 }
 
-export function AssigneePicker({ assigneeId, assigneeName, assigneeAvatarUrl, onAssign }: AssigneePickerProps) {
+export function AssigneePicker({ assigneeId, assigneeName, assigneeAvatarUrl, onAssign, projectId }: AssigneePickerProps) {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState<UserResponse[]>([])
 
   useEffect(() => {
     if (open && users.length === 0) {
-      fetch('/api/users')
+      // If projectId is provided, fetch only project members; otherwise fall back to all users
+      const url = projectId ? `/api/projects/${projectId}/members` : '/api/users'
+      fetch(url)
         .then((r) => r.json())
-        .then((json) => setUsers(json.data ?? []))
+        .then((json) => {
+          if (projectId) {
+            // Members API returns { data: [{ user: { id, name, ... }, role }] }
+            const members = (json.data ?? []) as { user: UserResponse }[]
+            setUsers(members.map((m) => m.user))
+          } else {
+            setUsers(json.data ?? [])
+          }
+        })
         .catch(() => {})
     }
-  }, [open, users.length])
+  }, [open, users.length, projectId])
 
   return (
     <div className="flex flex-col gap-1">

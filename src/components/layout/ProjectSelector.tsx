@@ -24,7 +24,7 @@ export function ProjectSelector() {
     <Popover.Root open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch('') }}>
       <Popover.Trigger asChild>
         <button className="flex items-center gap-1 px-2 py-1 rounded-button text-body text-text-secondary hover:bg-surface-hover transition-colors">
-          <span className="truncate max-w-[150px]">
+          <span className="truncate max-w-[120px] md:max-w-[150px]">
             {currentProject ? currentProject.title : '프로젝트 선택'}
           </span>
           <ChevronDown size={14} />

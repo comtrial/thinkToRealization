@@ -6,7 +6,7 @@ import { NodeDetailPanel } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
 import { useNodeStore } from '@/stores/node-store'
-import { X } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useMobile } from '@/hooks/useMobile'
 import type { SessionResponse } from '@/lib/types/api'
@@ -129,30 +129,20 @@ export function SidePanel() {
           style={{ top: 'var(--header-height)' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 h-14 border-b border-border/50 shrink-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                data-testid="panel-close-btn"
-                onClick={closePanel}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary"
-                title="닫기 (ESC)"
-              >
-                <X size={16} />
-              </button>
-              {selectedNode && (
-                <h2 className="text-node-title-lg text-text-primary truncate">
-                  {selectedNode.title}
-                </h2>
-              )}
-            </div>
+          <div className="flex items-center px-4 h-14 border-b border-border/50 shrink-0 gap-2">
             <button
-              data-testid="panel-fullscreen-btn"
+              data-testid="panel-close-btn"
               onClick={closePanel}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary"
-              title="닫기"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary flex-shrink-0"
+              title="닫기 (ESC)"
             >
-              <X size={16} />
+              <ArrowLeft size={18} />
             </button>
+            {selectedNode && (
+              <h2 className="text-node-title-lg text-text-primary truncate">
+                {selectedNode.title}
+              </h2>
+            )}
           </div>
 
           {/* Tabs */}

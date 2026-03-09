@@ -1,21 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { Menu, Search, LogOut } from 'lucide-react'
+import { Menu, Search, LogOut, Users } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useUIStore } from '@/stores/ui-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { ProjectSelector } from './ProjectSelector'
+import { ProjectMembersDialog } from './ProjectMembersDialog'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { UserAvatar } from '@/components/shared/UserAvatar'
 import { useMobile } from '@/hooks/useMobile'
+import { useProject } from '@/components/providers/ProjectProvider'
 
 export function Header() {
   const { toggleSidebar, activeTab, setActiveTab, toggleCommandPalette } = useUIStore()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const isMobile = useMobile()
+  const { currentProject } = useProject()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false)
 
   const handleLogout = async () => {
     await logout()
@@ -42,37 +46,51 @@ export function Header() {
         <ProjectSelector />
       </div>
 
-      {/* Center: nav tabs */}
-      <nav className="flex items-center gap-0.5 flex-shrink-0">
-        {(['dashboard', 'canvas'] as const).map((tab) => (
-          <button
-            key={tab}
-            data-active={activeTab === tab ? 'true' : undefined}
-            onClick={() => setActiveTab(tab)}
-            className={`px-2 md:px-3 py-1.5 text-caption md:text-body rounded-button transition-colors relative min-h-[44px] focus-ring ${
-              activeTab === tab
-                ? 'text-text-primary'
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            {tab === 'dashboard' ? '대시보드' : '캔버스'}
-            {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-            )}
-          </button>
-        ))}
-      </nav>
+      {/* Center: nav tabs — hidden on mobile (moved to MobileBottomNav) */}
+      {!isMobile && (
+        <nav className="flex items-center gap-0.5 flex-shrink-0">
+          {(['dashboard', 'canvas'] as const).map((tab) => (
+            <button
+              key={tab}
+              data-active={activeTab === tab ? 'true' : undefined}
+              onClick={() => setActiveTab(tab)}
+              className={`px-2 md:px-3 py-1.5 text-caption md:text-body rounded-button transition-colors relative min-h-[44px] focus-ring ${
+                activeTab === tab
+                  ? 'text-text-primary'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {tab === 'dashboard' ? '대시보드' : '캔버스'}
+              {activeTab === tab && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
+              )}
+            </button>
+          ))}
+        </nav>
+      )}
 
-      {/* Right: search + notifications + user */}
+      {/* Right: search (desktop only) + notifications + user */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        <button
-          onClick={toggleCommandPalette}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button border border-border hover:bg-surface-hover transition-colors focus-ring"
-        >
-          <Search size={14} className="text-text-tertiary" />
-          {!isMobile && <span className="text-caption text-text-tertiary ml-2">검색</span>}
-          {!isMobile && <kbd className="text-micro px-1 py-0.5 rounded bg-surface-hover border border-border ml-2">⌘K</kbd>}
-        </button>
+        {!isMobile && (
+          <button
+            onClick={toggleCommandPalette}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button border border-border hover:bg-surface-hover transition-colors focus-ring"
+          >
+            <Search size={14} className="text-text-tertiary" />
+            <span className="text-caption text-text-tertiary ml-2">검색</span>
+            <kbd className="text-micro px-1 py-0.5 rounded bg-surface-hover border border-border ml-2">⌘K</kbd>
+          </button>
+        )}
+
+        {currentProject && (
+          <button
+            onClick={() => setMembersDialogOpen(true)}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover transition-colors focus-ring"
+            title="프로젝트 멤버"
+          >
+            <Users size={16} className="text-text-tertiary" />
+          </button>
+        )}
 
         <NotificationBell />
 
@@ -106,6 +124,11 @@ export function Header() {
           </Popover.Root>
         )}
       </div>
+
+      <ProjectMembersDialog
+        open={membersDialogOpen}
+        onOpenChange={setMembersDialogOpen}
+      />
     </header>
   )
 }

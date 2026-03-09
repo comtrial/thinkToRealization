@@ -4,6 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNodeStore } from '@/stores/node-store'
+import { useToast } from '@/components/shared/Toast'
 import type { NodeStatus } from '@/lib/types/api'
 
 const statusOptions: { status: NodeStatus; label: string; color: string }[] = [
@@ -16,10 +17,19 @@ const statusOptions: { status: NodeStatus; label: string; color: string }[] = [
 
 export function NodeStatusControl() {
   const { selectedNode, updateNodeStatus } = useNodeStore()
+  const { addToast } = useToast()
 
   if (!selectedNode) return null
 
   const currentStatus = statusOptions.find((s) => s.status === selectedNode.status)
+
+  const handleSelect = async (status: NodeStatus) => {
+    if (status === selectedNode.status) return
+    const result = await updateNodeStatus(selectedNode.id, status)
+    if (!result.ok) {
+      addToast('error', result.error || '상태 변경 실패')
+    }
+  }
 
   return (
     <DropdownMenu.Root>
@@ -46,10 +56,12 @@ export function NodeStatusControl() {
           {statusOptions.map(({ status, label, color }) => (
             <DropdownMenu.Item
               key={status}
-              onSelect={() => updateNodeStatus(selectedNode.id, status)}
+              disabled={selectedNode.status === status}
+              onSelect={() => handleSelect(status)}
               className={cn(
                 'flex items-center gap-2 px-3 py-1.5 text-body text-text-primary',
-                'hover:bg-surface-hover cursor-pointer outline-none'
+                'hover:bg-surface-hover cursor-pointer outline-none',
+                selectedNode.status === status && 'opacity-50 cursor-default'
               )}
             >
               <div className={cn('w-2 h-2 rounded-full', color)} />

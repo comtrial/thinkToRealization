@@ -10,11 +10,11 @@ interface NodeStore {
   isLoading: boolean
   selectNode: (nodeId: string) => Promise<void>
   clearSelection: () => void
-  updateNodeStatus: (nodeId: string, status: string) => Promise<void>
+  updateNodeStatus: (nodeId: string, status: string) => Promise<{ ok: boolean; error?: string }>
   addDecision: (nodeId: string, content: string, sessionId?: string) => Promise<DecisionResponse | null>
   removeDecision: (decisionId: string) => Promise<void>
   promoteDecision: (decisionId: string, nodeType: string, title: string) => Promise<void>
-  addSubNode: (parentNodeId: string, projectId: string, parentType: string) => Promise<void>
+  addSubNode: (parentNodeId: string, projectId: string, parentType: string) => Promise<string | null>
 }
 
 export const useNodeStore = create<NodeStore>((set, get) => ({
@@ -54,12 +54,16 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
       if (res.ok) {
         const { data } = await res.json()
         set((s) => ({ selectedNode: s.selectedNode ? { ...s.selectedNode, status: data.status } : null }))
-        // Also update canvas node data
         useCanvasStore.getState().updateNodeData(nodeId, { status: data.status })
         useUIStore.getState().invalidateDashboard()
+        return { ok: true }
       }
+      const errorBody = await res.json().catch(() => null)
+      const errorMsg = errorBody?.error?.message || '상태 변경에 실패했습니다'
+      return { ok: false, error: errorMsg }
     } catch (err) {
       console.error('Failed to update status:', err)
+      return { ok: false, error: '네트워크 오류' }
     }
   },
   addDecision: async (nodeId, content, sessionId) => {
@@ -115,7 +119,7 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
           canvasY: parentY + childYOffset,
         }),
       })
-      if (!res.ok) return
+      if (!res.ok) return null
 
       const { data: newNode } = await res.json()
 
@@ -153,8 +157,14 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
           },
         ])
       }
+
+      // Refresh dashboard
+      useUIStore.getState().invalidateDashboard()
+
+      return newNode.id as string
     } catch (err) {
       console.error('Failed to add sub-node:', err)
+      return null
     }
   },
   promoteDecision: async (decisionId, nodeType, title) => {

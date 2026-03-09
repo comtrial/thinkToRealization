@@ -12,12 +12,15 @@ model Project {
   projectDir  String   @default("")
   isActive    Boolean  @default(true)
   claudeMdPath String?
+  createdById String?
+  createdBy   User?    @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   canvasViewportX    Float @default(0)
   canvasViewportY    Float @default(0)
   canvasViewportZoom Float @default(1.0)
   nodes Node[]
+  members ProjectMember[]
 }
 
 model User {
@@ -31,6 +34,22 @@ model User {
   comments      NodeComment[]
   notifications Notification[]
   assignedNodes Node[]         @relation("NodeAssignee")
+  createdProjects Project[]    @relation("ProjectCreator")
+  memberships   ProjectMember[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model Node {
@@ -61,6 +80,7 @@ model Node {
   stateLogs    NodeStateLog[]
   plans        Plan[]
   comments     NodeComment[]
+  attachments  Attachment[]
   @@index([projectId, status])
 }
 
@@ -170,4 +190,17 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
   @@index([userId, isRead])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  nodeId       String
+  node         Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  fileName     String
+  fileType     String
+  fileSize     Int
+  storagePath  String
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  @@index([nodeId])
 }

@@ -8,6 +8,7 @@ import {
 import { handlePrismaError } from "@/lib/prisma-error";
 import { updateNodeSchema } from "@/lib/schemas/node";
 import { nodeWithCounts, toNodeResponse } from "@/lib/node-helpers";
+import { deleteFile } from "@/lib/storage";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -88,6 +89,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const existing = await prisma.node.findUnique({ where: { id } });
     if (!existing) return notFound("Node", id);
+
+    // Clean up attachment files from disk before archiving
+    const attachments = await prisma.attachment.findMany({ where: { nodeId: id } });
+    await Promise.all(attachments.map((a) => deleteFile(a.storagePath)));
 
     const archived = await prisma.$transaction(async (tx) => {
       const updated = await tx.node.update({

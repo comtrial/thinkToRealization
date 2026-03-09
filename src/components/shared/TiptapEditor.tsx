@@ -1,9 +1,12 @@
 'use client'
 
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useRef } from 'react'
+import Image from '@tiptap/extension-image'
+import { useRef, useEffect, useState } from 'react'
+import { useMobile } from '@/hooks/useMobile'
+import { EditorMobileToolbar } from './EditorMobileToolbar'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
 import { cn } from '@/lib/utils'
@@ -19,6 +22,7 @@ interface TiptapEditorProps {
   onUpdate: (markdown: string) => void
   placeholder?: string
   className?: string
+  editorRef?: React.MutableRefObject<Editor | null>
 }
 
 function htmlFromMarkdown(md: string): string {
@@ -28,8 +32,10 @@ function htmlFromMarkdown(md: string): string {
   return result
 }
 
-export function TiptapEditor({ content, onUpdate, placeholder, className }: TiptapEditorProps) {
+export function TiptapEditor({ content, onUpdate, placeholder, className, editorRef }: TiptapEditorProps) {
   const isInternalUpdate = useRef(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const isMobile = useMobile()
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -39,6 +45,10 @@ export function TiptapEditor({ content, onUpdate, placeholder, className }: Tipt
       }),
       Placeholder.configure({
         placeholder: placeholder || '내용을 입력하세요...',
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: false,
       }),
     ],
     content: content ? htmlFromMarkdown(content) : '',
@@ -53,7 +63,15 @@ export function TiptapEditor({ content, onUpdate, placeholder, className }: Tipt
       const md = turndown.turndown(html)
       onUpdate(md)
     },
+    onFocus: () => setIsFocused(true),
+    onBlur: () => setIsFocused(false),
   })
+
+  useEffect(() => {
+    if (editorRef && editor) {
+      editorRef.current = editor
+    }
+  }, [editor, editorRef])
 
   return (
     <div
@@ -65,6 +83,9 @@ export function TiptapEditor({ content, onUpdate, placeholder, className }: Tipt
       )}
     >
       <EditorContent editor={editor} />
+      {isMobile && editor && isFocused && (
+        <EditorMobileToolbar editor={editor} />
+      )}
     </div>
   )
 }

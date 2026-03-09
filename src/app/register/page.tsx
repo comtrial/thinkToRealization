@@ -11,12 +11,19 @@ export default function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (password !== passwordConfirm) {
+      setError('비밀번호가 일치하지 않습니다')
+      return
+    }
+
     setLoading(true)
     const result = await register(email, name, password)
     setLoading(false)
@@ -81,9 +88,30 @@ export default function RegisterPage() {
             />
           </div>
 
+          <div className="flex flex-col gap-1">
+            <label htmlFor="passwordConfirm" className="text-caption text-text-secondary">비밀번호 확인</label>
+            <input
+              id="passwordConfirm"
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              required
+              minLength={6}
+              className={`px-3 py-2 rounded-button border bg-surface text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent ${
+                passwordConfirm && password !== passwordConfirm
+                  ? 'border-red-300 focus:border-red-400 focus:ring-red-200/20'
+                  : 'border-border'
+              }`}
+              placeholder="비밀번호를 다시 입력하세요"
+            />
+            {passwordConfirm && password !== passwordConfirm && (
+              <span className="text-[11px] text-red-500 mt-0.5">비밀번호가 일치하지 않습니다</span>
+            )}
+          </div>
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (!!passwordConfirm && password !== passwordConfirm)}
             className="px-4 py-2.5 rounded-button bg-accent text-white font-medium text-body hover:bg-accent/90 disabled:opacity-50 transition-colors"
           >
             {loading ? '가입 중...' : '회원가입'}

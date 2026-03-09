@@ -4,6 +4,7 @@ import { successResponse, validationError, notFound } from "@/lib/api-response";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { createNodeSchema } from "@/lib/schemas/node";
 import { nodeWithCounts, toNodeResponse } from "@/lib/node-helpers";
+import { requireProjectAccess } from "@/lib/auth/project-guard";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,6 +12,9 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(req: NextRequest, { params }: Params) {
   const { id: projectId } = await params;
   const status = req.nextUrl.searchParams.get("status");
+
+  const access = await requireProjectAccess(req, projectId);
+  if (access.response) return access.response;
 
   try {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
@@ -34,6 +38,10 @@ export async function GET(req: NextRequest, { params }: Params) {
 // POST /api/projects/:pid/nodes
 export async function POST(req: NextRequest, { params }: Params) {
   const { id: projectId } = await params;
+
+  const access = await requireProjectAccess(req, projectId);
+  if (access.response) return access.response;
+
   try {
     const body = await req.json();
     const parsed = createNodeSchema.safeParse(body);

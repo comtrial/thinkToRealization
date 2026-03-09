@@ -1,10 +1,14 @@
 import { create } from 'zustand'
 
+export type DashboardTab = 'all' | 'assigned' | 'active' | 'backlog'
+
 interface UIStore {
   sidebarOpen: boolean
   toggleSidebar: () => void
   activeTab: 'dashboard' | 'canvas'
   setActiveTab: (tab: 'dashboard' | 'canvas') => void
+  dashboardTab: DashboardTab
+  setDashboardTab: (tab: DashboardTab) => void
   panelMode: 'closed' | 'peek' | 'full'
   panelNodeId: string | null
   panelTab: 'overview' | 'sessions' | 'plans'
@@ -28,6 +32,8 @@ export const useUIStore = create<UIStore>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   activeTab: 'dashboard',
   setActiveTab: (tab) => set({ activeTab: tab }),
+  dashboardTab: 'all',
+  setDashboardTab: (tab) => set({ dashboardTab: tab }),
   panelMode: 'closed',
   panelNodeId: null,
   panelTab: 'overview',

@@ -10,12 +10,14 @@ import { handlePrismaError } from "@/lib/prisma-error";
 import { updateNodeStatusSchema } from "@/lib/schemas/node";
 import { nodeWithCounts, toNodeResponse } from "@/lib/node-helpers";
 
+// Manual transitions allow any status change (user intent respected)
+const ALL_STATUSES = ["backlog", "todo", "in_progress", "done", "archived"];
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  backlog: ["todo", "in_progress", "archived"],
-  todo: ["backlog", "in_progress", "archived"],
-  in_progress: ["todo", "done", "archived"],
-  done: ["todo", "in_progress", "archived"],
-  archived: ["backlog", "todo"],
+  backlog: ALL_STATUSES.filter((s) => s !== "backlog"),
+  todo: ALL_STATUSES.filter((s) => s !== "todo"),
+  in_progress: ALL_STATUSES.filter((s) => s !== "in_progress"),
+  done: ALL_STATUSES.filter((s) => s !== "done"),
+  archived: ALL_STATUSES.filter((s) => s !== "archived"),
 };
 
 type Params = { params: Promise<{ id: string }> };

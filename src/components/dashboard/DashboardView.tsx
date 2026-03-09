@@ -3,9 +3,19 @@
 import { useEffect, useState, useCallback } from 'react'
 import { IssueListSection } from './IssueListSection'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { useUIStore } from '@/stores/ui-store'
+import { useUIStore, type DashboardTab } from '@/stores/ui-store'
 import { useCanvasStore } from '@/stores/canvas-store'
+import { useAuthStore } from '@/stores/auth-store'
+import { cn } from '@/lib/utils'
+import { Layers, User, Zap, Archive } from 'lucide-react'
 import type { DashboardResponse } from '@/lib/types/api'
+
+const DASHBOARD_TABS: { key: DashboardTab; label: string; icon: typeof Layers }[] = [
+  { key: 'all', label: '전체', icon: Layers },
+  { key: 'assigned', label: '나에게 배정', icon: User },
+  { key: 'active', label: '진행중', icon: Zap },
+  { key: 'backlog', label: '백로그', icon: Archive },
+]
 
 function IssueListSkeleton() {
   const RowSkeleton = () => (
@@ -38,15 +48,56 @@ function IssueListSkeleton() {
   )
 }
 
+function DashboardTabBar() {
+  const dashboardTab = useUIStore((s) => s.dashboardTab)
+  const setDashboardTab = useUIStore((s) => s.setDashboardTab)
+
+  return (
+    <div className="flex items-center gap-1 px-4 py-2 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-20">
+      {DASHBOARD_TABS.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          onClick={() => setDashboardTab(key)}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-button text-caption font-medium transition-colors duration-100',
+            dashboardTab === key
+              ? 'bg-accent/10 text-accent'
+              : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-hover'
+          )}
+        >
+          <Icon size={14} />
+          <span>{label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function DashboardView({ projectId }: { projectId: string }) {
   const [data, setData] = useState<DashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const dashboardTab = useUIStore((s) => s.dashboardTab)
+  const user = useAuthStore((s) => s.user)
+
   const fetchDashboard = useCallback(async () => {
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/dashboard`)
+      // Build query params based on active tab
+      const params = new URLSearchParams()
+      if (dashboardTab === 'assigned' && user?.id) {
+        params.set('filter', 'assigned')
+        params.set('userId', user.id)
+      } else if (dashboardTab === 'active') {
+        params.set('filter', 'active')
+      } else if (dashboardTab === 'backlog') {
+        params.set('filter', 'backlog')
+      }
+
+      const qs = params.toString()
+      const url = `/api/projects/${projectId}/dashboard${qs ? `?${qs}` : ''}`
+      const res = await fetch(url)
       if (res.ok) {
         const json = await res.json()
         setData(json.data)
@@ -62,7 +113,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
     } finally {
       setLoading(false)
     }
-  }, [projectId])
+  }, [projectId, dashboardTab, user?.id])
 
   useEffect(() => {
     setLoading(true)
@@ -83,7 +134,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
   }, [activeTab, dashboardVersion])
 
 
-  const handleCreateNode = useCallback(async () => {
+  const handleCreateNode = useCallback(async (status?: string) => {
     if (!projectId) return
     try {
       const res = await fetch(`/api/projects/${projectId}/nodes`, {
@@ -92,6 +143,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
         body: JSON.stringify({
           type: 'feature',
           title: '새 기능개발',
+          status: status || 'backlog',
           canvasX: Math.random() * 300 + 100,
           canvasY: Math.random() * 300 + 100,
         }),
@@ -113,62 +165,68 @@ export function DashboardView({ projectId }: { projectId: string }) {
     }
   }, [projectId, fetchDashboard])
 
-  if (loading) {
-    return (
-      <div className="h-full flex flex-col">
-        <div className="flex-1 overflow-y-auto">
-          <IssueListSkeleton />
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !data) {
-    return (
-      <div className="h-full flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-body text-text-secondary mb-2">대시보드를 불러올 수 없습니다</p>
-            {error && <p className="text-caption text-text-tertiary mb-md">{error}</p>}
-            <button
-              onClick={fetchDashboard}
-              className="px-4 py-2 rounded-button text-body text-accent border border-accent hover:bg-accent-light transition-colors"
-            >
-              다시 시도
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const isEmpty =
-    data.inProgress.length === 0 &&
-    data.todo.length === 0 &&
-    (data.backlog?.length ?? 0) === 0 &&
-    data.recentDone.length === 0
+  const emptyMessage = dashboardTab === 'assigned'
+    ? '배정된 이슈가 없습니다'
+    : dashboardTab === 'active'
+      ? '진행중인 이슈가 없습니다'
+      : dashboardTab === 'backlog'
+        ? '백로그 이슈가 없습니다'
+        : undefined
 
   return (
     <div className="h-full flex flex-col">
+      <DashboardTabBar />
+
       <div className="flex-1 overflow-y-auto">
-        {isEmpty ? (
-          <EmptyState variant="empty-dashboard" onAction={handleCreateNode} />
-        ) : (
-          <div className="flex flex-col">
-            {data.inProgress.length > 0 && (
-              <IssueListSection status="in_progress" label="In Progress" nodes={data.inProgress} defaultOpen={true} onAddNode={handleCreateNode} />
-            )}
-            {data.todo.length > 0 && (
-              <IssueListSection status="todo" label="Todo" nodes={data.todo} defaultOpen={true} onAddNode={handleCreateNode} />
-            )}
-            {(data.backlog?.length ?? 0) > 0 && (
-              <IssueListSection status="backlog" label="Backlog" nodes={data.backlog} defaultOpen={true} onAddNode={handleCreateNode} />
-            )}
-            {data.recentDone.length > 0 && (
-              <IssueListSection status="done" label="Done" nodes={data.recentDone} defaultOpen={false} onAddNode={handleCreateNode} />
-            )}
+        {loading ? (
+          <IssueListSkeleton />
+        ) : error || !data ? (
+          <div className="flex-1 flex items-center justify-center py-16">
+            <div className="text-center">
+              <p className="text-body text-text-secondary mb-2">대시보드를 불러올 수 없습니다</p>
+              {error && <p className="text-caption text-text-tertiary mb-md">{error}</p>}
+              <button
+                onClick={fetchDashboard}
+                className="px-4 py-2 rounded-button text-body text-accent border border-accent hover:bg-accent-light transition-colors"
+              >
+                다시 시도
+              </button>
+            </div>
           </div>
-        )}
+        ) : (() => {
+          const isEmpty =
+            data.inProgress.length === 0 &&
+            data.todo.length === 0 &&
+            (data.backlog?.length ?? 0) === 0 &&
+            data.recentDone.length === 0
+
+          if (isEmpty) {
+            return dashboardTab === 'all' ? (
+              <EmptyState variant="empty-dashboard" onAction={() => handleCreateNode()} />
+            ) : (
+              <div className="flex items-center justify-center py-16">
+                <p className="text-body text-text-tertiary">{emptyMessage}</p>
+              </div>
+            )
+          }
+
+          return (
+            <div className="flex flex-col">
+              {data.inProgress.length > 0 && (
+                <IssueListSection status="in_progress" label="In Progress" nodes={data.inProgress} defaultOpen={true} onAddNode={handleCreateNode} />
+              )}
+              {data.todo.length > 0 && (
+                <IssueListSection status="todo" label="Todo" nodes={data.todo} defaultOpen={true} onAddNode={handleCreateNode} />
+              )}
+              {(data.backlog?.length ?? 0) > 0 && (
+                <IssueListSection status="backlog" label="Backlog" nodes={data.backlog} defaultOpen={true} onAddNode={handleCreateNode} />
+              )}
+              {data.recentDone.length > 0 && (
+                <IssueListSection status="done" label="Done" nodes={data.recentDone} defaultOpen={false} />
+              )}
+            </div>
+          )
+        })()}
       </div>
     </div>
   )

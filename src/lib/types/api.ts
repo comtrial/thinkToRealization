@@ -113,6 +113,8 @@ export interface SessionMessage {
   highlightId: string | null;
 }
 
+export type MemberRole = "owner" | "admin" | "member";
+
 export interface ProjectResponse {
   id: string;
   title: string;
@@ -123,8 +125,23 @@ export interface ProjectResponse {
   canvasViewportX: number;
   canvasViewportY: number;
   canvasViewportZoom: number;
+  memberCount?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProjectMemberResponse {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: MemberRole;
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  };
 }
 
 export interface CanvasResponse {

@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Clean existing data
+  await prisma.projectMember.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.nodeComment.deleteMany();
   await prisma.nodeStateLog.deleteMany();
@@ -32,7 +33,16 @@ async function main() {
       slug: "ttr-v2",
       description: "사고 흐름 캔버스 기반 개발 도구",
       projectDir: "/Users/choeseung-won/personal-project/thinkToRealization",
+      createdById: admin.id,
     },
+  });
+
+  // Create project memberships
+  await prisma.projectMember.createMany({
+    data: [
+      { projectId: project.id, userId: admin.id, role: "owner" },
+      { projectId: project.id, userId: dev.id, role: "member" },
+    ],
   });
 
   // Create nodes
@@ -212,6 +222,7 @@ async function main() {
   console.log("Seed completed:", {
     project: project.title,
     users: 2,
+    members: 2,
     nodes: 6,
     edges: 6,
     sessions: 3,

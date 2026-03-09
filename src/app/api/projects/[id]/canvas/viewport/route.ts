@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { successResponse, validationError, notFound } from "@/lib/api-response";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { requireProjectAccess } from "@/lib/auth/project-guard";
 
 const viewportSchema = z.object({
   x: z.number(),
@@ -15,6 +16,10 @@ type Params = { params: Promise<{ id: string }> };
 // PUT /api/projects/:pid/canvas/viewport
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
+
+  const access = await requireProjectAccess(req, id);
+  if (access.response) return access.response;
+
   try {
     let body;
     try {

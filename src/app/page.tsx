@@ -155,6 +155,7 @@ function MainContent() {
   const activeTab = useUIStore((s) => s.activeTab)
   const panelMode = useUIStore((s) => s.panelMode)
   const { currentProject, loading } = useProject()
+  const isMobile = useMobile()
 
   // Show loading while auth check or project fetch is in progress
   if (loading) {
@@ -175,7 +176,7 @@ function MainContent() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className={`h-full flex flex-col ${isMobile ? 'pb-14' : ''}`}>
       <div className="flex-1 overflow-hidden">
         {activeTab === 'dashboard' ? (
           <DashboardView projectId={currentProject.id} />
@@ -183,7 +184,7 @@ function MainContent() {
           <CanvasView projectId={currentProject.id} />
         )}
       </div>
-      <TerminalSection />
+      {!isMobile && <TerminalSection />}
     </div>
   )
 }

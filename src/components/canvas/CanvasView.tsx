@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
+import { useCallback, useRef, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   ReactFlow,
@@ -20,7 +20,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
-import { Plus } from 'lucide-react'
+import { Plus, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -573,10 +573,40 @@ function CanvasInner({ projectId }: { projectId: string }) {
   )
 }
 
+/** Detect if mobile device is in portrait orientation */
+function useIsPortraitMobile(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      const mql = window.matchMedia('(max-width: 768px) and (orientation: portrait)')
+      mql.addEventListener('change', cb)
+      return () => mql.removeEventListener('change', cb)
+    },
+    () => window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches,
+    () => false // server
+  )
+}
+
+function PortraitOverlay() {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm px-8 text-center">
+      <RotateCcw size={48} className="text-text-tertiary mb-4 animate-pulse" />
+      <h2 className="text-lg font-semibold text-text-primary mb-2">
+        가로 화면으로 전환해주세요
+      </h2>
+      <p className="text-caption text-text-secondary max-w-[280px]">
+        캔버스는 가로 화면에서만 사용할 수 있습니다. 기기를 옆으로 돌려주세요.
+      </p>
+    </div>
+  )
+}
+
 export function CanvasView({ projectId }: { projectId: string }) {
+  const isPortrait = useIsPortraitMobile()
+
   return (
     <ReactFlowProvider>
-      <div className="w-full h-full">
+      <div className="w-full h-full relative">
+        {isPortrait && <PortraitOverlay />}
         <CanvasInner projectId={projectId} />
       </div>
     </ReactFlowProvider>
