@@ -90,9 +90,12 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const existing = await prisma.node.findUnique({ where: { id } });
     if (!existing) return notFound("Node", id);
 
-    // Clean up attachment files from disk before archiving
+    // Clean up attachment files (disk/Supabase) and DB records before archiving
     const attachments = await prisma.attachment.findMany({ where: { nodeId: id } });
-    await Promise.all(attachments.map((a) => deleteFile(a.storagePath)));
+    await Promise.allSettled(attachments.map((a) => deleteFile(a.storagePath)));
+    if (attachments.length > 0) {
+      await prisma.attachment.deleteMany({ where: { nodeId: id } });
+    }
 
     const archived = await prisma.$transaction(async (tx) => {
       const updated = await tx.node.update({

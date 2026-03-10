@@ -17,6 +17,7 @@ const ALLOWED_TYPES = [
   "image/webp",
   "application/pdf",
 ];
+const ALLOWED_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"];
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -73,10 +74,12 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const ext = "." + (file.name.split(".").pop()?.toLowerCase() || "");
+    // Mobile browsers may send empty file.type for camera captures — fallback to extension
+    if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(ext)) {
       return errorResponse(
         "INVALID_FILE_TYPE",
-        `File type not allowed: ${file.type}`,
+        `File type not allowed: ${file.type || ext}`,
         400
       );
     }
