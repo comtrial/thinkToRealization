@@ -74,11 +74,11 @@ export function Header() {
         {!isMobile && (
           <button
             onClick={toggleCommandPalette}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button border border-border hover:bg-surface-hover transition-colors focus-ring"
+            className="min-w-[200px] h-[35px] flex items-center justify-center rounded-button border border-border hover:bg-surface-hover transition-colors focus-ring px-4 gap-2"
           >
             <Search size={14} className="text-text-tertiary" />
-            <span className="text-caption text-text-tertiary ml-2">검색</span>
-            <kbd className="text-micro px-1 py-0.5 rounded bg-surface-hover border border-border ml-2">⌘K</kbd>
+            <span className="text-caption text-text-tertiary">검색</span>
+            <kbd className="text-micro px-1 py-0.5 rounded bg-surface-hover border border-border ml-auto">⌘K</kbd>
           </button>
         )}
 

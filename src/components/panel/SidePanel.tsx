@@ -129,29 +129,14 @@ export function SidePanel() {
         data-testid="side-panel"
         className="fixed inset-0 z-50 bg-surface flex flex-col transition-all duration-200 ease-devflow"
       >
-        {/* Back button header */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 shrink-0">
-          <button
-            data-testid="panel-close-btn"
-            onClick={closePanel}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary transition-colors shrink-0"
-            title="뒤로가기"
-          >
-            <span className="text-body">&larr;</span>
-          </button>
-          <h2 className="text-body font-medium text-text-primary truncate flex-1">
-            {selectedNode?.title || ''}
-          </h2>
-        </div>
-
-        {/* Full content */}
+        {/* Full content — close button is inside NodeDetailPanel title row */}
         <div className="flex-1 overflow-y-auto pb-safe">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <span className="text-caption text-text-tertiary">로딩 중...</span>
             </div>
           ) : selectedNode ? (
-            <NodeDetailPanel />
+            <NodeDetailPanel onClose={closePanel} />
           ) : null}
         </div>
       </aside>
@@ -182,7 +167,7 @@ export function SidePanel() {
                 <span className="text-caption text-text-tertiary">로딩 중...</span>
               </div>
             ) : selectedNode ? (
-              <NodeDetailPanel />
+              <NodeDetailPanel onClose={closePanel} />
             ) : null}
           </div>
         </aside>

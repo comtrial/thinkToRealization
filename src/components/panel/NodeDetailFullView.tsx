@@ -5,7 +5,6 @@ import { useNodeStore } from '@/stores/node-store'
 import { NodeDetailPanel, NodeProperties } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
-import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { SessionResponse } from '@/lib/types/api'
 
@@ -115,21 +114,6 @@ export function NodeDetailFullView() {
 
   return (
     <div className="h-full flex flex-col bg-surface" data-testid="side-panel">
-      {/* Header — [X] [Node Title] inline row */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 shrink-0">
-        <button
-          data-testid="panel-close-btn"
-          onClick={closePanel}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary transition-colors shrink-0"
-          title="닫기 (ESC)"
-        >
-          <X size={18} />
-        </button>
-        <h2 className="text-body font-medium text-text-primary truncate flex-1">
-          {selectedNode?.title || ''}
-        </h2>
-      </div>
-
       {/* Content: 2-column layout (main + properties sidebar) */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -140,7 +124,7 @@ export function NodeDetailFullView() {
           {/* Left: main content */}
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-[780px] mx-auto">
-              <NodeDetailPanel showProperties={false} />
+              <NodeDetailPanel showProperties={false} onClose={closePanel} />
               {/* Sessions — localhost only */}
               {isLocal && (
                 <div className="px-8 pb-8">

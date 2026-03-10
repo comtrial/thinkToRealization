@@ -133,9 +133,9 @@ export function AttachmentSection({ nodeId }: AttachmentSectionProps) {
   const files = attachments.filter((a) => !isImageType(a.fileType))
 
   return (
-    <div className="border-t border-border/30 pt-4">
+    <div className={cn("border-t border-border/30", attachments.length > 0 ? "pt-4" : "pt-2")}>
       {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className={cn("flex items-center justify-between", attachments.length > 0 ? "mb-3" : "mb-0")}>
         <div className="flex items-center gap-1.5">
           <Paperclip size={14} className="text-text-tertiary" />
           <span className="text-caption font-medium text-text-secondary">
@@ -197,15 +197,6 @@ export function AttachmentSection({ nodeId }: AttachmentSectionProps) {
       {loading && (
         <div className="flex items-center justify-center py-6">
           <Loader2 size={18} className="animate-spin text-text-tertiary" />
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!loading && attachments.length === 0 && (
-        <div className="text-center py-6">
-          <p className="text-[12px] text-text-tertiary">
-            첨부된 파일이 없습니다
-          </p>
         </div>
       )}
 

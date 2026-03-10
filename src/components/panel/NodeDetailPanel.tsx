@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Plus, ChevronRight, Trash2, MoreHorizontal, Copy, Archive, ClipboardCopy, Check } from 'lucide-react'
+import { Plus, ChevronRight, Trash2, MoreHorizontal, Copy, Archive, ClipboardCopy, Check, X } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useNodeStore } from '@/stores/node-store'
 import { useCanvasStore } from '@/stores/canvas-store'
@@ -360,7 +360,7 @@ function NodeHierarchy() {
   )
 }
 
-export function NodeDetailPanel({ showProperties = true }: { showProperties?: boolean }) {
+export function NodeDetailPanel({ showProperties = true, onClose }: { showProperties?: boolean; onClose?: () => void }) {
   const selectedNode = useNodeStore((s) => s.selectedNode)
   const updateNodeStatus = useNodeStore((s) => s.updateNodeStatus)
   const decisions = useNodeStore((s) => s.decisions)
@@ -520,7 +520,17 @@ ${childrenText}
   return (
     <div className="px-4 pt-5 pb-4 md:px-8 md:pt-8 flex flex-col gap-6">
       {/* Title — large, like Linear + action menu */}
-      <div className="flex items-start gap-2">
+      <div className="flex items-center gap-1">
+        {onClose && (
+          <button
+            data-testid="panel-close-btn"
+            onClick={onClose}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary transition-colors shrink-0 -ml-2"
+            title="닫기 (ESC)"
+          >
+            <X size={18} />
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           {editingTitle ? (
             <input
