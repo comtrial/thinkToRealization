@@ -5,6 +5,7 @@ import { IssueListSection } from './IssueListSection'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useUIStore, type DashboardTab } from '@/stores/ui-store'
 import { useCanvasStore } from '@/stores/canvas-store'
+import { useNodeStore } from '@/stores/node-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Layers, User, Zap, Archive } from 'lucide-react'
@@ -157,6 +158,9 @@ export function DashboardView({ projectId }: { projectId: string }) {
           position: { x: newNode.canvasX, y: newNode.canvasY },
           data: newNode,
         })
+        // Open full edit view for the new node
+        await useNodeStore.getState().selectNode(newNode.id)
+        useUIStore.getState().openPanelFull(newNode.id)
         // Refetch dashboard
         fetchDashboard()
       }

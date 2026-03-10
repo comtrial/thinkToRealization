@@ -26,7 +26,7 @@ export function NodeStatusControl() {
   const handleSelect = async (status: NodeStatus) => {
     if (status === selectedNode.status) return
     const result = await updateNodeStatus(selectedNode.id, status)
-    if (!result.ok) {
+    if (!result.ok && result.code !== 'ASSIGNEE_REQUIRED') {
       addToast('error', result.error || '상태 변경 실패')
     }
   }

@@ -28,7 +28,7 @@ export default function RegisterPage() {
     const result = await register(email, name, password)
     setLoading(false)
     if (result.ok) {
-      router.push('/')
+      router.replace('/')
     } else {
       setError(result.error ?? '회원가입에 실패했습니다')
     }

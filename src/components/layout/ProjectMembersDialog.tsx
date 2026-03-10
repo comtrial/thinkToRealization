@@ -181,13 +181,13 @@ export function ProjectMembersDialog({ open, onOpenChange }: ProjectMembersDialo
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] max-h-[85vh] bg-surface border border-border rounded-dropdown shadow-elevation-3 p-6 z-50 focus:outline-none overflow-y-auto">
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] max-w-[520px] max-h-[80vh] md:max-h-[85vh] bg-surface border border-border rounded-dropdown shadow-elevation-3 p-4 md:p-6 z-50 focus:outline-none overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
           <div className="flex items-center justify-between mb-4">
             <Dialog.Title className="text-section-header text-text-primary font-semibold">
               프로젝트 멤버
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button className="p-1 rounded hover:bg-surface-hover text-text-tertiary">
+              <button className="p-2 md:p-1 rounded hover:bg-surface-hover text-text-tertiary min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center">
                 <X size={16} />
               </button>
             </Dialog.Close>
@@ -196,38 +196,42 @@ export function ProjectMembersDialog({ open, onOpenChange }: ProjectMembersDialo
           {/* Invite form — only for owner/admin */}
           {canInvite && (
             <form onSubmit={handleInvite} className="mb-4 pb-4 border-b border-border">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center">
                 <div className="flex-1 min-w-0">
                   <input
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="이메일 주소로 초대"
-                    className="w-full px-3 py-2 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring"
+                    className="w-full px-3 py-2 min-h-[44px] md:min-h-0 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 focus-ring"
                     required
                   />
                 </div>
-                <div className="relative">
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as 'admin' | 'member')}
-                    className="appearance-none pl-3 pr-7 py-2 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent cursor-pointer"
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 md:flex-none">
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value as 'admin' | 'member')}
+                      className="appearance-none w-full md:w-auto pl-3 pr-7 py-2 min-h-[44px] md:min-h-0 text-body bg-background border border-border rounded-button focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      <option value="member">멤버</option>
+                      {currentRole === 'owner' && (
+                        <option value="admin">관리자</option>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={inviting || !inviteEmail.trim()}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 min-h-[44px] md:min-h-0 text-body text-white bg-accent rounded-button hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed focus-ring whitespace-nowrap"
                   >
-                    <option value="member">멤버</option>
-                    {currentRole === 'owner' && (
-                      <option value="admin">관리자</option>
-                    )}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+                    <UserPlus size={14} />
+                    {inviting ? '초대 중...' : '초대'}
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={inviting || !inviteEmail.trim()}
-                  className="flex items-center gap-1.5 px-3 py-2 text-body text-white bg-accent rounded-button hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed focus-ring whitespace-nowrap"
-                >
-                  <UserPlus size={14} />
-                  {inviting ? '초대 중...' : '초대'}
-                </button>
               </div>
             </form>
           )}
@@ -250,7 +254,7 @@ export function ProjectMembersDialog({ open, onOpenChange }: ProjectMembersDialo
               members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-button hover:bg-surface-hover transition-colors group"
+                  className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-button hover:bg-surface-hover transition-colors group"
                 >
                   <UserAvatar
                     name={member.user.name}
@@ -277,7 +281,7 @@ export function ProjectMembersDialog({ open, onOpenChange }: ProjectMembersDialo
                       <select
                         value={member.role}
                         onChange={(e) => handleChangeRole(member, e.target.value as 'admin' | 'member')}
-                        className={`appearance-none pl-2 pr-6 py-1 rounded-badge text-badge cursor-pointer border-0 focus:outline-none ${ROLE_COLORS[member.role]}`}
+                        className={`appearance-none pl-2 pr-6 py-1 min-h-[44px] md:min-h-0 rounded-badge text-badge cursor-pointer border-0 focus:outline-none ${ROLE_COLORS[member.role]}`}
                       >
                         <option value="admin">관리자</option>
                         <option value="member">멤버</option>
@@ -294,7 +298,7 @@ export function ProjectMembersDialog({ open, onOpenChange }: ProjectMembersDialo
                   {canRemoveMember(member) && (
                     <button
                       onClick={() => handleRemoveMember(member)}
-                      className="p-1 rounded hover:bg-red-50 text-text-tertiary hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-2 md:p-1 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center rounded hover:bg-red-50 text-text-tertiary hover:text-red-500 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       title={member.user.id === currentUser?.id ? '프로젝트 나가기' : '멤버 제거'}
                     >
                       <Trash2 size={14} />

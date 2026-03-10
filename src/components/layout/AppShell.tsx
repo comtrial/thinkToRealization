@@ -18,26 +18,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className="w-screen overflow-hidden bg-background"
+      className="w-screen overflow-hidden bg-background flex flex-col"
       style={{
         /* dvh handles iOS Safari dynamic address bar; vh fallback for older browsers */
         height: '100dvh',
-        display: 'grid',
-        gridTemplateRows: 'var(--header-height) 1fr',
-        gridTemplateColumns: isMobile
-          ? '1fr'
-          : `${sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)'} 1fr`,
       }}
     >
+      {/* Header — sticky at top, outside scrollable area */}
       <Header />
-      {!isMobile && <Sidebar />}
-      <main
-        className="overflow-hidden relative transition-[padding-right] duration-panel ease-devflow"
-        style={{ paddingRight: mainPaddingRight }}
+
+      {/* Content area below header */}
+      <div
+        className="flex-1 overflow-hidden"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile
+            ? '1fr'
+            : `${sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)'} 1fr`,
+        }}
       >
-        {children}
-        <SidePanel />
-      </main>
+        {!isMobile && <Sidebar />}
+        <main
+          className="overflow-hidden relative transition-[padding-right] duration-panel ease-devflow"
+          style={{ paddingRight: mainPaddingRight }}
+        >
+          {children}
+          <SidePanel />
+        </main>
+      </div>
       {/* Mobile sidebar renders as fixed overlay — outside grid flow */}
       {isMobile && <Sidebar />}
       {/* Mobile bottom navigation — fixed position, outside grid */}

@@ -1,12 +1,13 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useUIStore } from '@/stores/ui-store'
 import * as Tabs from '@radix-ui/react-tabs'
 
-const tabs = [
+const allTabs = [
   { value: 'overview' as const, label: '개요' },
-  { value: 'sessions' as const, label: '세션' },
-  { value: 'plans' as const, label: '계획서' },
+  { value: 'sessions' as const, label: '세션', localOnly: true },
+  { value: 'plans' as const, label: '계획서', localOnly: true },
 ]
 
 interface PanelTabsProps {
@@ -17,7 +18,15 @@ export function PanelTabs({ hidden }: PanelTabsProps) {
   const panelTab = useUIStore((s) => s.panelTab)
   const setPanelTab = useUIStore((s) => s.setPanelTab)
 
+  const [isLocal, setIsLocal] = useState(false)
+  useEffect(() => {
+    const host = window.location.hostname
+    setIsLocal(host === 'localhost' || host === '127.0.0.1')
+  }, [])
+
   if (hidden) return null
+
+  const tabs = allTabs.filter((tab) => !tab.localOnly || isLocal)
 
   return (
     <Tabs.Root value={panelTab} onValueChange={(v) => setPanelTab(v as typeof panelTab)}>

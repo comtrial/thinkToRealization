@@ -13,8 +13,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow public pages
+  // Public pages: redirect authenticated users to home
   if (PUBLIC_PATHS.some((p) => pathname === p)) {
+    const cookie = req.cookies.get(sessionOptions.cookieName);
+    if (cookie?.value) {
+      try {
+        const session = await unsealData<{ userId?: string }>(cookie.value, {
+          password: sessionOptions.password,
+        });
+        if (session.userId) {
+          return NextResponse.redirect(new URL("/", req.url));
+        }
+      } catch {
+        // Invalid session — let them through to login/register
+      }
+    }
     return NextResponse.next();
   }
 

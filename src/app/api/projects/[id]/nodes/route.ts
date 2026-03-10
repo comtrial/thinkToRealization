@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!project) return notFound("Project", projectId);
 
     const node = await prisma.node.create({
-      data: { ...parsed.data, projectId },
+      data: { ...parsed.data, projectId, createdById: access.data.session.userId },
       include: nodeWithCounts,
     });
 

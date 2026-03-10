@@ -12,6 +12,7 @@ import { CommentSection } from '@/components/comments/CommentSection'
 import { useToast } from '@/components/shared/Toast'
 import { useProject } from '@/components/providers/ProjectProvider'
 import { CompactProperties } from './CompactProperties'
+import { AttachmentSection } from './AttachmentSection'
 import type { NodeType, NodeStatus, EdgeResponse } from '@/lib/types/api'
 
 const STATUS_OPTIONS: { value: NodeStatus; label: string; color: string }[] = [
@@ -83,7 +84,7 @@ export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === selectedNode.status) return
     const result = await updateNodeStatus(selectedNode.id, newStatus)
-    if (!result.ok) {
+    if (!result.ok && result.code !== 'ASSIGNEE_REQUIRED') {
       addToast('error', result.error || '상태 변경 실패')
     }
   }
@@ -632,6 +633,9 @@ ${childrenText}
           placeholder="설명을 추가하세요... (Markdown 지원)"
         />
       </div>
+
+      {/* Attachments */}
+      <AttachmentSection nodeId={selectedNode.id} />
 
       {/* Sub-node button + Hierarchy (parent/children) — grouped together */}
       <div className="border-t border-border/30 pt-3">

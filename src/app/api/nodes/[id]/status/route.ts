@@ -63,6 +63,18 @@ export async function PUT(req: NextRequest, { params }: Params) {
       );
     }
 
+    // Assignee required for in_progress and done statuses
+    if (
+      (targetStatus === "in_progress" || targetStatus === "done") &&
+      !existing.assigneeId
+    ) {
+      return errorResponse(
+        "ASSIGNEE_REQUIRED",
+        `'${targetStatus}' 상태로 변경하려면 담당자를 먼저 배정해야 합니다`,
+        400
+      );
+    }
+
     const [updated] = await prisma.$transaction([
       prisma.node.update({
         where: { id },

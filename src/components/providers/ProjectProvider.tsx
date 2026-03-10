@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -44,6 +45,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  // Track whether initial fetch has completed at least once
+  const initialFetchDone = useRef(false);
 
   const refreshProjects = useCallback(async () => {
     try {
@@ -66,11 +69,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     } catch {
       // silently fail — user can retry
     } finally {
+      initialFetchDone.current = true;
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    // Reset state on fresh mount (e.g., after login) to ensure clean loading state
+    initialFetchDone.current = false;
+    setProjects([]);
+    setCurrentProject(null);
+    setLoading(true);
     refreshProjects();
   }, [refreshProjects]);
 

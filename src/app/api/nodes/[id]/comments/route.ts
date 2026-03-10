@@ -46,7 +46,7 @@ export async function POST(
 
     const node = await prisma.node.findUnique({
       where: { id: nodeId },
-      select: { id: true, title: true, assigneeId: true },
+      select: { id: true, title: true, assigneeId: true, createdById: true },
     });
     if (!node) return notFound("Node", nodeId);
 
@@ -61,17 +61,27 @@ export async function POST(
       },
     });
 
-    // Notify assignee (if someone else)
+    // Collect unique users to notify (excluding comment author)
+    const notifyUserIds = new Set<string>();
     if (node.assigneeId && node.assigneeId !== auth.session.userId) {
-      await createNotification({
-        userId: node.assigneeId,
+      notifyUserIds.add(node.assigneeId);
+    }
+    if (node.createdById && node.createdById !== auth.session.userId) {
+      notifyUserIds.add(node.createdById);
+    }
+
+    // Notify assignee and/or creator
+    const notificationPromises = Array.from(notifyUserIds).map((userId) =>
+      createNotification({
+        userId,
         type: "comment",
         title: "새 댓글",
         body: `${auth.session.name}님이 '${node.title}' 노드에 댓글을 남겼습니다`,
         nodeId: node.id,
         actorId: auth.session.userId,
-      });
-    }
+      })
+    );
+    await Promise.all(notificationPromises);
 
     return successResponse(comment, 201);
   } catch (error) {

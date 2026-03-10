@@ -8,9 +8,15 @@ interface NodeStore {
   sessions: SessionResponse[]
   decisions: DecisionResponse[]
   isLoading: boolean
+  // Assignee-required dialog state
+  assigneeDialogOpen: boolean
+  pendingStatusChange: { nodeId: string; status: string } | null
+  openAssigneeDialog: (nodeId: string, status: string) => void
+  closeAssigneeDialog: () => void
   selectNode: (nodeId: string) => Promise<void>
   clearSelection: () => void
-  updateNodeStatus: (nodeId: string, status: string) => Promise<{ ok: boolean; error?: string }>
+  updateNodeStatus: (nodeId: string, status: string) => Promise<{ ok: boolean; error?: string; code?: string }>
+  updateAssigneeAndStatus: (nodeId: string, assigneeId: string, status: string) => Promise<{ ok: boolean; error?: string }>
   addDecision: (nodeId: string, content: string, sessionId?: string) => Promise<DecisionResponse | null>
   removeDecision: (decisionId: string) => Promise<void>
   promoteDecision: (decisionId: string, nodeType: string, title: string) => Promise<void>
@@ -22,6 +28,12 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
   sessions: [],
   decisions: [],
   isLoading: false,
+  assigneeDialogOpen: false,
+  pendingStatusChange: null,
+  openAssigneeDialog: (nodeId, status) =>
+    set({ assigneeDialogOpen: true, pendingStatusChange: { nodeId, status } }),
+  closeAssigneeDialog: () =>
+    set({ assigneeDialogOpen: false, pendingStatusChange: null }),
   selectNode: async (nodeId) => {
     // Guard: skip if already loading the same node
     const current = get()
@@ -45,6 +57,18 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
   },
   clearSelection: () => set({ selectedNode: null, sessions: [], decisions: [], isLoading: false }),
   updateNodeStatus: async (nodeId, status) => {
+    // Client-side pre-check: if target is in_progress/done and no assignee, open dialog
+    const node = get().selectedNode
+    if (
+      (status === 'in_progress' || status === 'done') &&
+      node &&
+      node.id === nodeId &&
+      !node.assigneeId
+    ) {
+      get().openAssigneeDialog(nodeId, status)
+      return { ok: false, error: '담당자를 먼저 배정해야 합니다', code: 'ASSIGNEE_REQUIRED' }
+    }
+
     try {
       const res = await fetch(`/api/nodes/${nodeId}/status`, {
         method: 'PUT',
@@ -59,10 +83,71 @@ export const useNodeStore = create<NodeStore>((set, get) => ({
         return { ok: true }
       }
       const errorBody = await res.json().catch(() => null)
+      const errorCode = errorBody?.error?.code || ''
       const errorMsg = errorBody?.error?.message || '상태 변경에 실패했습니다'
-      return { ok: false, error: errorMsg }
+
+      // Backend also returns ASSIGNEE_REQUIRED if assignee was removed between checks
+      if (errorCode === 'ASSIGNEE_REQUIRED') {
+        get().openAssigneeDialog(nodeId, status)
+      }
+
+      return { ok: false, error: errorMsg, code: errorCode }
     } catch (err) {
       console.error('Failed to update status:', err)
+      return { ok: false, error: '네트워크 오류' }
+    }
+  },
+  updateAssigneeAndStatus: async (nodeId, assigneeId, status) => {
+    try {
+      // Step 1: Assign user
+      const assignRes = await fetch(`/api/nodes/${nodeId}/assignee`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigneeId }),
+      })
+      if (!assignRes.ok) {
+        return { ok: false, error: '담당자 배정에 실패했습니다' }
+      }
+      const { data: assignData } = await assignRes.json()
+
+      // Update local state with assignee info
+      set((s) => ({
+        selectedNode: s.selectedNode
+          ? {
+              ...s.selectedNode,
+              assigneeId: assignData.assigneeId,
+              assigneeName: assignData.assignee?.name ?? null,
+              assigneeAvatarUrl: assignData.assignee?.avatarUrl ?? null,
+            }
+          : null,
+      }))
+      useCanvasStore.getState().updateNodeData(nodeId, {
+        assigneeId: assignData.assigneeId,
+        assigneeName: assignData.assignee?.name ?? null,
+        assigneeAvatarUrl: assignData.assignee?.avatarUrl ?? null,
+      })
+
+      // Step 2: Change status
+      const statusRes = await fetch(`/api/nodes/${nodeId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, triggerType: 'user_manual' }),
+      })
+      if (!statusRes.ok) {
+        const errBody = await statusRes.json().catch(() => null)
+        return { ok: false, error: errBody?.error?.message || '상태 변경에 실패했습니다' }
+      }
+      const { data: statusData } = await statusRes.json()
+
+      set((s) => ({
+        selectedNode: s.selectedNode ? { ...s.selectedNode, status: statusData.status } : null,
+      }))
+      useCanvasStore.getState().updateNodeData(nodeId, { status: statusData.status })
+      useUIStore.getState().invalidateDashboard()
+
+      return { ok: true }
+    } catch (err) {
+      console.error('Failed to assign and update status:', err)
       return { ok: false, error: '네트워크 오류' }
     }
   },

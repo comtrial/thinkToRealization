@@ -20,7 +20,7 @@ export default function LoginPage() {
     const result = await login(email, password)
     setLoading(false)
     if (result.ok) {
-      router.push('/')
+      router.replace('/')
     } else {
       setError(result.error ?? '로그인에 실패했습니다')
     }

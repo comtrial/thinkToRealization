@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { WebSocketProvider } from "./WebSocketProvider"
 import { ProjectProvider } from "./ProjectProvider"
 import { ToastProvider } from "@/components/shared/Toast"
+import { AssigneeRequiredDialog } from "@/components/shared/AssigneeRequiredDialog"
 import { useAuthStore } from "@/stores/auth-store"
 
 // Global 401 interceptor — redirect to /login on expired session
@@ -63,7 +64,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthInitializer>
       <AuthGate>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          {children}
+          <AssigneeRequiredDialog />
+        </ToastProvider>
       </AuthGate>
     </AuthInitializer>
   )

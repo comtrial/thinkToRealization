@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Loader2, Sparkles, RefreshCw } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePlanStore } from '@/stores/plan-store'
 import { useNodeStore } from '@/stores/node-store'
@@ -14,7 +14,6 @@ export function PlanTab() {
   const isGenerating = usePlanStore((s) => s.isGenerating)
   const error = usePlanStore((s) => s.error)
   const loadPlans = usePlanStore((s) => s.loadPlans)
-  const generatePlan = usePlanStore((s) => s.generatePlan)
   const selectPlan = usePlanStore((s) => s.selectPlan)
 
   useEffect(() => {
@@ -27,35 +26,6 @@ export function PlanTab() {
 
   return (
     <div className="p-4 flex flex-col gap-4">
-      {/* Generate button */}
-      <button
-        onClick={() => generatePlan(selectedNode.id)}
-        disabled={isGenerating}
-        className={cn(
-          'flex items-center justify-center gap-2 px-4 py-2.5 rounded-button text-body transition-colors',
-          isGenerating
-            ? 'bg-accent/10 text-accent cursor-wait'
-            : 'bg-accent text-white hover:opacity-90'
-        )}
-      >
-        {isGenerating ? (
-          <>
-            <Loader2 size={16} className="animate-spin" />
-            실행 계획서 생성 중...
-          </>
-        ) : plans.length > 0 ? (
-          <>
-            <RefreshCw size={16} />
-            실행 계획서 재생성
-          </>
-        ) : (
-          <>
-            <Sparkles size={16} />
-            @Claude 실행 계획서 생성
-          </>
-        )}
-      </button>
-
       {/* Error */}
       {error && (
         <div className="p-2 rounded-badge bg-red-50 border border-red-200">
@@ -95,7 +65,7 @@ export function PlanTab() {
             아직 실행 계획서가 없습니다
           </p>
           <p className="text-[10px] text-text-tertiary mt-1">
-            @Claude 버튼을 눌러 실행 계획서를 생성하세요
+            세션을 통해 실행 계획서가 생성됩니다
           </p>
         </div>
       )}

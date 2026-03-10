@@ -11,6 +11,16 @@ import { useMobile } from '@/hooks/useMobile'
 import type { SessionResponse } from '@/lib/types/api'
 // ESC key handling is centralized in useKeyboardShortcuts
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function useIsLocal() {
+  const [isLocal, setIsLocal] = useState(false)
+  useEffect(() => {
+    const host = window.location.hostname
+    setIsLocal(host === 'localhost' || host === '127.0.0.1')
+  }, [])
+  return isLocal
+}
+
 function SessionsSection({
   sessions,
   viewingSessionId,
@@ -97,6 +107,7 @@ export function SidePanel() {
   const selectNode = useNodeStore((s) => s.selectNode)
 
   const isMobile = useMobile()
+  const isLocal = useIsLocal()
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null)
 
   // Load node data when panel opens
@@ -107,10 +118,47 @@ export function SidePanel() {
     }
   }, [panelNodeId, panelMode, selectNode])
 
-  // Full mode is handled by NodeDetailFullView in page.tsx — skip SidePanel rendering
-  if (panelMode === 'closed' || panelMode === 'full') return null
+  // Full mode on desktop is handled by NodeDetailFullView in page.tsx
+  if (panelMode === 'closed') return null
+  if (panelMode === 'full' && !isMobile) return null
 
-  // On mobile, Notion-style: full screen, no tabs, direct content
+  // Mobile full mode: true fullscreen overlay covering entire screen (including header)
+  if (isMobile && panelMode === 'full') {
+    return (
+      <aside
+        data-testid="side-panel"
+        className="fixed inset-0 z-50 bg-surface flex flex-col transition-all duration-200 ease-devflow"
+      >
+        {/* Back button header */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 shrink-0">
+          <button
+            data-testid="panel-close-btn"
+            onClick={closePanel}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary transition-colors shrink-0"
+            title="뒤로가기"
+          >
+            <span className="text-body">&larr;</span>
+          </button>
+          <h2 className="text-body font-medium text-text-primary truncate flex-1">
+            {selectedNode?.title || ''}
+          </h2>
+        </div>
+
+        {/* Full content */}
+        <div className="flex-1 overflow-y-auto pb-safe">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <span className="text-caption text-text-tertiary">로딩 중...</span>
+            </div>
+          ) : selectedNode ? (
+            <NodeDetailPanel />
+          ) : null}
+        </div>
+      </aside>
+    )
+  }
+
+  // Mobile peek mode: Notion-style, full screen below header
   if (isMobile) {
     return (
       <>
@@ -124,7 +172,7 @@ export function SidePanel() {
         {/* Panel — fixed, full width, below header */}
         <aside
           data-testid="side-panel"
-          className="fixed left-0 right-0 bottom-0 bg-surface z-50 flex flex-col"
+          className="fixed left-0 right-0 bottom-0 bg-surface z-50 flex flex-col transition-all duration-200 ease-devflow"
           style={{ top: 'var(--header-height)' }}
         >
           {/* Content — no header bar, no tabs, Notion-style direct content */}
@@ -161,7 +209,7 @@ export function SidePanel() {
         {panelTab === 'overview' && !isLoading && selectedNode && (
           <NodeDetailPanel />
         )}
-        {panelTab === 'sessions' && (
+        {isLocal && panelTab === 'sessions' && (
           <div className="p-4 flex flex-col gap-3">
             <SessionsSection
               sessions={sessions}
@@ -170,7 +218,7 @@ export function SidePanel() {
             />
           </div>
         )}
-        {panelTab === 'plans' && <PlanTab />}
+        {isLocal && panelTab === 'plans' && <PlanTab />}
       </div>
     </aside>
   )

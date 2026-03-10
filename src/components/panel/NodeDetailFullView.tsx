@@ -9,6 +9,15 @@ import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { SessionResponse } from '@/lib/types/api'
 
+function useIsLocal() {
+  const [isLocal, setIsLocal] = useState(false)
+  useEffect(() => {
+    const host = window.location.hostname
+    setIsLocal(host === 'localhost' || host === '127.0.0.1')
+  }, [])
+  return isLocal
+}
+
 function SessionsSection({
   sessions,
   viewingSessionId,
@@ -93,6 +102,7 @@ export function NodeDetailFullView() {
   const selectNode = useNodeStore((s) => s.selectNode)
 
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null)
+  const isLocal = useIsLocal()
 
   useEffect(() => {
     if (panelNodeId) {
@@ -104,16 +114,21 @@ export function NodeDetailFullView() {
   if (!panelNodeId) return null
 
   return (
-    <div className="h-full flex flex-col bg-surface relative" data-testid="side-panel">
-      {/* Close button — floating top-left */}
-      <button
-        data-testid="panel-close-btn"
-        onClick={closePanel}
-        className="absolute top-3 left-4 z-10 p-1.5 rounded-button hover:bg-surface-hover text-text-secondary transition-colors"
-        title="닫기 (ESC)"
-      >
-        <X size={16} />
-      </button>
+    <div className="h-full flex flex-col bg-surface" data-testid="side-panel">
+      {/* Header — [X] [Node Title] inline row */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 shrink-0">
+        <button
+          data-testid="panel-close-btn"
+          onClick={closePanel}
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-button hover:bg-surface-hover text-text-secondary transition-colors shrink-0"
+          title="닫기 (ESC)"
+        >
+          <X size={18} />
+        </button>
+        <h2 className="text-body font-medium text-text-primary truncate flex-1">
+          {selectedNode?.title || ''}
+        </h2>
+      </div>
 
       {/* Content: 2-column layout (main + properties sidebar) */}
       {isLoading ? (
@@ -121,30 +136,34 @@ export function NodeDetailFullView() {
           <span className="text-caption text-text-tertiary">로딩 중...</span>
         </div>
       ) : selectedNode ? (
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left: main content */}
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-[780px] mx-auto">
               <NodeDetailPanel showProperties={false} />
-              {/* Sessions */}
-              <div className="px-8 pb-8">
-                <label className="text-caption text-text-tertiary mb-2 block">
-                  세션 ({sessions.length})
-                </label>
-                <SessionsSection
-                  sessions={sessions}
-                  viewingSessionId={viewingSessionId}
-                  setViewingSessionId={setViewingSessionId}
-                />
-              </div>
-              {/* Plans */}
-              <div className="px-8 pb-8">
-                <PlanTab />
-              </div>
+              {/* Sessions — localhost only */}
+              {isLocal && (
+                <div className="px-8 pb-8">
+                  <label className="text-caption text-text-tertiary mb-2 block">
+                    세션 ({sessions.length})
+                  </label>
+                  <SessionsSection
+                    sessions={sessions}
+                    viewingSessionId={viewingSessionId}
+                    setViewingSessionId={setViewingSessionId}
+                  />
+                </div>
+              )}
+              {/* Plans — localhost only */}
+              {isLocal && (
+                <div className="px-8 pb-8">
+                  <PlanTab />
+                </div>
+              )}
             </div>
           </div>
-          {/* Right: properties sidebar (Linear-style) */}
-          <div className="w-[260px] border-l border-border/30 overflow-y-auto shrink-0">
+          {/* Right: properties sidebar (Linear-style) — stacks below on mobile */}
+          <div className="w-full md:w-[260px] border-t md:border-t-0 md:border-l border-border/30 overflow-y-auto md:shrink-0">
             <div className="p-5">
               <span className="text-caption text-text-tertiary font-medium block mb-4">Properties</span>
               <NodeProperties vertical />

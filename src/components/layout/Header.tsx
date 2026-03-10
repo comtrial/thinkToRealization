@@ -28,7 +28,7 @@ export function Header() {
 
   return (
     <header
-      className={`${isMobile ? 'col-span-1' : 'col-span-2'} flex items-center justify-between px-2 md:px-4 border-b border-border bg-surface overflow-hidden`}
+      className="sticky top-0 z-30 flex items-center justify-between px-2 md:px-4 border-b border-border bg-surface overflow-hidden flex-shrink-0"
       style={{ height: 'var(--header-height)' }}
     >
       {/* Left: menu + project selector */}

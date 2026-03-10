@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { ListTodo, Plus, ChevronDown, Check, FolderOpen, X, Bug, Inbox, LayoutGrid, MoreHorizontal } from 'lucide-react'
+import { ListTodo, Plus, ChevronDown, Check, FolderOpen, X, Bug, Inbox, LayoutGrid, MoreHorizontal, Settings, Trash2 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { useUIStore } from '@/stores/ui-store'
 import { useCanvasStore } from '@/stores/canvas-store'
 import { useProject } from '@/components/providers/ProjectProvider'
 import { CreateProjectDialog } from '@/components/layout/CreateProjectDialog'
+import { DeleteProjectDialog } from '@/components/layout/DeleteProjectDialog'
+import { ProjectMembersDialog } from '@/components/layout/ProjectMembersDialog'
 import { useMobile } from '@/hooks/useMobile'
 import { StatusDot } from '@/components/shared/Badge'
 import type { NodeStatus } from '@/lib/types/api'
@@ -53,6 +55,8 @@ export function Sidebar() {
   const openPanel = useUIStore((s) => s.openPanel)
   const { currentProject, setCurrentProject, projects } = useProject()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false)
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false)
   const [issueStatusFilter, setIssueStatusFilter] = useState<NodeStatus | 'all'>('all')
   const isMobile = useMobile()
@@ -167,7 +171,7 @@ export function Sidebar() {
                       )
                     })}
                   </ul>
-                  <div className="border-t border-border mt-1 pt-1">
+                  <div className="border-t border-border mt-1 pt-1 flex flex-col gap-0.5">
                     <button
                       data-testid="create-project-btn"
                       onClick={() => { setCreateDialogOpen(true); setProjectDropdownOpen(false) }}
@@ -176,6 +180,24 @@ export function Sidebar() {
                       <Plus size={12} />
                       <span>새 프로젝트</span>
                     </button>
+                    {currentProject && (
+                      <>
+                        <button
+                          onClick={() => { setMembersDialogOpen(true); setProjectDropdownOpen(false) }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-button text-caption text-text-secondary hover:bg-surface-hover transition-colors"
+                        >
+                          <Settings size={12} />
+                          <span>멤버 관리</span>
+                        </button>
+                        <button
+                          onClick={() => { setDeleteDialogOpen(true); setProjectDropdownOpen(false) }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-button text-caption text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 size={12} />
+                          <span>프로젝트 삭제</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </Popover.Content>
               </Popover.Portal>
@@ -250,7 +272,17 @@ export function Sidebar() {
   )
 
   if (isMobile) {
-    if (!sidebarOpen) return <CreateProjectDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+    if (!sidebarOpen) return (
+      <>
+        <CreateProjectDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+        {currentProject && (
+          <>
+            <DeleteProjectDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} projectId={currentProject.id} projectTitle={currentProject.title} />
+            <ProjectMembersDialog open={membersDialogOpen} onOpenChange={setMembersDialogOpen} />
+          </>
+        )}
+      </>
+    )
 
     return (
       <>
@@ -275,6 +307,12 @@ export function Sidebar() {
           {sidebarContent}
         </aside>
         <CreateProjectDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+        {currentProject && (
+          <>
+            <DeleteProjectDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} projectId={currentProject.id} projectTitle={currentProject.title} />
+            <ProjectMembersDialog open={membersDialogOpen} onOpenChange={setMembersDialogOpen} />
+          </>
+        )}
       </>
     )
   }
@@ -291,6 +329,12 @@ export function Sidebar() {
       </aside>
 
       <CreateProjectDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      {currentProject && (
+        <>
+          <DeleteProjectDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} projectId={currentProject.id} projectTitle={currentProject.title} />
+          <ProjectMembersDialog open={membersDialogOpen} onOpenChange={setMembersDialogOpen} />
+        </>
+      )}
     </>
   )
 }
