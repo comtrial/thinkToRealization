@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Paperclip, Upload, X, FileText, Loader2 } from 'lucide-react'
+import { Paperclip, Upload, X, FileText, Loader2, Camera } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/shared/Toast'
+import { useMobile } from '@/hooks/useMobile'
 
 interface AttachmentSectionProps {
   nodeId: string
@@ -30,13 +31,9 @@ function isImageType(fileType: string): boolean {
   return fileType.startsWith('image/')
 }
 
-function isMobile(): boolean {
-  if (typeof window === 'undefined') return false
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-}
-
 export function AttachmentSection({ nodeId }: AttachmentSectionProps) {
   const { addToast } = useToast()
+  const isMobile = useMobile()
   const [attachments, setAttachments] = useState<AttachmentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -72,7 +69,10 @@ export function AttachmentSection({ nodeId }: AttachmentSectionProps) {
     }
 
     const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf']
-    if (!allowedTypes.includes(file.type)) {
+    const allowedExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf']
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+    // Mobile browsers may return empty file.type for camera captures — fallback to extension
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
       addToast('error', '지원하지 않는 파일 형식입니다 (PNG, JPEG, GIF, WEBP, PDF만 가능)')
       return
     }
@@ -149,14 +149,17 @@ export function AttachmentSection({ nodeId }: AttachmentSectionProps) {
         {/* Upload buttons */}
         <div className="flex items-center gap-1">
           {/* Camera button (mobile only) */}
-          {isMobile() && (
+          {isMobile && (
             <>
               <button
                 onClick={() => cameraInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-button text-[11px] text-text-tertiary hover:text-accent hover:bg-surface-hover transition-colors disabled:opacity-50"
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-button text-[11px] text-text-tertiary hover:text-accent hover:bg-surface-hover transition-colors disabled:opacity-50",
+                  "min-h-[44px] min-w-[44px] justify-center"
+                )}
               >
-                <Upload size={12} />
+                <Camera size={14} />
                 <span>촬영</span>
               </button>
               <input
@@ -174,7 +177,10 @@ export function AttachmentSection({ nodeId }: AttachmentSectionProps) {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-1 px-2 py-1 rounded-button text-[11px] text-text-tertiary hover:text-accent hover:bg-surface-hover transition-colors disabled:opacity-50"
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-button text-[11px] text-text-tertiary hover:text-accent hover:bg-surface-hover transition-colors disabled:opacity-50",
+              isMobile && "min-h-[44px] min-w-[44px] justify-center"
+            )}
           >
             {uploading ? (
               <Loader2 size={12} className="animate-spin" />
@@ -186,7 +192,7 @@ export function AttachmentSection({ nodeId }: AttachmentSectionProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+            accept={isMobile ? "image/*,.pdf" : "image/png,image/jpeg,image/gif,image/webp,application/pdf"}
             onChange={handleFileChange}
             className="hidden"
           />

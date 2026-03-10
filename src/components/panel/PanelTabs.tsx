@@ -5,7 +5,7 @@ import { useUIStore } from '@/stores/ui-store'
 import * as Tabs from '@radix-ui/react-tabs'
 
 const allTabs = [
-  { value: 'overview' as const, label: '개요' },
+  { value: 'detail' as const, label: '상세' },
   { value: 'sessions' as const, label: '세션', localOnly: true },
   { value: 'plans' as const, label: '계획서', localOnly: true },
 ]
@@ -27,6 +27,8 @@ export function PanelTabs({ hidden }: PanelTabsProps) {
   if (hidden) return null
 
   const tabs = allTabs.filter((tab) => !tab.localOnly || isLocal)
+
+  if (tabs.length <= 1) return null
 
   return (
     <Tabs.Root value={panelTab} onValueChange={(v) => setPanelTab(v as typeof panelTab)}>

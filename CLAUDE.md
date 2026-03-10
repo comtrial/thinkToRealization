@@ -289,7 +289,7 @@ done       + session_resume → in_progress
   activeTab: 'dashboard' | 'canvas'
   panelMode: 'closed' | 'peek' | 'full'   // Side panel 3-mode
   panelNodeId: string | null
-  panelTab: 'overview' | 'sessions' | 'files'
+  panelTab: 'sessions' | 'plans'
   terminalExpanded: boolean
   terminalHeight: number                    // 150-600px
   commandPaletteOpen: boolean

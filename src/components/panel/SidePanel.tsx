@@ -186,15 +186,15 @@ export function SidePanel() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {panelTab === 'overview' && isLoading && (
+        {isLoading && (
           <div className="flex items-center justify-center py-12">
             <span className="text-caption text-text-tertiary">로딩 중...</span>
           </div>
         )}
-        {panelTab === 'overview' && !isLoading && selectedNode && (
+        {!isLoading && selectedNode && panelTab === 'detail' && (
           <NodeDetailPanel />
         )}
-        {isLocal && panelTab === 'sessions' && (
+        {!isLoading && selectedNode && isLocal && panelTab === 'sessions' && (
           <div className="p-4 flex flex-col gap-3">
             <SessionsSection
               sessions={sessions}
@@ -203,7 +203,7 @@ export function SidePanel() {
             />
           </div>
         )}
-        {isLocal && panelTab === 'plans' && <PlanTab />}
+        {!isLoading && selectedNode && isLocal && panelTab === 'plans' && <PlanTab />}
       </div>
     </aside>
   )

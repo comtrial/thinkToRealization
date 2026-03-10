@@ -11,12 +11,12 @@ interface UIStore {
   setDashboardTab: (tab: DashboardTab) => void
   panelMode: 'closed' | 'peek' | 'full'
   panelNodeId: string | null
-  panelTab: 'overview' | 'sessions' | 'plans'
+  panelTab: 'detail' | 'sessions' | 'plans'
   openPanel: (nodeId: string) => void
   openPanelFull: (nodeId: string) => void
   closePanel: () => void
   toggleFullPage: () => void
-  setPanelTab: (tab: 'overview' | 'sessions' | 'plans') => void
+  setPanelTab: (tab: 'detail' | 'sessions' | 'plans') => void
   terminalExpanded: boolean
   terminalHeight: number
   setTerminalExpanded: (expanded: boolean) => void
@@ -36,9 +36,9 @@ export const useUIStore = create<UIStore>((set) => ({
   setDashboardTab: (tab) => set({ dashboardTab: tab }),
   panelMode: 'closed',
   panelNodeId: null,
-  panelTab: 'overview',
-  openPanel: (nodeId) => set({ panelMode: 'peek', panelNodeId: nodeId, panelTab: 'overview' }),
-  openPanelFull: (nodeId) => set({ panelMode: 'full', panelNodeId: nodeId, panelTab: 'overview' }),
+  panelTab: 'detail',
+  openPanel: (nodeId) => set({ panelMode: 'peek', panelNodeId: nodeId, panelTab: 'detail' }),
+  openPanelFull: (nodeId) => set({ panelMode: 'full', panelNodeId: nodeId, panelTab: 'detail' }),
   closePanel: () => set({ panelMode: 'closed', panelNodeId: null }),
   toggleFullPage: () => set((s) => ({
     panelMode: s.panelMode === 'full' ? 'peek' : 'full',
