@@ -34,6 +34,12 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'ThinkToRealization',
   description: '캔버스 기반 개발 사고 운영 도구',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'TTR',
+  },
 }
 
 export default function RootLayout({

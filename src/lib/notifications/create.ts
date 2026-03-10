@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/client";
+import { sendPushToUser } from "./push";
 
-type NotificationType = "comment" | "assignment";
+type NotificationType = "comment" | "assignment" | "status_change";
 
 export async function createNotification(params: {
   userId: string;
@@ -17,7 +18,7 @@ export async function createNotification(params: {
     return null;
   }
 
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: {
       userId: params.userId,
       type: params.type,
@@ -27,4 +28,17 @@ export async function createNotification(params: {
       actorId: params.actorId ?? null,
     },
   });
+
+  // Push: never send to self (regardless of allowSelf for in-app)
+  const shouldPush = !(params.actorId && params.actorId === params.userId);
+  if (shouldPush) {
+    sendPushToUser(params.userId, {
+      title: params.title,
+      body: params.body,
+      tag: params.type,
+      url: params.nodeId ? `/?node=${params.nodeId}` : "/",
+    }).catch(console.warn);
+  }
+
+  return notification;
 }

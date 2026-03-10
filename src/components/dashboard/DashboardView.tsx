@@ -8,7 +8,7 @@ import { useCanvasStore } from '@/stores/canvas-store'
 import { useNodeStore } from '@/stores/node-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
-import { Layers, User, Zap, Archive } from 'lucide-react'
+import { Layers, User, Zap, Archive, RefreshCw } from 'lucide-react'
 import type { DashboardResponse } from '@/lib/types/api'
 
 const DASHBOARD_TABS: { key: DashboardTab; label: string; icon: typeof Layers }[] = [
@@ -49,27 +49,39 @@ function IssueListSkeleton() {
   )
 }
 
-function DashboardTabBar() {
+function DashboardTabBar({ onRefresh, refreshing }: { onRefresh?: () => void; refreshing?: boolean }) {
   const dashboardTab = useUIStore((s) => s.dashboardTab)
   const setDashboardTab = useUIStore((s) => s.setDashboardTab)
 
   return (
-    <div className="grid grid-cols-4 px-2 sm:px-4 py-1.5 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-20">
-      {DASHBOARD_TABS.map(({ key, label, icon: Icon }) => (
+    <div className="flex items-center px-2 sm:px-4 py-1.5 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-20 gap-1">
+      <div className="grid grid-cols-4 flex-1 gap-0.5">
+        {DASHBOARD_TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setDashboardTab(key)}
+            className={cn(
+              'flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-button text-[11px] sm:text-xs font-medium transition-colors duration-100 truncate',
+              dashboardTab === key
+                ? 'bg-accent/10 text-accent'
+                : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-hover'
+            )}
+          >
+            <Icon size={13} className="shrink-0" />
+            <span className="truncate">{label}</span>
+          </button>
+        ))}
+      </div>
+      {onRefresh && (
         <button
-          key={key}
-          onClick={() => setDashboardTab(key)}
-          className={cn(
-            'flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-button text-[11px] sm:text-xs font-medium transition-colors duration-100 truncate',
-            dashboardTab === key
-              ? 'bg-accent/10 text-accent'
-              : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-hover'
-          )}
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-button text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-colors shrink-0"
+          title="새로고침"
         >
-          <Icon size={13} className="shrink-0" />
-          <span className="truncate">{label}</span>
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
         </button>
-      ))}
+      )}
     </div>
   )
 }
@@ -179,7 +191,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
 
   return (
     <div className="h-full flex flex-col">
-      <DashboardTabBar />
+      <DashboardTabBar onRefresh={fetchDashboard} refreshing={loading} />
 
       <div className="flex-1 overflow-y-auto">
         {loading ? (

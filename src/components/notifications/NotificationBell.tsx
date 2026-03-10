@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
-import { Bell, Check, MessageSquare, UserPlus } from 'lucide-react'
+import { ArrowRightLeft, Bell, Check, MessageSquare, UserPlus } from 'lucide-react'
 import { useNotificationStore, type NotificationItem } from '@/stores/notification-store'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -37,6 +37,8 @@ function NotificationRow({ item, onRead }: { item: NotificationItem; onRead: () 
       <div className="mt-0.5 flex-shrink-0">
         {item.type === 'comment' ? (
           <MessageSquare size={14} className="text-blue-500" />
+        ) : item.type === 'status_change' ? (
+          <ArrowRightLeft size={14} className="text-indigo-500" />
         ) : (
           <UserPlus size={14} className="text-purple-500" />
         )}

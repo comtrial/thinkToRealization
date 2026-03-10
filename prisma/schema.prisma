@@ -37,19 +37,20 @@ model Project {
 }
 
 model User {
-  id              String          @id @default(cuid())
-  email           String          @unique
-  name            String
-  passwordHash    String
-  avatarUrl       String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  comments        NodeComment[]
-  notifications   Notification[]
-  assignedNodes   Node[]          @relation("NodeAssignee")
-  createdNodes    Node[]          @relation("NodeCreator")
-  createdProjects Project[]       @relation("ProjectCreator")
-  memberships     ProjectMember[]
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String
+  passwordHash      String
+  avatarUrl         String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  comments          NodeComment[]
+  notifications     Notification[]
+  assignedNodes     Node[]             @relation("NodeAssignee")
+  createdNodes      Node[]             @relation("NodeCreator")
+  createdProjects   Project[]          @relation("ProjectCreator")
+  memberships       ProjectMember[]
+  pushSubscriptions PushSubscription[]
 }
 
 model ProjectMember {
@@ -215,6 +216,19 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, endpoint])
+  @@index([userId])
 }
 
 model Attachment {

@@ -37,7 +37,7 @@ export const ERROR_CODES = {
   INTERNAL_ERROR: "INTERNAL_ERROR",
 } as const;
 
-export const NOTIFICATION_TYPES = ["comment", "assignment"] as const;
+export const NOTIFICATION_TYPES = ["comment", "assignment", "status_change"] as const;
 
 export const WS_PORT = 3001;
 export const WS_URL =

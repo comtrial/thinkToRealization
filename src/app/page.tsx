@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { AppShell } from '@/components/layout/AppShell'
 import { useUIStore } from '@/stores/ui-store'
@@ -170,27 +170,44 @@ function MainContent() {
     return <EmptyState variant="no-project" className="h-full" />
   }
 
-  // Full mode: node detail replaces the main content area (like a tab switch)
-  if (panelMode === 'full') {
-    return <NodeDetailFullView />
-  }
+  const isFullPanel = panelMode === 'full'
 
   return (
-    <div className={`h-full flex flex-col ${isMobile ? 'pb-14' : ''}`}>
-      <div className="flex-1 overflow-hidden">
-        {activeTab === 'dashboard' ? (
-          <DashboardView projectId={currentProject.id} />
-        ) : (
-          <CanvasView projectId={currentProject.id} />
-        )}
+    <>
+      {isFullPanel && <NodeDetailFullView />}
+      <div className={`h-full flex flex-col ${isMobile ? 'pb-14' : ''} ${isFullPanel ? 'hidden' : ''}`}>
+        <div className="flex-1 overflow-hidden">
+          {activeTab === 'dashboard' ? (
+            <DashboardView projectId={currentProject.id} />
+          ) : (
+            <CanvasView projectId={currentProject.id} />
+          )}
+        </div>
+        {!isMobile && <TerminalSection />}
       </div>
-      {!isMobile && <TerminalSection />}
-    </div>
+    </>
   )
+}
+
+function useDeepLinkNode() {
+  const openPanel = useUIStore((s) => s.openPanel)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const nodeId = params.get('node')
+    if (nodeId) {
+      openPanel(nodeId)
+      // Clean up URL without reload
+      const url = new URL(window.location.href)
+      url.searchParams.delete('node')
+      window.history.replaceState({}, '', url.pathname)
+    }
+  }, [openPanel])
 }
 
 export default function Home() {
   useKeyboardShortcuts()
+  useDeepLinkNode()
 
   return (
     <AppShell>

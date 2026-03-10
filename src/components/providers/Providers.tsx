@@ -5,6 +5,7 @@ import { WebSocketProvider } from "./WebSocketProvider"
 import { ProjectProvider } from "./ProjectProvider"
 import { ToastProvider } from "@/components/shared/Toast"
 import { AssigneeRequiredDialog } from "@/components/shared/AssigneeRequiredDialog"
+import { PushPermissionPrompt } from "@/components/notifications/PushPermissionPrompt"
 import { useAuthStore } from "@/stores/auth-store"
 
 // Global 401 interceptor — redirect to /login on expired session
@@ -55,6 +56,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     <ProjectProvider>
       <WebSocketProvider>
         {children}
+        <PushPermissionPrompt />
       </WebSocketProvider>
     </ProjectProvider>
   )

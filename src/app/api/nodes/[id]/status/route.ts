@@ -9,6 +9,8 @@ import {
 import { handlePrismaError } from "@/lib/prisma-error";
 import { updateNodeStatusSchema } from "@/lib/schemas/node";
 import { nodeWithCounts, toNodeResponse } from "@/lib/node-helpers";
+import { requireAuth } from "@/lib/auth/guard";
+import { createNotification } from "@/lib/notifications/create";
 
 // Manual transitions allow any status change (user intent respected)
 const ALL_STATUSES = ["backlog", "todo", "in_progress", "done", "archived"];
@@ -25,6 +27,7 @@ type Params = { params: Promise<{ id: string }> };
 // PUT /api/nodes/:id/status — change status with state log
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
+  const auth = await requireAuth(req);
   try {
     let body;
     try {
@@ -90,6 +93,18 @@ export async function PUT(req: NextRequest, { params }: Params) {
         },
       }),
     ]);
+
+    // Notify assignee of status change
+    if (updated.assigneeId && auth.session) {
+      createNotification({
+        userId: updated.assigneeId,
+        type: "status_change",
+        title: "상태 변경",
+        body: `'${updated.title}' ${existing.status} → ${targetStatus}`,
+        nodeId: id,
+        actorId: auth.session.userId,
+      }).catch(console.warn);
+    }
 
     return successResponse(toNodeResponse(updated));
   } catch (error) {
