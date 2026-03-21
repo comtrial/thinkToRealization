@@ -189,7 +189,7 @@ export const BaseNode = memo(function BaseNode({ id, data, selected }: NodeProps
         !selected && nodeData.status === 'in_progress' && 'border-indigo-500 border-[1.5px] bg-indigo-50 shadow-[inset_5px_0_0_0_#6366F1,0_0_12px_rgba(99,102,241,0.15)]',
         !selected && nodeData.status === 'done' && 'bg-green-50/50 border-green-300/40 opacity-70',
         !selected && nodeData.status === 'archived' && 'opacity-40 bg-gray-50',
-        !selected && nodeData.status === 'backlog' && 'opacity-60 bg-gray-50/80 border-gray-200',
+        !selected && nodeData.status === 'backlog' && 'opacity-55 bg-gray-100/60 border-dashed border-gray-300',
         !selected && (nodeData.status === 'backlog' || nodeData.status === 'todo') && 'bg-surface',
         'hover:shadow-elevation-1'
       )}
