@@ -463,65 +463,83 @@ export function NodeDetailPanel({ showProperties = true, onClose }: { showProper
     }
   }, [editingTitle])
 
-  const pendingDescRef = useRef<string | null>(null)
+  // Pending description: stores BOTH nodeId and content so saves go to the correct node
+  const pendingDescRef = useRef<{ nodeId: string; content: string } | null>(null)
 
-  const saveDescription = useCallback(async (value: string) => {
-    if (!selectedNode) return
-    pendingDescRef.current = null
+  // Save description to a specific node (nodeId-safe)
+  const saveDescToNode = useCallback(async (nodeId: string, value: string) => {
     try {
-      const res = await fetch(`/api/nodes/${selectedNode.id}`, {
+      const res = await fetch(`/api/nodes/${nodeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: value || null }),
       })
       if (res.ok) {
         const { data } = await res.json()
-        useNodeStore.setState((s) => ({
-          selectedNode: s.selectedNode ? { ...s.selectedNode, description: data.description } : null,
-        }))
-        useCanvasStore.getState().updateNodeData(selectedNode.id, { description: data.description })
+        // Only update stores if still on the same node
+        const current = useNodeStore.getState().selectedNode
+        if (current?.id === nodeId) {
+          useNodeStore.setState((s) => ({
+            selectedNode: s.selectedNode ? { ...s.selectedNode, description: data.description } : null,
+          }))
+        }
+        useCanvasStore.getState().updateNodeData(nodeId, { description: data.description })
       }
     } catch (err) {
       console.error('Failed to update description:', err)
     }
-  }, [selectedNode])
+  }, [])
 
-  // Flush pending save immediately (for blur / unmount)
+  // Flush any pending save immediately (uses stored nodeId, not current selectedNode)
   const flushDescSave = useCallback(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = undefined
     }
-    if (pendingDescRef.current !== null) {
-      saveDescription(pendingDescRef.current)
+    const pending = pendingDescRef.current
+    if (pending) {
+      pendingDescRef.current = null
+      saveDescToNode(pending.nodeId, pending.content)
     }
-  }, [saveDescription])
+  }, [saveDescToNode])
 
-  // Cleanup: flush pending save on unmount
+  // When selectedNode changes, flush pending save for the PREVIOUS node
+  const prevNodeIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    const currentId = selectedNode?.id ?? null
+    if (prevNodeIdRef.current && prevNodeIdRef.current !== currentId) {
+      // Node switched — flush pending for previous node
+      flushDescSave()
+    }
+    prevNodeIdRef.current = currentId
+  }, [selectedNode?.id, flushDescSave])
+
+  // Cleanup on unmount: fire-and-forget save
   useEffect(() => {
     return () => {
-      if (pendingDescRef.current !== null && debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-        // Fire-and-forget save on unmount
-        const nodeId = useNodeStore.getState().selectedNode?.id
-        const value = pendingDescRef.current
-        if (nodeId && value !== null) {
-          fetch(`/api/nodes/${nodeId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ description: value || null }),
-          }).catch(() => {})
-        }
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      const pending = pendingDescRef.current
+      if (pending) {
+        fetch(`/api/nodes/${pending.nodeId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: pending.content || null }),
+        }).catch(() => {})
+        pendingDescRef.current = null
       }
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
     }
   }, [])
 
   const handleDescUpdate = useCallback((md: string) => {
-    pendingDescRef.current = md
+    if (!selectedNode) return
+    pendingDescRef.current = { nodeId: selectedNode.id, content: md }
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    debounceTimerRef.current = setTimeout(() => saveDescription(md), 500)
-  }, [saveDescription])
+    debounceTimerRef.current = setTimeout(() => {
+      pendingDescRef.current = null
+      saveDescToNode(selectedNode.id, md)
+    }, 500)
+  }, [selectedNode, saveDescToNode])
 
   // Blur handler: flush pending save immediately
   const handleDescBlur = useCallback(() => {
