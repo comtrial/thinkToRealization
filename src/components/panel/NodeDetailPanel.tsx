@@ -289,20 +289,31 @@ function NodeHierarchy() {
     ? (parentCanvasNode.data as Record<string, unknown>)?.title as string
     : null
 
-  // Derive child nodes from outEdges (parent_child type)
+  // Derive child nodes: by parentNodeId field on canvas nodes + outEdges parent_child type
+  const childNodeIds = new Set<string>()
+
+  // 1) Canvas nodes whose parentNodeId points to this node
+  canvasNodes.forEach((cn) => {
+    if ((cn.data as Record<string, unknown>)?.parentNodeId === selectedNode.id) {
+      childNodeIds.add(cn.id)
+    }
+  })
+
+  // 2) outEdges with parent_child type
   const nodeWithEdges = selectedNode as unknown as {
     outEdges?: EdgeResponse[]
   }
-  const childEdges = (nodeWithEdges.outEdges ?? []).filter(
-    (e) => e.type === 'parent_child'
-  )
-  const childNodes = childEdges
-    .map((edge) => {
-      const canvasNode = canvasNodes.find((n) => n.id === edge.toNodeId)
+  ;(nodeWithEdges.outEdges ?? [])
+    .filter((e) => e.type === 'parent_child')
+    .forEach((e) => childNodeIds.add(e.toNodeId))
+
+  const childNodes = Array.from(childNodeIds)
+    .map((id) => {
+      const canvasNode = canvasNodes.find((n) => n.id === id)
       if (!canvasNode) return null
       const data = canvasNode.data as Record<string, unknown>
       return {
-        id: edge.toNodeId,
+        id,
         title: (data.title as string) || '(untitled)',
         status: (data.status as string) || 'backlog',
       }
