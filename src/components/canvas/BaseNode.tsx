@@ -43,7 +43,11 @@ function CompactNode({ data }: { data: NodeData }) {
   return (
     <div className="w-[200px] h-[52px] flex items-center px-3 gap-2">
       <NodeTypeIcon type={data.type} size={16} />
-      <span className="text-node-title-sm text-text-primary truncate flex-1">{data.title}</span>
+      <span className={cn(
+        'text-node-title-sm truncate flex-1',
+        data.status === 'done' ? 'text-text-tertiary line-through' : 'text-text-primary',
+        data.status === 'archived' && 'text-text-tertiary italic',
+      )}>{data.title}</span>
       {data.childCount != null && data.childCount > 0 && (
         <span className="text-micro px-1 py-0.5 rounded-badge bg-type-issue/20 text-type-issue font-medium">
           {data.childCount}
@@ -63,7 +67,11 @@ function ExpandedNode({ data }: { data: NodeData }) {
       )}
       <div className="flex items-center gap-2 shrink-0 mb-1">
         <NodeTypeIcon type={data.type} size={14} />
-        <span className="text-[11px] font-semibold text-text-primary truncate flex-1">{data.title}</span>
+        <span className={cn(
+          'text-[11px] font-semibold truncate flex-1',
+          data.status === 'done' ? 'text-text-tertiary line-through' : 'text-text-primary',
+          data.status === 'archived' && 'text-text-tertiary italic',
+        )}>{data.title}</span>
         <StatusBadge status={data.status} />
       </div>
       {data.description ? (
@@ -176,9 +184,12 @@ export const BaseNode = memo(function BaseNode({ id, data, selected }: NodeProps
   return (
     <div
       className={cn(
-        'relative rounded-node border bg-surface transition-shadow duration-zoom',
+        'relative rounded-node border transition-shadow duration-zoom',
         selected ? 'border-accent border-2 shadow-elevation-2' : 'border-border',
-        nodeData.status === 'in_progress' && !selected && 'border-accent/30',
+        !selected && nodeData.status === 'in_progress' && 'border-accent/40 bg-accent/[0.02]',
+        !selected && nodeData.status === 'done' && 'bg-green-50/50 border-green-300/40 opacity-70',
+        !selected && nodeData.status === 'archived' && 'opacity-40 bg-gray-50',
+        !selected && (nodeData.status === 'backlog' || nodeData.status === 'todo') && 'bg-surface',
         'hover:shadow-elevation-1'
       )}
     >
