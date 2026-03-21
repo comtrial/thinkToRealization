@@ -280,48 +280,79 @@ function NodeHierarchy() {
   const openPanel = useUIStore((s) => s.openPanel)
 
   const [parentInfo, setParentInfo] = useState<{ id: string; title: string } | null>(null)
+  const [upstreamNodes, setUpstreamNodes] = useState<LinkedNode[]>([])
   const [childNodes, setChildNodes] = useState<LinkedNode[]>([])
-  const [downstreamNodes, setDownstreamNodes] = useState<LinkedNode[]>([])
 
   useEffect(() => {
     if (!selectedNode) return
     const nodeWithEdges = selectedNode as unknown as { outEdges?: EdgeResponse[]; inEdges?: EdgeResponse[] }
     const outEdges = nodeWithEdges.outEdges ?? []
+    const inEdges = nodeWithEdges.inEdges ?? []
 
-    // --- Parent (via parentNodeId) ---
+    // --- 상위 이슈: parentNodeId + inEdges sources ---
+    const upIds = new Map<string, string>() // id → label
     const pid = selectedNode.parentNodeId
-    if (pid) {
-      fetch(`/api/nodes/${pid}`).then(r => r.json()).then(({ data }) => {
-        setParentInfo(data ? { id: pid, title: data.title } : { id: pid, title: pid.slice(0, 8) })
-      }).catch(() => setParentInfo({ id: pid, title: pid.slice(0, 8) }))
-    } else {
+    if (pid) upIds.set(pid, '상위')
+    inEdges.forEach((e) => {
+      if (!upIds.has(e.fromNodeId)) upIds.set(e.fromNodeId, e.label || e.type)
+    })
+
+    if (upIds.size === 0) {
       setParentInfo(null)
-    }
-
-    // --- Children (parentNodeId pointing here) ---
-    fetch(`/api/projects/${selectedNode.projectId}/nodes`).then(r => r.json()).then(({ data }) => {
-      if (!data) return setChildNodes([])
-      const children = (data as { id: string; title: string; status: string; parentNodeId?: string | null }[])
-        .filter((n) => n.parentNodeId === selectedNode.id)
-        .map((n) => ({ id: n.id, title: n.title, status: n.status }))
-      setChildNodes(children)
-    }).catch(() => setChildNodes([]))
-
-    // --- Downstream (outEdges targets, excluding parent_child since those are children) ---
-    const downIds = outEdges
-      .filter((e) => e.type !== 'parent_child')
-      .map((e) => ({ id: e.toNodeId, label: e.label || e.type }))
-    if (downIds.length === 0) {
-      setDownstreamNodes([])
+      setUpstreamNodes([])
     } else {
-      Promise.all(downIds.map(({ id, label }) =>
+      Promise.all(Array.from(upIds.entries()).map(([id, label]) =>
         fetch(`/api/nodes/${id}`).then(r => r.json()).then(({ data }) =>
           data ? { id, title: data.title, status: data.status, label } : null
         ).catch(() => null)
       )).then((results) => {
-        setDownstreamNodes(results.filter(Boolean) as LinkedNode[])
+        const valid = results.filter(Boolean) as LinkedNode[]
+        // First one with '상위' label (parentNodeId) becomes the main parent
+        const parent = valid.find((n) => n.label === '상위')
+        setParentInfo(parent ? { id: parent.id, title: parent.title } : null)
+        setUpstreamNodes(valid.filter((n) => n.label !== '상위'))
       })
     }
+
+    // --- 하위 이슈: parentNodeId children + ALL outEdges targets (merged, deduplicated) ---
+    const downEdgeMap = new Map<string, string>() // id → label
+    outEdges.forEach((e) => downEdgeMap.set(e.toNodeId, e.label || e.type))
+
+    fetch(`/api/projects/${selectedNode.projectId}/nodes`).then(r => r.json()).then(({ data }) => {
+      if (!data) return setChildNodes([])
+      const allNodes = data as { id: string; title: string; status: string; parentNodeId?: string | null }[]
+
+      // parentNodeId children
+      const childMap = new Map<string, LinkedNode>()
+      allNodes
+        .filter((n) => n.parentNodeId === selectedNode.id)
+        .forEach((n) => childMap.set(n.id, { id: n.id, title: n.title, status: n.status }))
+
+      // outEdges targets
+      downEdgeMap.forEach((label, id) => {
+        if (!childMap.has(id)) {
+          const node = allNodes.find((n) => n.id === id)
+          if (node) {
+            childMap.set(id, { id, title: node.title, status: node.status, label })
+          }
+        }
+      })
+
+      // For targets not in project nodes list, fetch individually
+      const missing = Array.from(downEdgeMap.entries()).filter(([id]) => !childMap.has(id))
+      if (missing.length === 0) {
+        setChildNodes(Array.from(childMap.values()))
+      } else {
+        Promise.all(missing.map(([id, label]) =>
+          fetch(`/api/nodes/${id}`).then(r => r.json()).then(({ data: d }) =>
+            d ? { id, title: d.title, status: d.status, label } : null
+          ).catch(() => null)
+        )).then((fetched) => {
+          fetched.filter(Boolean).forEach((n) => { if (n) childMap.set(n.id, n) })
+          setChildNodes(Array.from(childMap.values()))
+        })
+      }
+    }).catch(() => setChildNodes([]))
   }, [selectedNode])
 
   if (!selectedNode) return null
@@ -331,11 +362,11 @@ function NodeHierarchy() {
     openPanel(nodeId)
   }
 
-  if (!parentInfo && childNodes.length === 0 && downstreamNodes.length === 0) return null
+  if (!parentInfo && upstreamNodes.length === 0 && childNodes.length === 0) return null
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Parent issue */}
+      {/* 상위 이슈 (parentNodeId) */}
       {parentInfo && (
         <div className="flex items-center gap-1 text-caption text-text-secondary">
           <span className="text-[11px] text-text-tertiary">상위 이슈</span>
@@ -349,7 +380,31 @@ function NodeHierarchy() {
         </div>
       )}
 
-      {/* Child issues (parentNodeId) */}
+      {/* 선행 이슈 (inEdges — 이 노드를 향하는 엣지의 소스) */}
+      {upstreamNodes.length > 0 && (
+        <div>
+          <span className="text-[11px] text-text-tertiary block mb-1.5">
+            선행 이슈 ({upstreamNodes.length})
+          </span>
+          <div className="flex flex-col gap-1">
+            {upstreamNodes.map((node) => (
+              <button
+                key={node.id}
+                onClick={() => handleNavigate(node.id)}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-caption text-text-primary hover:bg-surface-hover transition-colors text-left group"
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_COLORS[node.status] || 'bg-gray-400'}`} />
+                <span className="truncate group-hover:text-accent transition-colors flex-1">{node.title}</span>
+                {node.label && (
+                  <span className="text-[10px] text-text-tertiary shrink-0 px-1.5 py-0.5 bg-surface-hover rounded">{node.label}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 하위 이슈 (parentNodeId children + outEdges targets) */}
       {childNodes.length > 0 && (
         <div>
           <span className="text-[11px] text-text-tertiary block mb-1.5">
@@ -363,30 +418,9 @@ function NodeHierarchy() {
                 className="flex items-center gap-2 px-2 py-1.5 rounded-md text-caption text-text-primary hover:bg-surface-hover transition-colors text-left group"
               >
                 <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_COLORS[child.status] || 'bg-gray-400'}`} />
-                <span className="truncate group-hover:text-accent transition-colors">{child.title}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Downstream linked issues (outEdges: sequence, dependency, related) */}
-      {downstreamNodes.length > 0 && (
-        <div>
-          <span className="text-[11px] text-text-tertiary block mb-1.5">
-            연결된 이슈 ({downstreamNodes.length})
-          </span>
-          <div className="flex flex-col gap-1">
-            {downstreamNodes.map((node) => (
-              <button
-                key={node.id}
-                onClick={() => handleNavigate(node.id)}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-caption text-text-primary hover:bg-surface-hover transition-colors text-left group"
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_COLORS[node.status] || 'bg-gray-400'}`} />
-                <span className="truncate group-hover:text-accent transition-colors flex-1">{node.title}</span>
-                {node.label && (
-                  <span className="text-[10px] text-text-tertiary shrink-0 px-1.5 py-0.5 bg-surface-hover rounded">{node.label}</span>
+                <span className="truncate group-hover:text-accent transition-colors flex-1">{child.title}</span>
+                {child.label && (
+                  <span className="text-[10px] text-text-tertiary shrink-0 px-1.5 py-0.5 bg-surface-hover rounded">{child.label}</span>
                 )}
               </button>
             ))}
