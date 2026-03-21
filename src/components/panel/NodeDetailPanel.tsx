@@ -204,6 +204,12 @@ export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
 
   const datesSection = (
     <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 pt-3 border-t border-border/30">
+      {selectedNode.createdByName && (
+        <div className="flex justify-between">
+          <span>Created by</span>
+          <span className="text-text-secondary">{selectedNode.createdByName}</span>
+        </div>
+      )}
       <div className="flex justify-between">
         <span>Created</span>
         <span>{new Date(selectedNode.createdAt).toLocaleDateString('ko-KR')}</span>

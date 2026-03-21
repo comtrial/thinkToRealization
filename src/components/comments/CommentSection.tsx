@@ -21,6 +21,26 @@ function timeAgo(dateStr: string): string {
   return `${days}일 전`
 }
 
+function CommentContent({ content }: { content: string }) {
+  // Parse [via SessionName] prefix into a badge
+  const viaMatch = content.match(/^\[via\s+(.+?)\]\s*/)
+  if (viaMatch) {
+    const viaName = viaMatch[1]
+    const rest = content.slice(viaMatch[0].length)
+    return (
+      <div className="mt-0.5">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent/10 text-accent mr-1.5">
+          CLI: {viaName}
+        </span>
+        <p className="text-[13px] text-text-secondary whitespace-pre-wrap break-words leading-relaxed inline">{rest}</p>
+      </div>
+    )
+  }
+  return (
+    <p className="text-[13px] text-text-secondary mt-0.5 whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+  )
+}
+
 export function CommentSection({ nodeId }: CommentSectionProps) {
   const currentUser = useAuthStore((s) => s.user)
   const [comments, setComments] = useState<CommentResponse[]>([])
@@ -154,9 +174,7 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
                       </button>
                     </div>
                   ) : (
-                    <p className="text-[13px] text-text-secondary mt-0.5 whitespace-pre-wrap break-words leading-relaxed">
-                      {c.content}
-                    </p>
+                    <CommentContent content={c.content} />
                   )}
                 </div>
               </div>
