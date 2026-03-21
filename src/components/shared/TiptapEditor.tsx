@@ -20,6 +20,7 @@ const turndown = new TurndownService({
 interface TiptapEditorProps {
   content: string
   onUpdate: (markdown: string) => void
+  onBlurSave?: () => void
   placeholder?: string
   className?: string
   editorRef?: React.MutableRefObject<Editor | null>
@@ -32,7 +33,7 @@ function htmlFromMarkdown(md: string): string {
   return result
 }
 
-export function TiptapEditor({ content, onUpdate, placeholder, className, editorRef }: TiptapEditorProps) {
+export function TiptapEditor({ content, onUpdate, onBlurSave, placeholder, className, editorRef }: TiptapEditorProps) {
   const isInternalUpdate = useRef(false)
   const [isFocused, setIsFocused] = useState(false)
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -50,8 +51,9 @@ export function TiptapEditor({ content, onUpdate, placeholder, className, editor
     // Delay blur to allow toolbar button taps to re-focus the editor
     blurTimeoutRef.current = setTimeout(() => {
       setIsFocused(false)
+      onBlurSave?.()
     }, 150)
-  }, [])
+  }, [onBlurSave])
 
   const editor = useEditor({
     immediatelyRender: false,

@@ -463,16 +463,11 @@ export function NodeDetailPanel({ showProperties = true, onClose }: { showProper
     }
   }, [editingTitle])
 
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
-    }
-  }, [])
+  const pendingDescRef = useRef<string | null>(null)
 
   const saveDescription = useCallback(async (value: string) => {
     if (!selectedNode) return
+    pendingDescRef.current = null
     try {
       const res = await fetch(`/api/nodes/${selectedNode.id}`, {
         method: 'PUT',
@@ -491,10 +486,47 @@ export function NodeDetailPanel({ showProperties = true, onClose }: { showProper
     }
   }, [selectedNode])
 
+  // Flush pending save immediately (for blur / unmount)
+  const flushDescSave = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = undefined
+    }
+    if (pendingDescRef.current !== null) {
+      saveDescription(pendingDescRef.current)
+    }
+  }, [saveDescription])
+
+  // Cleanup: flush pending save on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingDescRef.current !== null && debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        // Fire-and-forget save on unmount
+        const nodeId = useNodeStore.getState().selectedNode?.id
+        const value = pendingDescRef.current
+        if (nodeId && value !== null) {
+          fetch(`/api/nodes/${nodeId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ description: value || null }),
+          }).catch(() => {})
+        }
+      }
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+    }
+  }, [])
+
   const handleDescUpdate = useCallback((md: string) => {
+    pendingDescRef.current = md
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     debounceTimerRef.current = setTimeout(() => saveDescription(md), 500)
   }, [saveDescription])
+
+  // Blur handler: flush pending save immediately
+  const handleDescBlur = useCallback(() => {
+    flushDescSave()
+  }, [flushDescSave])
 
   const handleCopyClaudeScript = useCallback(async () => {
     if (!selectedNode) return
@@ -714,6 +746,7 @@ ${decisionsText}
           key={selectedNode.id}
           content={selectedNode.description || ''}
           onUpdate={handleDescUpdate}
+          onBlurSave={handleDescBlur}
           placeholder="설명을 추가하세요... (Markdown 지원)"
         />
       </div>
