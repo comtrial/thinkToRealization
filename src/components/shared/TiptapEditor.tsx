@@ -22,25 +22,27 @@ const turndown = new TurndownService({
 })
 
 // Table support for turndown (HTML → Markdown)
+// Tiptap produces <table><tbody><tr><th>...</th></tr><tr><td>...</td></tr></tbody></table>
+// (no <thead>), so we detect th cells in rows to insert the separator line
 turndown.addRule('tableCell', {
   filter: ['th', 'td'],
   replacement: (content) => ` ${content.trim().replace(/\n/g, ' ')} |`,
 })
 turndown.addRule('tableRow', {
   filter: 'tr',
-  replacement: (content) => `|${content}\n`,
-})
-turndown.addRule('tableHead', {
-  filter: 'thead',
-  replacement: (content) => {
-    const headerRow = content.trim().split('\n')[0] || ''
-    const cols = (headerRow.match(/\|/g) || []).length - 1
-    const separator = '|' + ' --- |'.repeat(cols)
-    return `${content.trim()}\n${separator}\n`
+  replacement: function (content, node) {
+    const row = `|${content}\n`
+    // If this row contains <th> cells, add separator after it
+    const hasTh = node.querySelector?.('th')
+    if (hasTh) {
+      const cellCount = node.querySelectorAll?.('th, td')?.length || 0
+      return `${row}|${' --- |'.repeat(cellCount)}\n`
+    }
+    return row
   },
 })
-turndown.addRule('tableBody', {
-  filter: 'tbody',
+turndown.addRule('tableSection', {
+  filter: ['thead', 'tbody', 'tfoot'],
   replacement: (content) => content,
 })
 turndown.addRule('table', {
