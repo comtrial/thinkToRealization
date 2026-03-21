@@ -278,67 +278,102 @@ function NodeHierarchy() {
   const openPanel = useUIStore((s) => s.openPanel)
   const canvasNodes = useCanvasStore((s) => s.nodes)
 
-  if (!selectedNode) return null
+  // Fetch parent and child titles that canvas may not have loaded
+  const [parentInfo, setParentInfo] = useState<{ id: string; title: string } | null>(null)
+  const [childNodes, setChildNodes] = useState<{ id: string; title: string; status: string }[]>([])
 
-  // Look up parent node data from canvas
-  const parentNodeId = selectedNode.parentNodeId
-  const parentCanvasNode = parentNodeId
-    ? canvasNodes.find((n) => n.id === parentNodeId)
-    : null
-  const parentTitle = parentCanvasNode
-    ? (parentCanvasNode.data as Record<string, unknown>)?.title as string
-    : null
+  useEffect(() => {
+    if (!selectedNode) return
 
-  // Derive child nodes: by parentNodeId field on canvas nodes + outEdges parent_child type
-  const childNodeIds = new Set<string>()
-
-  // 1) Canvas nodes whose parentNodeId points to this node
-  canvasNodes.forEach((cn) => {
-    if ((cn.data as Record<string, unknown>)?.parentNodeId === selectedNode.id) {
-      childNodeIds.add(cn.id)
+    // Fetch parent title
+    const parentNodeId = selectedNode.parentNodeId
+    if (parentNodeId) {
+      // Try canvas first
+      const parentCN = canvasNodes.find((n) => n.id === parentNodeId)
+      if (parentCN) {
+        setParentInfo({ id: parentNodeId, title: (parentCN.data as Record<string, unknown>)?.title as string || parentNodeId.slice(0, 8) })
+      } else {
+        // Fetch from API
+        fetch(`/api/nodes/${parentNodeId}`).then(r => r.json()).then(({ data }) => {
+          if (data?.title) setParentInfo({ id: parentNodeId, title: data.title })
+          else setParentInfo({ id: parentNodeId, title: parentNodeId.slice(0, 8) })
+        }).catch(() => setParentInfo({ id: parentNodeId, title: parentNodeId.slice(0, 8) }))
+      }
+    } else {
+      setParentInfo(null)
     }
-  })
 
-  // 2) outEdges with parent_child type
-  const nodeWithEdges = selectedNode as unknown as {
-    outEdges?: EdgeResponse[]
-  }
-  ;(nodeWithEdges.outEdges ?? [])
-    .filter((e) => e.type === 'parent_child')
-    .forEach((e) => childNodeIds.add(e.toNodeId))
+    // Collect child IDs from multiple sources
+    const childIds = new Set<string>()
 
-  const childNodes = Array.from(childNodeIds)
-    .map((id) => {
-      const canvasNode = canvasNodes.find((n) => n.id === id)
-      if (!canvasNode) return null
-      const data = canvasNode.data as Record<string, unknown>
-      return {
-        id,
-        title: (data.title as string) || '(untitled)',
-        status: (data.status as string) || 'backlog',
+    // 1) Canvas nodes whose parentNodeId points to this node
+    canvasNodes.forEach((cn) => {
+      if ((cn.data as Record<string, unknown>)?.parentNodeId === selectedNode.id) {
+        childIds.add(cn.id)
       }
     })
-    .filter(Boolean) as { id: string; title: string; status: string }[]
+
+    // 2) outEdges with parent_child type
+    const nodeWithEdges = selectedNode as unknown as { outEdges?: EdgeResponse[] }
+    ;(nodeWithEdges.outEdges ?? [])
+      .filter((e) => e.type === 'parent_child')
+      .forEach((e) => childIds.add(e.toNodeId))
+
+    if (childIds.size === 0) {
+      // 3) Fetch children from API using project nodes endpoint
+      fetch(`/api/projects/${selectedNode.projectId}/nodes`).then(r => r.json()).then(({ data }) => {
+        if (!data) return setChildNodes([])
+        const children = (data as { id: string; title: string; status: string; parentNodeId?: string }[])
+          .filter((n) => n.parentNodeId === selectedNode.id)
+          .map((n) => ({ id: n.id, title: n.title, status: n.status }))
+        setChildNodes(children)
+      }).catch(() => setChildNodes([]))
+    } else {
+      // Resolve titles from canvas or API
+      const resolved: { id: string; title: string; status: string }[] = []
+      const toFetch: string[] = []
+      childIds.forEach((id) => {
+        const cn = canvasNodes.find((n) => n.id === id)
+        if (cn) {
+          const d = cn.data as Record<string, unknown>
+          resolved.push({ id, title: (d.title as string) || '(untitled)', status: (d.status as string) || 'backlog' })
+        } else {
+          toFetch.push(id)
+        }
+      })
+      if (toFetch.length === 0) {
+        setChildNodes(resolved)
+      } else {
+        Promise.all(toFetch.map(id => fetch(`/api/nodes/${id}`).then(r => r.json()).then(({ data }) =>
+          data ? { id, title: data.title, status: data.status } : null
+        ).catch(() => null))).then((fetched) => {
+          setChildNodes([...resolved, ...fetched.filter(Boolean) as { id: string; title: string; status: string }[]])
+        })
+      }
+    }
+  }, [selectedNode, canvasNodes])
+
+  if (!selectedNode) return null
 
   const handleNavigate = (nodeId: string) => {
     selectNode(nodeId)
     openPanel(nodeId)
   }
 
-  if (!parentNodeId && childNodes.length === 0) return null
+  if (!parentInfo && childNodes.length === 0) return null
 
   return (
     <div className="flex flex-col gap-2">
       {/* Parent issue */}
-      {parentNodeId && (
+      {parentInfo && (
         <div className="flex items-center gap-1 text-caption text-text-secondary">
           <span className="text-[11px] text-text-tertiary">상위 이슈</span>
           <ChevronRight size={12} className="text-text-tertiary" />
           <button
-            onClick={() => handleNavigate(parentNodeId)}
+            onClick={() => handleNavigate(parentInfo.id)}
             className="hover:text-accent hover:underline transition-colors truncate max-w-[260px]"
           >
-            {parentTitle || parentNodeId.slice(0, 8)}
+            {parentInfo.title}
           </button>
         </div>
       )}
