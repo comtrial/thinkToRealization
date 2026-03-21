@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unsealData } from "iron-session";
 import { sessionOptions } from "@/lib/auth/session";
 
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = ["/login", "/register", "/guide"];
 const PUBLIC_API_PATHS = ["/api/auth/login", "/api/auth/register", "/api/test/"];
 
 export async function middleware(req: NextRequest) {
