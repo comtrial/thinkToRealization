@@ -204,19 +204,16 @@ export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
 
   const datesSection = (
     <div className="text-[11px] text-text-tertiary flex flex-col gap-1.5 pt-3 border-t border-border/30">
-      {selectedNode.createdByName && (
-        <div className="flex justify-between">
-          <span>Created by</span>
-          <span className="text-text-secondary">{selectedNode.createdByName}</span>
-        </div>
-      )}
       <div className="flex justify-between">
         <span>Created</span>
-        <span>{new Date(selectedNode.createdAt).toLocaleDateString('ko-KR')}</span>
+        <span>
+          {new Date(selectedNode.createdAt).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+          {selectedNode.createdByName && <span className="text-text-secondary"> · {selectedNode.createdByName}</span>}
+        </span>
       </div>
       <div className="flex justify-between">
         <span>Updated</span>
-        <span>{new Date(selectedNode.updatedAt).toLocaleDateString('ko-KR')}</span>
+        <span>{new Date(selectedNode.updatedAt).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
       </div>
     </div>
   )
