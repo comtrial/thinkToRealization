@@ -272,86 +272,57 @@ export function NodeProperties({ vertical = false }: { vertical?: boolean }) {
 }
 
 // Hierarchy section: parent + children
+interface LinkedNode { id: string; title: string; status: string; label?: string }
+
 function NodeHierarchy() {
   const selectedNode = useNodeStore((s) => s.selectedNode)
   const selectNode = useNodeStore((s) => s.selectNode)
   const openPanel = useUIStore((s) => s.openPanel)
-  const canvasNodes = useCanvasStore((s) => s.nodes)
 
-  // Fetch parent and child titles that canvas may not have loaded
   const [parentInfo, setParentInfo] = useState<{ id: string; title: string } | null>(null)
-  const [childNodes, setChildNodes] = useState<{ id: string; title: string; status: string }[]>([])
+  const [childNodes, setChildNodes] = useState<LinkedNode[]>([])
+  const [downstreamNodes, setDownstreamNodes] = useState<LinkedNode[]>([])
 
   useEffect(() => {
     if (!selectedNode) return
+    const nodeWithEdges = selectedNode as unknown as { outEdges?: EdgeResponse[]; inEdges?: EdgeResponse[] }
+    const outEdges = nodeWithEdges.outEdges ?? []
 
-    // Fetch parent title
-    const parentNodeId = selectedNode.parentNodeId
-    if (parentNodeId) {
-      // Try canvas first
-      const parentCN = canvasNodes.find((n) => n.id === parentNodeId)
-      if (parentCN) {
-        setParentInfo({ id: parentNodeId, title: (parentCN.data as Record<string, unknown>)?.title as string || parentNodeId.slice(0, 8) })
-      } else {
-        // Fetch from API
-        fetch(`/api/nodes/${parentNodeId}`).then(r => r.json()).then(({ data }) => {
-          if (data?.title) setParentInfo({ id: parentNodeId, title: data.title })
-          else setParentInfo({ id: parentNodeId, title: parentNodeId.slice(0, 8) })
-        }).catch(() => setParentInfo({ id: parentNodeId, title: parentNodeId.slice(0, 8) }))
-      }
+    // --- Parent (via parentNodeId) ---
+    const pid = selectedNode.parentNodeId
+    if (pid) {
+      fetch(`/api/nodes/${pid}`).then(r => r.json()).then(({ data }) => {
+        setParentInfo(data ? { id: pid, title: data.title } : { id: pid, title: pid.slice(0, 8) })
+      }).catch(() => setParentInfo({ id: pid, title: pid.slice(0, 8) }))
     } else {
       setParentInfo(null)
     }
 
-    // Collect child IDs from multiple sources
-    const childIds = new Set<string>()
+    // --- Children (parentNodeId pointing here) ---
+    fetch(`/api/projects/${selectedNode.projectId}/nodes`).then(r => r.json()).then(({ data }) => {
+      if (!data) return setChildNodes([])
+      const children = (data as { id: string; title: string; status: string; parentNodeId?: string | null }[])
+        .filter((n) => n.parentNodeId === selectedNode.id)
+        .map((n) => ({ id: n.id, title: n.title, status: n.status }))
+      setChildNodes(children)
+    }).catch(() => setChildNodes([]))
 
-    // 1) Canvas nodes whose parentNodeId points to this node
-    canvasNodes.forEach((cn) => {
-      if ((cn.data as Record<string, unknown>)?.parentNodeId === selectedNode.id) {
-        childIds.add(cn.id)
-      }
-    })
-
-    // 2) outEdges with parent_child type
-    const nodeWithEdges = selectedNode as unknown as { outEdges?: EdgeResponse[] }
-    ;(nodeWithEdges.outEdges ?? [])
-      .filter((e) => e.type === 'parent_child')
-      .forEach((e) => childIds.add(e.toNodeId))
-
-    if (childIds.size === 0) {
-      // 3) Fetch children from API using project nodes endpoint
-      fetch(`/api/projects/${selectedNode.projectId}/nodes`).then(r => r.json()).then(({ data }) => {
-        if (!data) return setChildNodes([])
-        const children = (data as { id: string; title: string; status: string; parentNodeId?: string }[])
-          .filter((n) => n.parentNodeId === selectedNode.id)
-          .map((n) => ({ id: n.id, title: n.title, status: n.status }))
-        setChildNodes(children)
-      }).catch(() => setChildNodes([]))
+    // --- Downstream (outEdges targets, excluding parent_child since those are children) ---
+    const downIds = outEdges
+      .filter((e) => e.type !== 'parent_child')
+      .map((e) => ({ id: e.toNodeId, label: e.label || e.type }))
+    if (downIds.length === 0) {
+      setDownstreamNodes([])
     } else {
-      // Resolve titles from canvas or API
-      const resolved: { id: string; title: string; status: string }[] = []
-      const toFetch: string[] = []
-      childIds.forEach((id) => {
-        const cn = canvasNodes.find((n) => n.id === id)
-        if (cn) {
-          const d = cn.data as Record<string, unknown>
-          resolved.push({ id, title: (d.title as string) || '(untitled)', status: (d.status as string) || 'backlog' })
-        } else {
-          toFetch.push(id)
-        }
+      Promise.all(downIds.map(({ id, label }) =>
+        fetch(`/api/nodes/${id}`).then(r => r.json()).then(({ data }) =>
+          data ? { id, title: data.title, status: data.status, label } : null
+        ).catch(() => null)
+      )).then((results) => {
+        setDownstreamNodes(results.filter(Boolean) as LinkedNode[])
       })
-      if (toFetch.length === 0) {
-        setChildNodes(resolved)
-      } else {
-        Promise.all(toFetch.map(id => fetch(`/api/nodes/${id}`).then(r => r.json()).then(({ data }) =>
-          data ? { id, title: data.title, status: data.status } : null
-        ).catch(() => null))).then((fetched) => {
-          setChildNodes([...resolved, ...fetched.filter(Boolean) as { id: string; title: string; status: string }[]])
-        })
-      }
     }
-  }, [selectedNode, canvasNodes])
+  }, [selectedNode])
 
   if (!selectedNode) return null
 
@@ -360,10 +331,10 @@ function NodeHierarchy() {
     openPanel(nodeId)
   }
 
-  if (!parentInfo && childNodes.length === 0) return null
+  if (!parentInfo && childNodes.length === 0 && downstreamNodes.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {/* Parent issue */}
       {parentInfo && (
         <div className="flex items-center gap-1 text-caption text-text-secondary">
@@ -378,7 +349,7 @@ function NodeHierarchy() {
         </div>
       )}
 
-      {/* Child issues */}
+      {/* Child issues (parentNodeId) */}
       {childNodes.length > 0 && (
         <div>
           <span className="text-[11px] text-text-tertiary block mb-1.5">
@@ -391,12 +362,32 @@ function NodeHierarchy() {
                 onClick={() => handleNavigate(child.id)}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-md text-caption text-text-primary hover:bg-surface-hover transition-colors text-left group"
               >
-                <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_COLORS[child.status] || 'bg-gray-400'}`}
-                />
-                <span className="truncate group-hover:text-accent transition-colors">
-                  {child.title}
-                </span>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_COLORS[child.status] || 'bg-gray-400'}`} />
+                <span className="truncate group-hover:text-accent transition-colors">{child.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Downstream linked issues (outEdges: sequence, dependency, related) */}
+      {downstreamNodes.length > 0 && (
+        <div>
+          <span className="text-[11px] text-text-tertiary block mb-1.5">
+            연결된 이슈 ({downstreamNodes.length})
+          </span>
+          <div className="flex flex-col gap-1">
+            {downstreamNodes.map((node) => (
+              <button
+                key={node.id}
+                onClick={() => handleNavigate(node.id)}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-caption text-text-primary hover:bg-surface-hover transition-colors text-left group"
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT_COLORS[node.status] || 'bg-gray-400'}`} />
+                <span className="truncate group-hover:text-accent transition-colors flex-1">{node.title}</span>
+                {node.label && (
+                  <span className="text-[10px] text-text-tertiary shrink-0 px-1.5 py-0.5 bg-surface-hover rounded">{node.label}</span>
+                )}
               </button>
             ))}
           </div>
