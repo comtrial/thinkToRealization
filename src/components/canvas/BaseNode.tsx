@@ -199,7 +199,7 @@ export const BaseNode = memo(function BaseNode({ id, data, selected }: NodeProps
       )}
 
       {/* Type color bar */}
-      <TypeColorBar type={nodeData.type} />
+      <TypeColorBar type={nodeData.type} status={nodeData.status} />
 
       {/* Level 1: Compact (zoom <= 80%) */}
       <div
