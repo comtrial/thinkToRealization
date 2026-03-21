@@ -186,9 +186,10 @@ export const BaseNode = memo(function BaseNode({ id, data, selected }: NodeProps
       className={cn(
         'relative rounded-node border transition-shadow duration-zoom',
         selected ? 'border-accent border-2 shadow-elevation-2' : 'border-border',
-        !selected && nodeData.status === 'in_progress' && 'border-accent/40 bg-accent/[0.02]',
+        !selected && nodeData.status === 'in_progress' && 'border-indigo-400 bg-indigo-50/60 shadow-[inset_4px_0_0_0_#6366F1]',
         !selected && nodeData.status === 'done' && 'bg-green-50/50 border-green-300/40 opacity-70',
         !selected && nodeData.status === 'archived' && 'opacity-40 bg-gray-50',
+        !selected && nodeData.status === 'backlog' && 'opacity-50',
         !selected && (nodeData.status === 'backlog' || nodeData.status === 'todo') && 'bg-surface',
         'hover:shadow-elevation-1'
       )}
