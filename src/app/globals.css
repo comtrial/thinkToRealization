@@ -246,6 +246,32 @@ body {
   height: 0;
 }
 
+.tiptap-editor .tiptap-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.tiptap-editor .tiptap-content th,
+.tiptap-editor .tiptap-content td {
+  border: 1px solid var(--color-border);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.tiptap-editor .tiptap-content th {
+  background: var(--color-surface-hover, #F5F5F3);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.tiptap-editor .tiptap-content td {
+  color: var(--color-text-primary);
+}
+
 /* highlight.js theme for session log code blocks */
 .hljs {
   background: #1E1E1E !important;

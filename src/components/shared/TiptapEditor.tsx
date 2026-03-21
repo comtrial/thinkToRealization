@@ -4,6 +4,10 @@ import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { useMobile } from '@/hooks/useMobile'
 import { EditorMobileToolbar } from './EditorMobileToolbar'
@@ -71,6 +75,10 @@ export function TiptapEditor({ content, onUpdate, onBlurSave, placeholder, class
         inline: false,
         allowBase64: false,
       }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableCell,
+      TableHeader,
     ],
     content: content ? htmlFromMarkdown(content) : '',
     editorProps: {
