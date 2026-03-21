@@ -9,16 +9,12 @@ export function createServer(client: TTRClient): McpServer {
     version: "1.0.0",
   })
 
-  // Session identity — auto-prepended to all comments/decisions
+  // Session identity — stored in DB source/sourceSession fields
   let sessionName: string | null = null
 
-  function withVia(content: string, explicitVia?: string): string {
+  function getSource(explicitVia?: string): { source: string; sourceSession?: string } {
     const via = explicitVia || sessionName
-    return via ? `[via ${via}] ${content}` : content
-  }
-
-  function viaLabel(explicitVia?: string): string | undefined {
-    return explicitVia || sessionName || undefined
+    return via ? { source: "cli", sourceSession: via } : { source: "cli" }
   }
 
   // ── ttr_set_session ──────────────────────────────────────
@@ -181,15 +177,12 @@ export function createServer(client: TTRClient): McpServer {
         triggerType: "user_manual",
       })
 
-      // Auto-comment with source info (uses sessionName if via not provided)
-      const effectiveVia = viaLabel(via)
-      const parts: string[] = []
-      if (effectiveVia) parts.push(`[via ${effectiveVia}]`)
-      parts.push(`상태 변경: → ${status}`)
-      if (note) parts.push(note)
-      await client.post(`/api/nodes/${nodeId}/comments`, { content: parts.join(" ") }).catch(() => {})
+      // Auto-comment with source info (DB fields, not text prefix)
+      const src = getSource(via)
+      const commentText = note ? `상태 변경: → ${status} — ${note}` : `상태 변경: → ${status}`
+      await client.post(`/api/nodes/${nodeId}/comments`, { content: commentText, ...src }).catch(() => {})
 
-      return { content: [{ type: "text", text: `✓ "${result.title}" → ${status}${effectiveVia ? ` (via ${effectiveVia})` : ""}` }] }
+      return { content: [{ type: "text", text: `✓ "${result.title}" → ${status}${src.sourceSession ? ` (${src.sourceSession})` : ""}` }] }
     }
   )
 
@@ -226,10 +219,9 @@ export function createServer(client: TTRClient): McpServer {
       via: z.string().optional().describe("출처 세션 이름 (미입력 시 ttr_set_session 값 사용)"),
     },
     async ({ nodeId, content, via }) => {
-      const body = withVia(content, via)
-      const effectiveVia = viaLabel(via)
-      const comment = await client.post<TTRComment>(`/api/nodes/${nodeId}/comments`, { content: body })
-      return { content: [{ type: "text", text: `✓ 코멘트 추가됨${effectiveVia ? ` (via ${effectiveVia})` : ""}` }] }
+      const src = getSource(via)
+      const comment = await client.post<TTRComment>(`/api/nodes/${nodeId}/comments`, { content, ...src })
+      return { content: [{ type: "text", text: `✓ 코멘트 추가됨${src.sourceSession ? ` (${src.sourceSession})` : ""}` }] }
     }
   )
 
@@ -242,11 +234,9 @@ export function createServer(client: TTRClient): McpServer {
       content: z.string().describe("결정 내용"),
       via: z.string().optional().describe("출처 세션 이름 (미입력 시 ttr_set_session 값 사용)"),
     },
-    async ({ nodeId, content, via }) => {
-      const body = withVia(content, via)
-      const effectiveVia = viaLabel(via)
-      const decision = await client.post<TTRDecision>("/api/decisions", { nodeId, content: body })
-      return { content: [{ type: "text", text: `✓ 결정 기록됨${effectiveVia ? ` (via ${effectiveVia})` : ""}: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"` }] }
+    async ({ nodeId, content }) => {
+      const decision = await client.post<TTRDecision>("/api/decisions", { nodeId, content })
+      return { content: [{ type: "text", text: `✓ 결정 기록됨: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"` }] }
     }
   )
 
@@ -329,13 +319,12 @@ export function createServer(client: TTRClient): McpServer {
         }
       }
 
-      // 6. Auto-comment if session is set
-      const effectiveVia = viaLabel()
-      if (effectiveVia) {
-        await client.post(`/api/nodes/${node.id}/comments`, {
-          content: `[via ${effectiveVia}] 노드 생성됨`
-        }).catch(() => {})
-      }
+      // 6. Auto-comment with source tracking
+      const src = getSource()
+      await client.post(`/api/nodes/${node.id}/comments`, {
+        content: "노드 생성됨",
+        ...src,
+      }).catch(() => {})
 
       const lines = [
         `✓ 노드 생성: "${title}" (${node.id})`,

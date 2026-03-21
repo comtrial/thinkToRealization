@@ -7,6 +7,8 @@ import { createNotification } from "@/lib/notifications/create";
 
 const createCommentSchema = z.object({
   content: z.string().min(1, "댓글 내용을 입력해주세요").max(5000),
+  source: z.enum(["web", "cli", "system"]).optional(),
+  sourceSession: z.string().max(100).optional(),
 });
 
 export async function GET(
@@ -55,6 +57,8 @@ export async function POST(
         nodeId,
         userId: auth.session.userId,
         content: parsed.content,
+        source: parsed.source || "web",
+        sourceSession: parsed.sourceSession || null,
       },
       include: {
         user: { select: { id: true, name: true, avatarUrl: true } },

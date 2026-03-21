@@ -177,6 +177,8 @@ model NodeComment {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   content   String
+  source    String   @default("web")  // "web" | "cli" | "system"
+  sourceSession String?               // CLI session name (e.g. "Commerce Intel CLI")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([nodeId])

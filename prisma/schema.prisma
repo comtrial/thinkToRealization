@@ -191,14 +191,16 @@ model NodeStateLog {
 }
 
 model NodeComment {
-  id        String   @id @default(cuid())
-  nodeId    String
-  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  nodeId        String
+  node          Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content       String
+  source        String   @default("web") // "web" | "cli" | "system"
+  sourceSession String? // CLI session name (e.g. "Commerce Intel CLI")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([nodeId])
 }

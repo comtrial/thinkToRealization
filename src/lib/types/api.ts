@@ -192,6 +192,8 @@ export interface CommentResponse {
   nodeId: string;
   userId: string;
   content: string;
+  source: string;          // "web" | "cli" | "system"
+  sourceSession: string | null;  // CLI session name
   createdAt: string;
   updatedAt: string;
   user: { id: string; name: string; avatarUrl: string | null };

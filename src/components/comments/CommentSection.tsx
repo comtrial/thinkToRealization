@@ -21,23 +21,26 @@ function timeAgo(dateStr: string): string {
   return `${days}일 전`
 }
 
-function CommentContent({ content }: { content: string }) {
-  // Parse [via SessionName] prefix into a badge
-  const viaMatch = content.match(/^\[via\s+(.+?)\]\s*/)
-  if (viaMatch) {
-    const viaName = viaMatch[1]
-    const rest = content.slice(viaMatch[0].length)
-    return (
-      <div className="mt-0.5">
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent/10 text-accent mr-1.5">
-          CLI: {viaName}
-        </span>
-        <p className="text-[13px] text-text-secondary whitespace-pre-wrap break-words leading-relaxed inline">{rest}</p>
-      </div>
-    )
-  }
+function CommentContent({ content, source, sourceSession }: { content: string; source?: string; sourceSession?: string | null }) {
+  const isCli = source === 'cli'
+  const isSystem = source === 'system'
+
   return (
-    <p className="text-[13px] text-text-secondary mt-0.5 whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+    <div className="mt-0.5">
+      {isCli && (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent/10 text-accent mr-1.5 mb-0.5">
+          CLI{sourceSession ? `: ${sourceSession}` : ''}
+        </span>
+      )}
+      {isSystem && (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 mr-1.5 mb-0.5">
+          system
+        </span>
+      )}
+      <p className={`text-[13px] whitespace-pre-wrap break-words leading-relaxed ${isCli || isSystem ? 'inline' : 'mt-0.5'} ${isSystem ? 'text-text-tertiary' : 'text-text-secondary'}`}>
+        {content}
+      </p>
+    </div>
   )
 }
 
@@ -174,7 +177,7 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
                       </button>
                     </div>
                   ) : (
-                    <CommentContent content={c.content} />
+                    <CommentContent content={c.content} source={c.source} sourceSession={c.sourceSession} />
                   )}
                 </div>
               </div>
