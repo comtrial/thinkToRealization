@@ -250,5 +250,103 @@ export function createServer(client: TTRClient): McpServer {
     }
   )
 
+  // ── ttr_create_node ────────────────────────────────────────
+  server.tool(
+    "ttr_create_node",
+    "새 노드 생성. 부모 노드를 지정하면 그 아래에 배치되고, 선행/후행 노드와 엣지도 함께 생성 가능.",
+    {
+      projectId: z.string().describe("프로젝트 ID"),
+      title: z.string().describe("노드 제목"),
+      type: z.enum(["planning", "feature", "issue"]).optional().describe("노드 타입 (기본: feature)"),
+      description: z.string().optional().describe("노드 설명 (Markdown)"),
+      status: z.enum(["backlog", "todo", "in_progress"]).optional().describe("초기 상태 (기본: backlog)"),
+      priority: z.enum(["none", "low", "medium", "high", "urgent"]).optional().describe("우선순위 (기본: none)"),
+      parentNodeId: z.string().optional().describe("상위 노드 ID (하위 노드로 생성, 부모 근처에 자동 배치)"),
+      afterNodeId: z.string().optional().describe("선행 노드 ID (이 노드 뒤에 sequence 엣지 생성)"),
+      dependsOn: z.array(z.string()).optional().describe("의존 노드 ID 목록 (dependency 엣지 생성)"),
+      relatedTo: z.array(z.string()).optional().describe("연관 노드 ID 목록 (related 엣지 생성)"),
+    },
+    async ({ projectId, title, type, description, status, priority, parentNodeId, afterNodeId, dependsOn, relatedTo }) => {
+      // 1. Determine canvas position
+      let canvasX = 200
+      let canvasY = 200
+
+      if (parentNodeId) {
+        // Place near parent
+        try {
+          const parent = await client.get<TTRNode>(`/api/nodes/${parentNodeId}`)
+          canvasX = (parent as unknown as { canvasX: number }).canvasX + 50
+          canvasY = (parent as unknown as { canvasY: number }).canvasY + 200
+        } catch { /* fallback to default */ }
+      } else if (afterNodeId) {
+        // Place to the right of the preceding node
+        try {
+          const prev = await client.get<TTRNode>(`/api/nodes/${afterNodeId}`)
+          canvasX = (prev as unknown as { canvasX: number }).canvasX + 350
+          canvasY = (prev as unknown as { canvasY: number }).canvasY
+        } catch { /* fallback to default */ }
+      }
+
+      // 2. Create the node
+      const node = await client.post<TTRNode>(`/api/projects/${projectId}/nodes`, {
+        title,
+        type: type || "feature",
+        description: description || undefined,
+        status: status || "backlog",
+        priority: priority || "none",
+        canvasX,
+        canvasY,
+        parentNodeId: parentNodeId || undefined,
+      })
+
+      const createdEdges: string[] = []
+
+      // 3. Create sequence edge from afterNode
+      if (afterNodeId) {
+        try {
+          await client.post("/api/edges", { fromNodeId: afterNodeId, toNodeId: node.id, type: "sequence" })
+          createdEdges.push(`${afterNodeId} →[sequence]→ ${node.id}`)
+        } catch { /* ignore */ }
+      }
+
+      // 4. Create dependency edges
+      if (dependsOn?.length) {
+        for (const depId of dependsOn) {
+          try {
+            await client.post("/api/edges", { fromNodeId: depId, toNodeId: node.id, type: "dependency" })
+            createdEdges.push(`${depId} →[dependency]→ ${node.id}`)
+          } catch { /* ignore */ }
+        }
+      }
+
+      // 5. Create related edges
+      if (relatedTo?.length) {
+        for (const relId of relatedTo) {
+          try {
+            await client.post("/api/edges", { fromNodeId: node.id, toNodeId: relId, type: "related" })
+            createdEdges.push(`${node.id} →[related]→ ${relId}`)
+          } catch { /* ignore */ }
+        }
+      }
+
+      // 6. Auto-comment if session is set
+      const effectiveVia = viaLabel()
+      if (effectiveVia) {
+        await client.post(`/api/nodes/${node.id}/comments`, {
+          content: `[via ${effectiveVia}] 노드 생성됨`
+        }).catch(() => {})
+      }
+
+      const lines = [
+        `✓ 노드 생성: "${title}" (${node.id})`,
+        `  타입: ${type || "feature"}, 상태: ${status || "backlog"}`,
+      ]
+      if (parentNodeId) lines.push(`  상위: ${parentNodeId}`)
+      if (createdEdges.length > 0) lines.push(`  엣지 ${createdEdges.length}개 생성`)
+
+      return { content: [{ type: "text", text: lines.join("\n") }] }
+    }
+  )
+
   return server
 }
