@@ -467,6 +467,37 @@ Shadow:  elevation-1 ~ elevation-4
 
 ---
 
+## UX/사용성 자동 검증 (모든 UI 변경 시 필수 — CRITICAL)
+코드 변경 시 아래 항목을 **스스로 검증**하고, 문제 발견 시 수정 후 배포해야 함.
+유저가 대충 요청해도 아래 기준은 항상 자동 적용할 것.
+
+### 1. 에러 피드백 원칙
+- API 호출 실패 시 **반드시** 사용자에게 에러를 보여줘야 함 (toast, inline 메시지 등)
+- "조용히 실패"(silent failure)는 절대 금지 — console.error만 찍고 UI에 아무것도 안 보이면 안 됨
+- Zod validation 실패, 네트워크 에러, 401/403/500 모두 사용자에게 피드백 필요
+
+### 2. 입력 제한 & 검증
+- Zod 스키마에 `.max()` 제한이 있으면, 클라이언트에서도 같은 제한을 안내하거나 서버 에러를 사용자에게 보여줘야 함
+- 큰 텍스트 붙여넣기가 가능한 필드는 제한을 넉넉하게 설정 (description: 50000자)
+- 제한 초과 시 "내용이 너무 깁니다 (최대 N자)" 같은 에러 표시
+
+### 3. 저장 상태 표시
+- 자동 저장 기능이 있으면 **저장 상태 인디케이터** 필수 ("저장 중..." / "✓ 저장됨" / "✗ 저장 실패")
+- debounce 저장은 blur/이탈 시 즉시 flush되어야 함
+- 저장 실패 시 에러 토스트 표시
+
+### 4. 콜백/클로저 검증
+- Tiptap, ReactFlow 등 한 번 초기화 후 콜백을 고정하는 라이브러리에서는 **반드시 useRef로 콜백 래핑**
+- `useCallback` deps가 바뀌어도 라이브러리 내부 콜백은 갱신 안 될 수 있음 주의
+- 컴포넌트 전환 시 이전 상태의 저장이 정확한 ID로 가는지 검증
+
+### 5. 대용량 데이터 처리
+- 텍스트 에디터에 긴 마크다운 붙여넣기 → 저장까지 정상 동작 검증
+- 노드가 많은 프로젝트 (30개+) → 대시보드/캔버스 로딩 정상 검증
+- API 응답이 느릴 때 로딩 상태 표시 검증
+
+---
+
 ## Learnings
 - **`.next` 캐시 + dev 서버 사망 패턴**: `rm -rf .next`는 dev 서버를 즉시 죽임. `npm run build`는 별도 프로세스라 dev 서버를 재시작하지 않음. 빌드 후 반드시 dev 서버 생존 확인 + 필요시 재시작. 또한 stale `.next` 캐시는 500 에러(`Cannot find module vendor-chunks/...`) 또는 삭제된 API 라우트 참조 에러를 유발하므로 빌드 실패 시 `rm -rf .next` 후 재빌드
 - **Cookie 이름 변경 시 세션 무효화**: cookie 이름을 변경하면(`devflow-session` → `ttr-session`) 기존 브라우저 세션이 모두 무효화됨. 사용자에게 재로그인 안내 필수
@@ -486,3 +517,6 @@ Shadow:  elevation-1 ~ elevation-4
 - **N+1 쿼리 방지 패턴**: 루프 내 개별 findUnique 대신, 프로젝트 전체 노드를 한번에 findMany → Map으로 인메모리 조회 (context-assembler)
 - **Vercel 리전 설정**: vercel.json의 `regions`를 Supabase와 동일 리전으로 (bom1=Mumbai). 크로스리전 지연 제거
 - **PrismaClient globalThis 캐싱**: production 포함 모든 환경에서 `globalForPrisma.prisma = prisma` 설정 필수. Vercel 서버리스에서 매 요청 새 클라이언트 방지
+- **Tiptap useEditor stale closure**: `useEditor`는 초기화 시 콜백(onUpdate, onBlur)을 고정. 이후 props 변경해도 내부 콜백 갱신 안 됨. **반드시 useRef로 콜백 래핑**하여 항상 최신 버전 호출
+- **Description 저장 실패 silent bug**: Zod `.max(5000)` 제한 → 긴 마크다운 붙여넣기 시 validation error → UI에 피드백 없이 조용히 실패. 제한을 50000으로 올리고, 모든 API 에러는 반드시 사용자에게 표시
+- **debounce + 노드 전환 = 잘못된 노드에 저장**: `saveDescription`이 closure로 `selectedNode.id`를 캡처 → 노드 전환 후 debounce 실행 시 새 노드 ID로 잘못 저장. 반드시 pending에 nodeId를 함께 저장하고, flush 시 저장된 nodeId 사용
