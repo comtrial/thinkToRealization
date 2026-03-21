@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Plus, ChevronRight, Trash2, MoreHorizontal, Copy, Archive, ClipboardCopy, Check, X } from 'lucide-react'
+import { Plus, ChevronRight, Trash2, MoreHorizontal, Copy, Archive, ClipboardCopy, Check, X, Crosshair } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useNodeStore } from '@/stores/node-store'
 import { useCanvasStore } from '@/stores/canvas-store'
@@ -368,6 +368,7 @@ export function NodeDetailPanel({ showProperties = true, onClose }: { showProper
   const canvasNodes = useCanvasStore((s) => s.nodes)
   const canvasEdges = useCanvasStore((s) => s.edges)
   const panelMode = useUIStore((s) => s.panelMode)
+  const focusNodeOnCanvas = useUIStore((s) => s.focusNodeOnCanvas)
   const { currentProject } = useProject()
   const { addToast } = useToast()
 
@@ -549,6 +550,15 @@ ${decisionsText}
             </h1>
           )}
         </div>
+
+        {/* Go to canvas button */}
+        <button
+          onClick={() => selectedNode && focusNodeOnCanvas(selectedNode.id)}
+          className="shrink-0 p-1.5 rounded-button text-text-tertiary hover:text-accent hover:bg-surface-hover transition-colors"
+          title="캔버스에서 보기"
+        >
+          <Crosshair size={16} />
+        </button>
 
         {/* Copy Claude Script button */}
         <button

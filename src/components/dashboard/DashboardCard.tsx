@@ -21,12 +21,12 @@ interface DashboardCardProps {
 }
 
 export function DashboardCard({ node, compact = false }: DashboardCardProps) {
-  const focusNodeOnCanvas = useUIStore((s) => s.focusNodeOnCanvas)
+  const openPanel = useUIStore((s) => s.openPanel)
   const selectNode = useNodeStore((s) => s.selectNode)
 
   const handleClick = () => {
     selectNode(node.id)
-    focusNodeOnCanvas(node.id)
+    openPanel(node.id)
   }
 
   const lastWorkTime = node.lastSessionAt
