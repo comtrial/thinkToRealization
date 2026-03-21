@@ -27,8 +27,6 @@ interface TiptapEditorProps {
 }
 
 function htmlFromMarkdown(md: string): string {
-  // Use marked for proper markdown → HTML conversion
-  // marked.parse can return string or Promise<string>; we use sync mode
   const result = marked.parse(md, { async: false }) as string
   return result
 }
@@ -39,6 +37,12 @@ export function TiptapEditor({ content, onUpdate, onBlurSave, placeholder, class
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMobile = useMobile()
 
+  // Use refs for callbacks so Tiptap always calls the latest version
+  const onUpdateRef = useRef(onUpdate)
+  const onBlurSaveRef = useRef(onBlurSave)
+  useEffect(() => { onUpdateRef.current = onUpdate }, [onUpdate])
+  useEffect(() => { onBlurSaveRef.current = onBlurSave }, [onBlurSave])
+
   const handleFocus = useCallback(() => {
     if (blurTimeoutRef.current) {
       clearTimeout(blurTimeoutRef.current)
@@ -48,12 +52,11 @@ export function TiptapEditor({ content, onUpdate, onBlurSave, placeholder, class
   }, [])
 
   const handleBlur = useCallback(() => {
-    // Delay blur to allow toolbar button taps to re-focus the editor
     blurTimeoutRef.current = setTimeout(() => {
       setIsFocused(false)
-      onBlurSave?.()
+      onBlurSaveRef.current?.()
     }, 150)
-  }, [onBlurSave])
+  }, [])
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -79,7 +82,7 @@ export function TiptapEditor({ content, onUpdate, onBlurSave, placeholder, class
       isInternalUpdate.current = true
       const html = ed.getHTML()
       const md = turndown.turndown(html)
-      onUpdate(md)
+      onUpdateRef.current(md)
     },
     onFocus: handleFocus,
     onBlur: handleBlur,
