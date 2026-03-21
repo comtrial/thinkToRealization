@@ -58,3 +58,4 @@ next-env.d.ts
 
 # supabase local
 supabase/.temp/
+mcp-server/node_modules/
