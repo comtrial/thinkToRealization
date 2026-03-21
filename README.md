@@ -1,124 +1,221 @@
-# DevFlow
+# DevFlow — AI Agent 워크플로 자동화 플랫폼
 
-AI 에이전트(Claude CLI)로 개발할 때의 사고 흐름을 캔버스에서 시각화하고 관리하는 로컬 웹앱.
+> LLM이 MCP 프로토콜로 프로젝트를 직접 관리하는 시스템.
+> "챗봇"을 넘어 "행동하는 AI"를 구현합니다.
 
-작업 노드에 터미널 세션을 연결하면 세션 시작/종료에 따라 노드 상태가 자동으로 바뀌고, 파일 변경이 기록되고, 전체 흐름이 그래프로 그려진다. 설계부터 구현까지 Claude CLI와의 vibe coding으로 만들었다.
+**Live** https://think-to-realization.vercel.app
+**MCP Guide** https://think-to-realization.vercel.app/guide
 
-## 화면
+<!-- [전체 캔버스 뷰 — 35개 노드가 상태별 색상으로 구분되어 보이는 줌 아웃 스크린샷] -->
 
-### 대시보드
-상태별로 작업 노드를 묶어서 보여준다. 필터링, 노드 생성, 상태 확인을 여기서 한다.
+---
 
-![Dashboard](docs/screenshots/dashboard.png)
+## 이 프로젝트는 뭘 하는가
 
-### 캔버스
-작업 노드를 그래프로 배치하고 관계를 연결한다. 줌 레벨에 따라 노드의 표시 정보가 달라진다.
+AI CLI(Claude Code)로 개발할 때, **여러 CLI 세션이 동시에 작업하면서 진행 상황을 자동으로 관리**하는 문제를 해결합니다.
 
-![Canvas](docs/screenshots/canvas.png)
+```
+CLI 세션 A: "Step 1 끝났어, 업데이트해줘"
+Claude: → ttr_update_status(#01, "done")     ← MCP 도구 자동 호출
+        → ttr_add_comment(#01, "DB 7개 테이블 완료")
 
-### 사이드 패널
-노드를 클릭하면 상세 정보, 세션 이력, 계획서를 볼 수 있다. 3단계 너비(닫힘/40%/80%)로 조절 가능.
+CLI 세션 B: "지금 진행 상황 어때?"
+Claude: → ttr_get_dashboard()
+        → "35개 중 5개 완료 (14%), 3개 진행중"
+```
 
-![Side Panel](docs/screenshots/side-panel.png)
+<!-- [CLI 터미널에서 ttr_update_status 호출 → 대시보드에 반영되는 모습 스크린샷 (터미널 + 브라우저 나란히)] -->
 
-### 커맨드 팔레트
-`Cmd+K`로 열고, 노드 검색이나 액션 실행을 한다.
+---
 
-![Command Palette](docs/screenshots/command-palette.png)
+## 핵심 기능
 
-## 만들게 된 배경
+### 1. MCP 서버 — LLM이 외부 시스템을 직접 조작
 
-Claude CLI로 개발하다 보면 컨텍스트가 흩어진다. 어떤 작업이 어디까지 진행됐는지, 세션에서 뭘 했는지, 파일이 뭐가 바뀌었는지. 이걸 수동으로 추적하는 게 비효율적이라 느껴서, 아예 세션 자체를 추적하고 상태를 자동 관리하는 시스템을 만들었다.
+Anthropic의 [MCP(Model Context Protocol)](https://modelcontextprotocol.io/)를 구현하여, Claude CLI가 **11개 도구**로 프로젝트를 관리합니다.
 
-## 주요 기능
+```
+ttr_set_session("Commerce Intel CLI")     세션 이름 설정
+ttr_login(email, password)                계정 전환
+ttr_get_dashboard(projectId)              진행률 조회
+ttr_update_status(nodeId, "done")         상태 변경 + 출처 자동 기록
+ttr_create_node(projectId, title, ...)    노드 생성 + 엣지 자동 연결
+ttr_add_comment(nodeId, content)          코멘트 (CLI/웹 출처 DB 분리)
+ttr_add_decision(nodeId, content)         기술 결정 기록
+```
 
-- 캔버스에서 작업 노드를 만들고, 노드에 터미널 세션을 붙여서 작업
-- 세션 시작하면 backlog → in_progress, 완료하면 → done으로 상태 자동 전이
-- 세션 중 변경된 파일을 감지해서 세션에 자동으로 매핑
-- 세션이 비정상 종료돼도 서버 재시작 시 자동 복구
-- 수동으로 상태를 바꿀 수도 있는 이중 트랙 상태 머신 (자동 + 수동)
+**기술적 특징:**
+- LLM이 도구 스키마(Zod)를 보고 파라미터를 자동 생성
+- iron-session 쿠키 인증을 MCP 서버가 투명하게 처리 (캐시 + 만료 시 자동 재로그인)
+- `source`/`sourceSession` DB 필드로 CLI vs 웹 작성 구분
 
-## AI-First 개발 방식
+<!-- [노드 상세 패널의 Activity 섹션 — "CLI: Commerce Intel CLI" 배지가 붙은 코멘트와 일반 코멘트가 구분되는 스크린샷] -->
 
-이 프로젝트 자체가 AI와의 협업 방식에 대한 실험이다.
+### 2. 캔버스 — 상태별 시맨틱 줌
 
-CLAUDE.md에 데이터 모델, 상태 전이 규칙, API 스펙, WebSocket 메시지 포맷을 전부 구조화해서 넣었다. AI가 단편적인 코드 조각이 아니라, 프로젝트 전체 맥락 안에서 일관된 코드를 생성하도록 컨텍스트를 설계한 것. 프롬프트 하나하나가 아니라 프로젝트 단위로 컨텍스트를 엔지니어링했다.
+35개 노드의 관계와 상태를 한눈에 파악할 수 있는 그래프 캔버스입니다.
 
-AI가 만든 코드가 실제로 도는지는 Playwright 테스트(235개)로 잡는다. 빌드 → 테스트 → 실패 시 수정 루프를 매 작업마다 돌린다.
+**상태별 시각 구분:**
+
+| 상태 | 시각 효과 |
+|------|----------|
+| in_progress | 인디고 글로우 + 왼쪽 5px 바 + 인디고 배경 |
+| todo | 앰버 컬러바 + 기본 배경 |
+| backlog | 점선 테두리 + 회색 배경 + 반투명 |
+| done | 초록 + 페이드 + 제목 취소선 |
+| archived | 매우 흐릿 + 회색 |
+
+<!-- [캔버스 줌 아웃 — in_progress(인디고 글로우)와 backlog(점선+회색)가 확연히 구분되는 스크린샷] -->
+
+**Dual-DOM 시맨틱 줌:**
+
+줌 아웃 시 제목만, 줌 인 시 상세 정보를 보여줍니다. **React 리렌더 0회** — CSS opacity만 전환하여 30+ 노드에서도 60fps.
+
+<!-- [줌 인 상태 — 노드 하나가 확대되어 설명, 세션 수, 상태 배지가 보이는 스크린샷] -->
+
+### 3. 실시간 자동 저장 (5중 안전장치)
+
+| 트리거 | 동작 |
+|--------|------|
+| 타이핑 | 500ms debounce 후 저장 |
+| 에디터 blur | 즉시 flush |
+| 노드 전환 | 이전 노드를 **저장된 nodeId로** flush |
+| 패널/탭 전환 | flush |
+| 컴포넌트 언마운트 | `fetch + keepalive:true` |
+
+저장 상태 인디케이터: `저장 중...` → `✓ 저장됨` → `✗ 저장 실패`
+
+<!-- [노드 설명 에디터 하단에 "✓ 저장됨" 인디케이터가 보이는 스크린샷] -->
+
+### 4. 권한 + 출처 추적
+
+```
+RBAC: owner > admin > member
+출처: NodeComment.source = "web" | "cli" | "system"
+      NodeComment.sourceSession = "Commerce Intel CLI"
+생성자: Node.createdByName = "최승원"
+```
+
+---
+
+## 실전 적용: Commerce Intel Agent 관리
+
+이커머스 수급 시그널 분석 시스템(Commerce Intel Agent)의 **25개 구현 단계**를 DevFlow에서 관리하고 있습니다.
+
+```
+스크립트 1회 실행:
+  → 35개 노드 생성 (Phase 3 + Day 7 + Step 25)
+  → 54개 엣지 생성 (sequence 16 + dependency 27 + parent_child 7 + related 4)
+  → 계층형 제목: P1.D1.#01. ~ P3.D7.#25.
+```
+
+<!-- [대시보드 뷰 — 진행중/할일/백로그/완료 섹션으로 노드들이 분류되어 보이는 스크린샷] -->
+
+**Commerce Intel Agent가 보여주는 AI 기술:**
+
+| 기술 | 구현 |
+|------|------|
+| **Claude Tool Use 멀티턴** | Analyst Agent가 3~4개 도구를 턴마다 조합하여 인사이트 생성 |
+| **Structured Output** | Normalizer가 JSON Schema로 상품 정규화 (product_key 생성) |
+| **RAG** | Dense(Voyage AI) + BM25 Sparse + RRF 병합으로 카테고리 분류 |
+| **Context Engineering** | Supply-Demand Matrix로 수급 상태를 LLM에 전달 → 액션 가능한 인사이트 |
+| **Eval-Optimize Loop** | 자동 채점 → 실패 분석 → 프롬프트 수정 → 회귀 검사 |
+
+---
 
 ## 아키텍처
 
 ```
-Browser
-├── Canvas (xyflow 그래프)
-├── Dashboard
-└── Terminal (xterm.js)
-    │
-    ├── REST API ──→ Next.js (port 3000) ──→ Prisma ──→ SQLite / PostgreSQL
-    │
-    └── WebSocket ──→ WS Server (port 3001, 별도 프로세스)
-                      ├── PTY Manager (node-pty, 노드별 터미널)
-                      ├── Session Manager (세션 생명주기)
-                      ├── State Machine (상태 자동 전이)
-                      ├── File Watcher (파일 변경 감지)
-                      └── Recovery Manager (크래시 복구)
+Claude Code CLI
+  └── MCP (stdin/stdout, JSON-RPC 2.0)
+        └── TTR MCP Server (11 tools, TypeScript)
+              ├── Auth: iron-session 쿠키 캐시 + 자동 재로그인
+              ├── Source tracking: source/sourceSession DB 필드
+              └── HTTPS → Vercel (Next.js 14 App Router)
+                            ├── REST API 20+ endpoints (Zod validation)
+                            ├── Prisma ORM (SQLite dev / PostgreSQL prod)
+                            ├── iron-session auth + RBAC
+                            └── React Client
+                                  ├── ReactFlow 캔버스 (Dual-DOM semantic zoom)
+                                  ├── Zustand 4 stores (UI, Canvas, Node, Session)
+                                  ├── Tiptap 에디터 (table ext + turndown rules)
+                                  └── 5-trigger auto-save system
 ```
 
-Next.js와 WebSocket 서버가 분리되어 있다. 터미널 I/O는 키 입력마다 발생하는 고빈도 양방향 통신인데, 이걸 HTTP 요청으로 처리하면 지연도 생기고 클라우드 API를 쓸 경우 비용도 든다. 그래서 로컬 WebSocket으로 PTY 프로세스에 직접 연결하는 구조를 택했다. 터미널 데이터는 React 상태 관리를 거치지 않고 EventEmitter로 xterm에 바로 쏜다.
+---
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|------|------|
-| 프레임워크 | Next.js 14 (App Router) |
-| 실시간 통신 | WebSocket (ws) + node-pty |
-| DB | Prisma + SQLite(로컬) / PostgreSQL(프로덕션) |
-| 상태관리 | Zustand v5 |
-| 캔버스 | @xyflow/react + dagre |
-| 검증 | Zod |
-| 테스트 | Playwright |
-| 인증 | iron-session + bcrypt |
-| 배포 | Vercel + Supabase |
+| 레이어 | 기술 | 선택 이유 |
+|--------|------|----------|
+| Framework | Next.js 14 App Router | API + SSR 통합, Vercel 최적화 |
+| DB | Prisma + SQLite/PostgreSQL | 듀얼 DB, 타입 안전 ORM |
+| Auth | iron-session | AES-256 암호화 (JWT보다 안전) |
+| State | Zustand v5 | 2KB 번들, useShallow 리렌더 최적화 |
+| Canvas | @xyflow/react 12 | 노드 그래프, 줌/패닝/엣지 내장 |
+| Editor | Tiptap + Table ext | 마크다운 ↔ HTML, 커스텀 turndown 규칙 |
+| MCP | @modelcontextprotocol/sdk | Anthropic 공식 MCP 표준 |
+| Deploy | Vercel + Supabase | 서버리스 + 관리형 PostgreSQL |
+| Validation | Zod 4 | 런타임 타입 검증, API 스키마 강제 |
 
-## 프로젝트 구조
+---
 
-```
-server/                  # WebSocket 서버 (독립 프로세스)
-├── ws-server.ts         # 연결 관리, 이벤트 중계
-├── terminal/            # PTY 생명주기, 출력 캡처
-├── events/              # 이벤트 버스
-├── session/             # 세션 시작/종료/재개
-├── state/               # 이중 트랙 상태 머신
-├── file-watcher/        # chokidar 기반 파일 변경 감지
-└── recovery/            # 세션 복구
+## 실전에서 해결한 문제들
 
-src/
-├── app/api/             # REST API (49개 라우트)
-├── components/          # React 컴포넌트 (61개)
-├── stores/              # Zustand 스토어 4개
-└── lib/                 # Zod 스키마, 인증, 유틸리티
+### Tiptap 테이블 roundtrip 깨짐
+마크다운 테이블 → HTML → 저장 시 turndown이 separator(`| --- |`) 누락 → 재로드 시 테이블 소멸.
+**원인**: Tiptap은 `<thead>` 없이 `<tbody>`에 `<th>`를 직접 넣음. **해결**: `<tr>` 내 `<th>` 감지 후 separator 삽입.
 
-e2e/                     # Playwright E2E 테스트 (26파일, 235케이스)
-prisma/                  # 14개 모델, 시드 데이터
-CLAUDE.md                # AI 개발 컨텍스트 명세서
-```
+### debounce + 노드 전환 = 잘못된 곳에 저장
+`saveDescription`이 closure로 `selectedNode.id`를 캡처 → 노드 전환 후 새 노드에 저장.
+**해결**: `pendingDescRef`에 `{nodeId, content}` 쌍으로 저장, flush 시 저장된 nodeId 사용.
+
+### Tiptap useEditor stale closure
+`useEditor`는 초기화 시 콜백 고정 → blur 시 저장 함수가 항상 null.
+**해결**: `useRef`로 콜백 래핑, Tiptap은 ref를 통해 항상 최신 함수 호출.
+
+### Vercel 빌드 6회 연속 실패
+`tsconfig.json`의 `**/*.ts`가 `mcp-server/` 포함 → MCP SDK import 실패.
+**해결**: `exclude`에 `mcp-server` 추가.
+
+### MCP 인증 순환
+iron-session 쿠키 7일 만료 → MCP 서버 장기 실행 시 모든 요청 실패.
+**해결**: 401 감지 → 자동 재로그인 → 요청 재시도.
+
+---
 
 ## 실행
 
 ```bash
-source ~/.nvm/nvm.sh && nvm use 22
+# 웹 서비스
 npm install
-npm run db:migrate && npm run db:seed
-npm run dev        # Next.js(3000) + WebSocket(3001) 동시 실행
-npx playwright test
+npm run dev          # Next.js + WebSocket
+
+# MCP 서버 (별도 터미널 불필요 — Claude CLI가 자동 spawn)
+# ~/.ttr-mcp/.env에 credentials 설정 후
+# .mcp.json에 서버 등록하면 CLI 시작 시 자동 연결
 ```
 
-## 설계 판단들
+---
 
-**CLAUDE.md를 컨텍스트로 쓴 이유** — AI에게 "버튼 만들어줘"가 아니라 "이 상태 머신 규칙에 맞는 API를 만들어줘"라고 시킬 수 있어야 했다. 그래서 데이터 모델, 전이 규칙, API 컨트랙트를 한 파일에 구조화해서 매 세션마다 컨텍스트로 넣었다. 결과적으로 300줄짜리 명세서가 됐는데, 이게 있으면 AI가 프로젝트 규칙을 이해한 상태에서 코드를 짜기 때문에 일관성이 확 올라간다.
+## 파일 구조
 
-**로컬 소켓을 쓴 이유** — 터미널 키 입력을 매번 클라우드로 보내면 레이턴시도 문제고 과금도 문제다. node-pty로 로컬에서 PTY 프로세스를 직접 관리하면 둘 다 해결된다.
-
-**테스트를 이 정도로 붙인 이유** — AI가 만든 코드는 얼핏 돌아가는 것 같아도 엣지 케이스에서 깨지는 경우가 많다. 상태 전이가 맞는지, 크로스 프로젝트 제약이 지켜지는지, 이런 건 실제 DB에 넣고 돌려봐야 안다. 그래서 mock 없이 실제 DB 대상으로 E2E를 돌린다.
-
-**상태 머신을 이중 트랙으로 만든 이유** — 세션 이벤트에 따른 자동 전이만으로는 실제 워크플로우를 못 커버한다. 끝난 작업을 다시 열거나 단계를 건너뛰는 경우가 있어서, 수동 오버라이드 트랙을 따로 뒀다. 전이는 전부 트랜잭션 안에서 처리하고 로그를 남긴다.
+```
+thinkToRealization/
+├── src/app/                    Next.js 페이지 + API (20+ routes)
+├── src/components/
+│   ├── canvas/                 ReactFlow 캔버스 (BaseNode, semantic zoom)
+│   ├── dashboard/              대시보드 (IssueRow, DashboardCard)
+│   ├── panel/                  사이드 패널 (NodeDetailPanel, 5-trigger save)
+│   └── comments/               코멘트 (source badge: CLI/web/system)
+├── src/stores/                 Zustand (UI, Canvas, Node, Session)
+├── src/lib/auth/               iron-session + RBAC
+├── mcp-server/src/             MCP 서버 (11 tools)
+│   ├── server.ts               도구 등록 + session/source tracking
+│   ├── client.ts               HTTP client + auto re-auth
+│   └── auth.ts                 쿠키 캐시 + 재로그인
+├── prisma/                     DB 스키마 (10+ models)
+└── docs/
+    ├── portfolio-ttr-mcp.md    기술 상세 문서
+    └── interview-prep.md       면접 Q&A + 기술 용어 사전
+```
