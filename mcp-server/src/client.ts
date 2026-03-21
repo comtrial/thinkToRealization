@@ -58,6 +58,14 @@ export class TTRClient {
   put<T>(path: string, body: unknown) { return this.request<T>("PUT", path, body) }
   del<T>(path: string) { return this.request<T>("DELETE", path) }
 
+  // Login as a different user (for per-session identity)
+  async loginAs(email: string, password: string): Promise<void> {
+    clearSession()
+    this.email = email
+    this.password = password
+    this.cookie = await login(this.baseUrl, email, password)
+  }
+
   // Get current user (for assignee auto-assignment)
   async getCurrentUserId(): Promise<string> {
     const user = await this.get<{ id: string }>("/api/auth/me")

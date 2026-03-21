@@ -9,6 +9,47 @@ export function createServer(client: TTRClient): McpServer {
     version: "1.0.0",
   })
 
+  // Session identity — auto-prepended to all comments/decisions
+  let sessionName: string | null = null
+
+  function withVia(content: string, explicitVia?: string): string {
+    const via = explicitVia || sessionName
+    return via ? `[via ${via}] ${content}` : content
+  }
+
+  function viaLabel(explicitVia?: string): string | undefined {
+    return explicitVia || sessionName || undefined
+  }
+
+  // ── ttr_set_session ──────────────────────────────────────
+  server.tool(
+    "ttr_set_session",
+    "현재 CLI 세션의 이름을 설정. 이후 모든 상태 변경/코멘트에 자동으로 [via 세션이름]이 붙음. 세션 시작 시 1회 호출 권장.",
+    { name: z.string().describe("세션 이름 (예: 'Commerce Intel CLI', 'Frontend Dev')") },
+    async ({ name }) => {
+      sessionName = name
+      return { content: [{ type: "text", text: `✓ 세션 이름 설정됨: "${name}". 이후 모든 변경에 [via ${name}] 자동 적용.` }] }
+    }
+  )
+
+  // ── ttr_login ────────────────────────────────────────────
+  server.tool(
+    "ttr_login",
+    "다른 TTR 계정으로 로그인. 이후 해당 유저로 API 호출됨. 기본값은 ~/.ttr-mcp/.env의 계정.",
+    {
+      email: z.string().email().describe("TTR 이메일"),
+      password: z.string().describe("비밀번호"),
+    },
+    async ({ email, password }) => {
+      try {
+        await client.loginAs(email, password)
+        return { content: [{ type: "text", text: `✓ ${email}(으)로 로그인됨. 이후 이 계정으로 API 호출.` }] }
+      } catch (err) {
+        return { content: [{ type: "text", text: `✗ 로그인 실패: ${err instanceof Error ? err.message : String(err)}` }], isError: true }
+      }
+    }
+  )
+
   // ── ttr_list_projects ────────────────────────────────────
   server.tool(
     "ttr_list_projects",
@@ -140,14 +181,15 @@ export function createServer(client: TTRClient): McpServer {
         triggerType: "user_manual",
       })
 
-      // Auto-comment with source info
+      // Auto-comment with source info (uses sessionName if via not provided)
+      const effectiveVia = viaLabel(via)
       const parts: string[] = []
-      if (via) parts.push(`[via ${via}]`)
+      if (effectiveVia) parts.push(`[via ${effectiveVia}]`)
       parts.push(`상태 변경: → ${status}`)
       if (note) parts.push(note)
       await client.post(`/api/nodes/${nodeId}/comments`, { content: parts.join(" ") }).catch(() => {})
 
-      return { content: [{ type: "text", text: `✓ "${result.title}" → ${status}${via ? ` (via ${via})` : ""}` }] }
+      return { content: [{ type: "text", text: `✓ "${result.title}" → ${status}${effectiveVia ? ` (via ${effectiveVia})` : ""}` }] }
     }
   )
 
@@ -177,32 +219,34 @@ export function createServer(client: TTRClient): McpServer {
   // ── ttr_add_comment ──────────────────────────────────────
   server.tool(
     "ttr_add_comment",
-    "노드에 진행 상황 코멘트 추가. via에 세션 이름을 넣으면 출처가 접두어로 붙음.",
+    "노드에 진행 상황 코멘트 추가. ttr_set_session으로 세션 이름을 설정했으면 자동으로 출처가 붙음.",
     {
       nodeId: z.string().describe("노드 ID"),
       content: z.string().describe("코멘트 내용"),
-      via: z.string().optional().describe("출처 세션 이름 (예: 'Commerce Intel Agent CLI')"),
+      via: z.string().optional().describe("출처 세션 이름 (미입력 시 ttr_set_session 값 사용)"),
     },
     async ({ nodeId, content, via }) => {
-      const body = via ? `[via ${via}] ${content}` : content
+      const body = withVia(content, via)
+      const effectiveVia = viaLabel(via)
       const comment = await client.post<TTRComment>(`/api/nodes/${nodeId}/comments`, { content: body })
-      return { content: [{ type: "text", text: `✓ 코멘트 추가됨${via ? ` (via ${via})` : ""}` }] }
+      return { content: [{ type: "text", text: `✓ 코멘트 추가됨${effectiveVia ? ` (via ${effectiveVia})` : ""}` }] }
     }
   )
 
   // ── ttr_add_decision ─────────────────────────────────────
   server.tool(
     "ttr_add_decision",
-    "노드에 결정 사항 기록. via에 세션 이름을 넣으면 출처가 접두어로 붙음.",
+    "노드에 결정 사항 기록. ttr_set_session으로 세션 이름을 설정했으면 자동으로 출처가 붙음.",
     {
       nodeId: z.string().describe("노드 ID"),
       content: z.string().describe("결정 내용"),
-      via: z.string().optional().describe("출처 세션 이름 (예: 'Commerce Intel Agent CLI')"),
+      via: z.string().optional().describe("출처 세션 이름 (미입력 시 ttr_set_session 값 사용)"),
     },
     async ({ nodeId, content, via }) => {
-      const body = via ? `[via ${via}] ${content}` : content
+      const body = withVia(content, via)
+      const effectiveVia = viaLabel(via)
       const decision = await client.post<TTRDecision>("/api/decisions", { nodeId, content: body })
-      return { content: [{ type: "text", text: `✓ 결정 기록됨${via ? ` (via ${via})` : ""}: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"` }] }
+      return { content: [{ type: "text", text: `✓ 결정 기록됨${effectiveVia ? ` (via ${effectiveVia})` : ""}: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"` }] }
     }
   )
 
