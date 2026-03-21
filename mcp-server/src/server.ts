@@ -110,12 +110,14 @@ export function createServer(client: TTRClient): McpServer {
   // ── ttr_update_status ────────────────────────────────────
   server.tool(
     "ttr_update_status",
-    "노드 상태 변경 (backlog/todo/in_progress/done/archived)",
+    "노드 상태 변경 (backlog/todo/in_progress/done/archived). via에 현재 작업 세션 이름을 넣으면 출처가 코멘트로 기록됨.",
     {
       nodeId: z.string().describe("노드 ID"),
       status: z.enum(["backlog", "todo", "in_progress", "done", "archived"]).describe("변경할 상태"),
+      via: z.string().optional().describe("출처 세션 이름 (예: 'Commerce Intel Agent CLI')"),
+      note: z.string().optional().describe("상태 변경 사유 (코멘트로 기록됨)"),
     },
-    async ({ nodeId, status }) => {
+    async ({ nodeId, status, via, note }) => {
       // Check if assignee is needed (in_progress, done)
       if (status === "in_progress" || status === "done") {
         const node = await client.get<TTRNode>(`/api/nodes/${nodeId}`)
@@ -130,7 +132,14 @@ export function createServer(client: TTRClient): McpServer {
         triggerType: "user_manual",
       })
 
-      return { content: [{ type: "text", text: `✓ "${result.title}" 상태를 ${status}(으)로 변경했습니다.` }] }
+      // Auto-comment with source info
+      const parts: string[] = []
+      if (via) parts.push(`[via ${via}]`)
+      parts.push(`상태 변경: → ${status}`)
+      if (note) parts.push(note)
+      await client.post(`/api/nodes/${nodeId}/comments`, { content: parts.join(" ") }).catch(() => {})
+
+      return { content: [{ type: "text", text: `✓ "${result.title}" → ${status}${via ? ` (via ${via})` : ""}` }] }
     }
   )
 
@@ -158,28 +167,32 @@ export function createServer(client: TTRClient): McpServer {
   // ── ttr_add_comment ──────────────────────────────────────
   server.tool(
     "ttr_add_comment",
-    "노드에 진행 상황 코멘트 추가",
+    "노드에 진행 상황 코멘트 추가. via에 세션 이름을 넣으면 출처가 접두어로 붙음.",
     {
       nodeId: z.string().describe("노드 ID"),
       content: z.string().describe("코멘트 내용"),
+      via: z.string().optional().describe("출처 세션 이름 (예: 'Commerce Intel Agent CLI')"),
     },
-    async ({ nodeId, content }) => {
-      const comment = await client.post<TTRComment>(`/api/nodes/${nodeId}/comments`, { content })
-      return { content: [{ type: "text", text: `✓ 코멘트 추가됨 (${comment.createdAt})` }] }
+    async ({ nodeId, content, via }) => {
+      const body = via ? `[via ${via}] ${content}` : content
+      const comment = await client.post<TTRComment>(`/api/nodes/${nodeId}/comments`, { content: body })
+      return { content: [{ type: "text", text: `✓ 코멘트 추가됨${via ? ` (via ${via})` : ""}` }] }
     }
   )
 
   // ── ttr_add_decision ─────────────────────────────────────
   server.tool(
     "ttr_add_decision",
-    "노드에 결정 사항 기록",
+    "노드에 결정 사항 기록. via에 세션 이름을 넣으면 출처가 접두어로 붙음.",
     {
       nodeId: z.string().describe("노드 ID"),
       content: z.string().describe("결정 내용"),
+      via: z.string().optional().describe("출처 세션 이름 (예: 'Commerce Intel Agent CLI')"),
     },
-    async ({ nodeId, content }) => {
-      const decision = await client.post<TTRDecision>("/api/decisions", { nodeId, content })
-      return { content: [{ type: "text", text: `✓ 결정 기록됨: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"` }] }
+    async ({ nodeId, content, via }) => {
+      const body = via ? `[via ${via}] ${content}` : content
+      const decision = await client.post<TTRDecision>("/api/decisions", { nodeId, content: body })
+      return { content: [{ type: "text", text: `✓ 결정 기록됨${via ? ` (via ${via})` : ""}: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"` }] }
     }
   )
 
