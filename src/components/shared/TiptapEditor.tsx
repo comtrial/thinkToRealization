@@ -21,6 +21,33 @@ const turndown = new TurndownService({
   bulletListMarker: '-',
 })
 
+// Table support for turndown (HTML → Markdown)
+turndown.addRule('tableCell', {
+  filter: ['th', 'td'],
+  replacement: (content) => ` ${content.trim().replace(/\n/g, ' ')} |`,
+})
+turndown.addRule('tableRow', {
+  filter: 'tr',
+  replacement: (content) => `|${content}\n`,
+})
+turndown.addRule('tableHead', {
+  filter: 'thead',
+  replacement: (content) => {
+    const headerRow = content.trim().split('\n')[0] || ''
+    const cols = (headerRow.match(/\|/g) || []).length - 1
+    const separator = '|' + ' --- |'.repeat(cols)
+    return `${content.trim()}\n${separator}\n`
+  },
+})
+turndown.addRule('tableBody', {
+  filter: 'tbody',
+  replacement: (content) => content,
+})
+turndown.addRule('table', {
+  filter: 'table',
+  replacement: (content) => `\n${content.trim()}\n\n`,
+})
+
 interface TiptapEditorProps {
   content: string
   onUpdate: (markdown: string) => void
