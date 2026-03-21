@@ -6,7 +6,7 @@ import { NodeDetailPanel } from './NodeDetailPanel'
 import { SessionLogViewer } from './SessionLogViewer'
 import { PlanTab } from './PlanTab'
 import { useNodeStore } from '@/stores/node-store'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useMobile } from '@/hooks/useMobile'
 import type { SessionResponse } from '@/lib/types/api'
 // ESC key handling is centralized in useKeyboardShortcuts
@@ -101,6 +101,8 @@ export function SidePanel() {
   const panelNodeId = useUIStore((s) => s.panelNodeId)
   const panelTab = useUIStore((s) => s.panelTab)
   const closePanel = useUIStore((s) => s.closePanel)
+  const panelWidth = useUIStore((s) => s.panelWidth)
+  const setPanelWidth = useUIStore((s) => s.setPanelWidth)
   const selectedNode = useNodeStore((s) => s.selectedNode)
   const sessions = useNodeStore((s) => s.sessions)
   const isLoading = useNodeStore((s) => s.isLoading)
@@ -109,6 +111,34 @@ export function SidePanel() {
   const isMobile = useMobile()
   const isLocal = useIsLocal()
   const [viewingSessionId, setViewingSessionId] = useState<string | null>(null)
+
+  // Drag resize logic
+  const isDragging = useRef(false)
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const handleMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return
+      const windowWidth = window.innerWidth
+      const newWidth = ((windowWidth - ev.clientX) / windowWidth) * 100
+      const clamped = Math.min(80, Math.max(20, newWidth))
+      setPanelWidth(clamped)
+    }
+
+    const handleUp = () => {
+      isDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', handleMove)
+      window.removeEventListener('mouseup', handleUp)
+    }
+
+    window.addEventListener('mousemove', handleMove)
+    window.addEventListener('mouseup', handleUp)
+  }, [setPanelWidth])
 
   // Load node data when panel opens
   useEffect(() => {
@@ -179,8 +209,15 @@ export function SidePanel() {
   return (
     <aside
       data-testid="side-panel"
-      className="absolute top-0 right-0 h-full bg-surface border-l border-border z-30 flex flex-col transition-all duration-panel ease-devflow w-[40%] min-w-[400px] max-w-[50%]"
+      className="absolute top-0 right-0 h-full bg-surface border-l border-border z-30 flex flex-col"
+      style={{ width: `${panelWidth}%`, minWidth: '320px', maxWidth: '80%' }}
     >
+      {/* Drag resize handle */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-accent/30 active:bg-accent/50 transition-colors z-10"
+      />
+
       {/* Tabs */}
       <PanelTabs />
 

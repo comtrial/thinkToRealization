@@ -18,14 +18,14 @@ const typeLabels: Record<string, string> = {
 }
 
 export function IssueRow({ node }: { node: NodeResponse }) {
-  const openPanel = useUIStore((s) => s.openPanel)
+  const focusNodeOnCanvas = useUIStore((s) => s.focusNodeOnCanvas)
   const openPanelFull = useUIStore((s) => s.openPanelFull)
   const selectNode = useNodeStore((s) => s.selectNode)
   const selectedNodeId = useNodeStore((s) => s.selectedNode?.id)
 
   const handleClick = () => {
     selectNode(node.id)
-    openPanel(node.id)
+    focusNodeOnCanvas(node.id)
   }
 
   const handleDoubleClick = () => {

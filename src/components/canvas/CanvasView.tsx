@@ -84,14 +84,29 @@ function CanvasInner({ projectId }: { projectId: string }) {
   const openPanelFull = useUIStore((s) => s.openPanelFull)
   const isMobile = useMobile()
   const [fabOpen, setFabOpen] = useState(false)
-  const { screenToFlowPosition, fitView, getViewport } = useReactFlow()
+  const { screenToFlowPosition, fitView, getViewport, setCenter } = useReactFlow()
   const saveTimerRef = useRef<NodeJS.Timeout>()
   const contextPosRef = useRef({ x: 0, y: 0 })
   const connectingNodeRef = useRef<{ nodeId: string; handleId: string | null } | null>(null)
 
+  const focusNodeId = useUIStore((s) => s.focusNodeId)
+  const clearFocusNode = useUIStore((s) => s.clearFocusNode)
+
   useEffect(() => {
     loadCanvas(projectId)
   }, [projectId, loadCanvas])
+
+  // Focus on a specific node when focusNodeId is set
+  useEffect(() => {
+    if (!focusNodeId) return
+    const targetNode = nodes.find((n) => n.id === focusNodeId)
+    if (targetNode) {
+      const x = targetNode.position.x + (targetNode.measured?.width ?? 200) / 2
+      const y = targetNode.position.y + (targetNode.measured?.height ?? 100) / 2
+      setCenter(x, y, { zoom: 1.2, duration: 400 })
+    }
+    clearFocusNode()
+  }, [focusNodeId, nodes, setCenter, clearFocusNode])
 
   const isZoomedInRef = useRef(isZoomedIn)
   useEffect(() => { isZoomedInRef.current = isZoomedIn }, [isZoomedIn])

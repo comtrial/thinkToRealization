@@ -427,33 +427,29 @@ export function NodeDetailPanel({ showProperties = true, onClose }: { showProper
   const handleCopyClaudeScript = useCallback(async () => {
     if (!selectedNode) return
 
-    const childEdges = canvasEdges.filter(
-      (e) => e.source === selectedNode.id && (e.data as Record<string, unknown>)?.type === 'parent_child'
+    // Find parent node via parent_child edge (where this node is the target)
+    const parentEdge = canvasEdges.find(
+      (e) => e.target === selectedNode.id && (e.data as Record<string, unknown>)?.type === 'parent_child'
     )
-    const childNodes = childEdges
-      .map((edge) => {
-        const canvasNode = canvasNodes.find((n) => n.id === edge.target)
-        if (!canvasNode) return null
-        const data = canvasNode.data as Record<string, unknown>
-        return {
-          title: (data.title as string) || '(untitled)',
-          status: (data.status as string) || 'backlog',
-        }
-      })
-      .filter(Boolean) as { title: string; status: string }[]
+    let parentText = ''
+    if (parentEdge) {
+      const parentCanvasNode = canvasNodes.find((n) => n.id === parentEdge.source)
+      if (parentCanvasNode) {
+        const pd = parentCanvasNode.data as Record<string, unknown>
+        const parentTitle = (pd.title as string) || '(untitled)'
+        const parentDesc = ((pd.description as string) || '').replace(/<[^>]*>/g, '').trim()
+        parentText = `## Parent: ${parentTitle}\n${parentDesc || 'No description'}\n\n`
+      }
+    }
 
     const decisionsText = decisions.length > 0
       ? decisions.map((d) => `- ${d.content}`).join('\n')
       : 'None'
 
-    const childrenText = childNodes.length > 0
-      ? childNodes.map((n) => `- [${n.status}] ${n.title}`).join('\n')
-      : 'None'
-
     const descriptionRaw = selectedNode.description || ''
     const descriptionText = descriptionRaw.replace(/<[^>]*>/g, '').trim() || 'No description'
 
-    const script = `## Context: ${selectedNode.title}
+    const script = `${parentText}## Context: ${selectedNode.title}
 - Type: ${selectedNode.type}
 - Status: ${selectedNode.status}
 - Priority: ${selectedNode.priority}
@@ -464,9 +460,6 @@ ${descriptionText}
 
 ## Decisions Made
 ${decisionsText}
-
-## Sub-issues
-${childrenText}
 
 ## Instructions
 위 컨텍스트를 참고하여 이 노드에 대한 작업을 진행해주세요.

@@ -25,6 +25,11 @@ interface UIStore {
   toggleCommandPalette: () => void
   dashboardVersion: number
   invalidateDashboard: () => void
+  focusNodeId: string | null
+  focusNodeOnCanvas: (nodeId: string) => void
+  clearFocusNode: () => void
+  panelWidth: number
+  setPanelWidth: (width: number) => void
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -52,4 +57,9 @@ export const useUIStore = create<UIStore>((set) => ({
   toggleCommandPalette: () => set((s) => ({ commandPaletteOpen: !s.commandPaletteOpen })),
   dashboardVersion: 0,
   invalidateDashboard: () => set((s) => ({ dashboardVersion: s.dashboardVersion + 1 })),
+  focusNodeId: null,
+  focusNodeOnCanvas: (nodeId) => set({ activeTab: 'canvas', focusNodeId: nodeId, panelMode: 'peek', panelNodeId: nodeId, panelTab: 'detail' }),
+  clearFocusNode: () => set({ focusNodeId: null }),
+  panelWidth: 40,
+  setPanelWidth: (width) => set({ panelWidth: width }),
 }))
