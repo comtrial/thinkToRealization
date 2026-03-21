@@ -29,7 +29,17 @@ export function createServer(client: TTRClient): McpServer {
     "프로젝트 대시보드 요약 (진행중/할일/백로그/완료 노드 목록)",
     { projectId: z.string().describe("프로젝트 ID") },
     async ({ projectId }) => {
-      const d = await client.get<TTRDashboard>(`/api/projects/${projectId}/dashboard`)
+      // Use both dashboard (for grouped view) and full node list (for accurate counts)
+      const [d, allNodes] = await Promise.all([
+        client.get<TTRDashboard>(`/api/projects/${projectId}/dashboard`),
+        client.get<TTRNode[]>(`/api/projects/${projectId}/nodes`),
+      ])
+
+      const counts = { backlog: 0, todo: 0, in_progress: 0, done: 0, archived: 0 }
+      allNodes.forEach((n) => { if (n.status in counts) counts[n.status as keyof typeof counts]++ })
+      const total = allNodes.filter((n) => n.status !== "archived").length
+      const done = counts.done
+
       const fmt = (label: string, nodes: TTRNode[]) =>
         nodes.length > 0 ? `${label} (${nodes.length}):\n${nodes.map((n) => `  • [${n.priority}] ${n.title}`).join("\n")}` : ""
 
@@ -37,11 +47,9 @@ export function createServer(client: TTRClient): McpServer {
         fmt("🔄 진행중", d.inProgress),
         fmt("📋 할일", d.todo),
         fmt("📦 백로그", d.backlog),
-        fmt("✅ 최근 완료", d.recentDone),
+        fmt("✅ 완료", allNodes.filter((n) => n.status === "done")),
       ].filter(Boolean)
 
-      const total = d.inProgress.length + d.todo.length + d.backlog.length + d.recentDone.length
-      const done = d.recentDone.length
       const header = `전체 ${total}개 노드, 완료 ${done}개 (${total > 0 ? Math.round((done / total) * 100) : 0}%)`
 
       return { content: [{ type: "text", text: `${header}\n\n${sections.join("\n\n")}` }] }
