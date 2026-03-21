@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ttr": {
+      "command": "npx",
+      "args": ["tsx", "/Users/choeseung-won/personal-project/thinkToRealization/mcp-server/src/index.ts"],
+      "cwd": "/Users/choeseung-won/personal-project/thinkToRealization/mcp-server"
+    }
+  }
+}
