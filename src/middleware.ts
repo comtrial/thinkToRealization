@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { unsealData } from "iron-session";
 import { sessionOptions } from "@/lib/auth/session";
 
-const PUBLIC_PATHS = ["/login", "/register", "/guide"];
+const AUTH_ONLY_PUBLIC = ["/login", "/register"]; // Redirect to home if already logged in
+const OPEN_PATHS = ["/guide"]; // Always accessible regardless of auth
 const PUBLIC_API_PATHS = ["/api/auth/login", "/api/auth/register", "/api/test/"];
 
 export async function middleware(req: NextRequest) {
@@ -13,8 +14,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public pages: redirect authenticated users to home
-  if (PUBLIC_PATHS.some((p) => pathname === p)) {
+  // Always accessible pages (no auth check at all)
+  if (OPEN_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // Auth-only public pages: redirect authenticated users to home
+  if (AUTH_ONLY_PUBLIC.some((p) => pathname === p)) {
     const cookie = req.cookies.get(sessionOptions.cookieName);
     if (cookie?.value) {
       try {
