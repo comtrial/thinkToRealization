@@ -146,21 +146,23 @@ export function createServer(client: TTRClient): McpServer {
   // ── ttr_update_node ──────────────────────────────────────
   server.tool(
     "ttr_update_node",
-    "노드 정보 수정 (제목, 설명, 우선순위 등)",
+    "노드 정보 수정 (제목, 설명, 우선순위, 담당자 등)",
     {
       nodeId: z.string().describe("노드 ID"),
       title: z.string().optional().describe("새 제목"),
       description: z.string().optional().describe("새 설명 (Markdown)"),
       priority: z.enum(["none", "low", "medium", "high", "urgent"]).optional().describe("우선순위"),
+      assignToMe: z.boolean().optional().describe("true면 현재 로그인 유저를 담당자로 할당"),
     },
-    async ({ nodeId, ...updates }) => {
+    async ({ nodeId, assignToMe, ...updates }) => {
       const body: Record<string, unknown> = {}
       if (updates.title !== undefined) body.title = updates.title
       if (updates.description !== undefined) body.description = updates.description
       if (updates.priority !== undefined) body.priority = updates.priority
+      if (assignToMe) body.assigneeId = await client.getCurrentUserId()
 
       const result = await client.put<TTRNode>(`/api/nodes/${nodeId}`, body)
-      return { content: [{ type: "text", text: `✓ "${result.title}" 수정 완료.` }] }
+      return { content: [{ type: "text", text: `✓ "${result.title}" 수정 완료.${assignToMe ? " (담당자 할당됨)" : ""}` }] }
     }
   )
 
