@@ -15,6 +15,9 @@ export const nodeCountsOnly = {
   assignee: {
     select: { id: true, name: true, avatarUrl: true },
   },
+  createdBy: {
+    select: { id: true, name: true },
+  },
 } as const;
 
 // Full include for detail pages (includes latest session + plan)
@@ -78,6 +81,7 @@ export function toNodeResponseLite(node: NodeWithCountsOnly): NodeResponse {
     hasActiveSession: false,
     lastSessionAt: null,
     lastSessionTitle: null,
+    createdByName: node.createdBy?.name ?? null,
   };
 }
 
@@ -117,5 +121,6 @@ export function toNodeResponse(node: NodeWithCounts): NodeResponse {
     hasActiveSession: lastSession?.status === "active",
     lastSessionAt: lastSession?.startedAt?.toISOString() ?? null,
     lastSessionTitle: lastSession?.title ?? null,
+    createdByName: node.createdBy?.name ?? null,
   };
 }

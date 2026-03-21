@@ -36,6 +36,7 @@ export interface NodeResponse {
   hasActiveSession: boolean;
   lastSessionAt: string | null;
   lastSessionTitle: string | null;
+  createdByName: string | null;
 }
 
 export interface EdgeResponse {
