@@ -13,7 +13,9 @@
 ## 이 프로젝트는 뭘 하는가
 
 CLI 를 통한 작업이 도입되면서, 더욱이 계획서와 설계 side-effect 등을 고려해야 하는 **문서** 에 중요성이 더해지는 것 같다고 느꼈습니다.
+
 코딩 자체의 업무는 일부 위임할 순 있지만, 무얼 계획 했고, 어떻게 설계하였는지는 놓치지 말아야 할 하네스가 된다고 느껴
+
 보다 우리가 작성하는 문서를 꼼꼼하게 놓치지 않고, 우리의 생각 ( 문서 )을 보다 CLI 풍부한 히스토리를 통해 파악할 수 있도록 하는 것이 목적이였습니다. 
 
 ```
@@ -73,7 +75,8 @@ ttr_add_decision(nodeId, content)         기술 결정 기록
 | archived | 매우 흐릿 + 회색 |
 
 <!-- [캔버스 줌 아웃 — in_progress(인디고 글로우)와 backlog(점선+회색)가 확연히 구분되는 스크린샷] -->
-<img width="1440" height="826" alt="image" src="https://github.com/user-attachments/assets/da191180-7a80-4f0f-b472-bd4059182dc8" />
+<img width="1440" height="754" alt="image" src="https://github.com/user-attachments/assets/61faa030-6ad5-4718-bae1-8eff83d036a0" />
+
 
 **Dual-DOM 시맨틱 줌:**
 
