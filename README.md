@@ -3,7 +3,6 @@
 > LLM이 MCP 프로토콜로 프로젝트의 문서와 작업 히스토리, 선후행 작업 등의 파악을 통해
 > 보다 누락없는 업무 구현과 관리를 동시에 돕는 시스템.
 
-**MCP Guide** https://think-to-realization.vercel.app/guide
 
 <!-- [전체 캔버스 뷰 — 35개 노드가 상태별 색상으로 구분되어 보이는 줌 아웃 스크린샷] -->
 <img width="1440" height="755" alt="image" src="https://github.com/user-attachments/assets/82b8cc2a-1dc7-4688-be10-89bda689f7df" />
@@ -27,9 +26,13 @@ Claude: → ttr_get_dashboard()
         → "35개 중 5개 완료 (14%), 3개 진행중"
 
 CLI 세션 C: "해당 작업의 상위/히위 이슈 모두 고려해서 영향도 없게 진행해야 해"
+Claude: → ttr_get_node()
+        → "상위/하위/연관 노드 조회하여 영향도 파악"
 ```
 
 <!-- [CLI 터미널에서 ttr_update_status 호출 → 대시보드에 반영되는 모습 스크린샷 (터미널 + 브라우저 나란히)] -->
+<img width="1440" height="826" alt="image" src="https://github.com/user-attachments/assets/f7777c5d-e86a-450e-92f8-f9a5b79fa791" />
+
 
 ---
 
@@ -54,7 +57,6 @@ ttr_add_decision(nodeId, content)         기술 결정 기록
 - iron-session 쿠키 인증을 MCP 서버가 투명하게 처리 (캐시 + 만료 시 자동 재로그인)
 - `source`/`sourceSession` DB 필드로 CLI vs 웹 작성 구분
 
-<!-- [노드 상세 패널의 Activity 섹션 — "CLI: Commerce Intel CLI" 배지가 붙은 코멘트와 일반 코멘트가 구분되는 스크린샷] -->
 
 ### 2. 캔버스 — 상태별 시맨틱 줌
 
@@ -71,6 +73,7 @@ ttr_add_decision(nodeId, content)         기술 결정 기록
 | archived | 매우 흐릿 + 회색 |
 
 <!-- [캔버스 줌 아웃 — in_progress(인디고 글로우)와 backlog(점선+회색)가 확연히 구분되는 스크린샷] -->
+<img width="1440" height="826" alt="image" src="https://github.com/user-attachments/assets/da191180-7a80-4f0f-b472-bd4059182dc8" />
 
 **Dual-DOM 시맨틱 줌:**
 
