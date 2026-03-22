@@ -45,7 +45,7 @@ MCP 도구 `ttr_*`를 사용하여 작업 상태를 관리하세요.
 | `ttr_list_projects` | 프로젝트 목록 | (없음) |
 | `ttr_get_dashboard` | 대시보드 (진행률) | `projectId` |
 | `ttr_list_nodes` | 노드 목록 | `projectId, status?` |
-| `ttr_get_node` | 노드 상세 | `nodeId` |
+| `ttr_get_node` | 노드 상세 (상위/하위/선행/후행 노드 제목 포함) | `nodeId` |
 | `ttr_update_status` | 상태 변경 + 출처 기록 | `nodeId, status, via?, note?` |
 | `ttr_update_node` | 수정 + 담당자 할당 | `nodeId, title?, description?, priority?, assignToMe?` |
 | `ttr_add_comment` | 코멘트 추가 | `nodeId, content, via?` |

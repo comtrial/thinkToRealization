@@ -115,10 +115,18 @@ export function createServer(client: TTRClient): McpServer {
     }
   )
 
+  // Helper: resolve node IDs to titles
+  async function resolveNodeTitle(id: string): Promise<string> {
+    try {
+      const n = await client.get<TTRNode>(`/api/nodes/${id}`)
+      return `${n.title} (${n.status})`
+    } catch { return id.slice(0, 12) }
+  }
+
   // ── ttr_get_node ─────────────────────────────────────────
   server.tool(
     "ttr_get_node",
-    "노드 상세 조회 (설명, 세션, 결정, 엣지 포함)",
+    "노드 상세 조회 (설명, 세션, 결정, 상위/하위/연관 노드 포함)",
     { nodeId: z.string().describe("노드 ID") },
     async ({ nodeId }) => {
       const node = await client.get<TTRNode & {
@@ -133,19 +141,47 @@ export function createServer(client: TTRClient): McpServer {
         `상태: ${node.status} | 우선순위: ${node.priority} | 타입: ${node.type}`,
         `ID: ${node.id}`,
         node.assigneeName ? `담당: ${node.assigneeName}` : null,
-        node.parentNodeId ? `상위: ${node.parentNodeId}` : null,
         "",
         node.description || "(설명 없음)",
       ].filter((l) => l !== null)
 
-      if (node.decisions && node.decisions.length > 0) {
-        lines.push("", `결정 사항 (${node.decisions.length}):`)
-        node.decisions.forEach((d) => lines.push(`  • ${d.content}`))
+      // 상위 노드
+      if (node.parentNodeId) {
+        const parentTitle = await resolveNodeTitle(node.parentNodeId)
+        lines.push("", `📌 상위 노드: ${parentTitle}`)
       }
 
-      if (node.outEdges && node.outEdges.length > 0) {
-        lines.push("", `하위/연결 (${node.outEdges.length}):`)
-        node.outEdges.forEach((e) => lines.push(`  → ${e.toNodeId} [${e.type}] ${e.label || ""}`))
+      // 하위 노드 (parentNodeId가 이 노드를 가리키는 것 + outEdges)
+      const allNodes = await client.get<TTRNode[]>(`/api/projects/${node.projectId}/nodes`)
+      const children = allNodes.filter((n) => n.parentNodeId === nodeId)
+      if (children.length > 0) {
+        lines.push("", `📂 하위 노드 (${children.length}):`)
+        children.forEach((c) => lines.push(`  • [${c.status}] ${c.title}`))
+      }
+
+      // 선행 노드 (inEdges)
+      const inEdges = node.inEdges || []
+      if (inEdges.length > 0) {
+        lines.push("", `⬅ 선행 노드 (${inEdges.length}):`)
+        for (const e of inEdges) {
+          const title = await resolveNodeTitle(e.fromNodeId)
+          lines.push(`  • ${title} [${e.type}]${e.label ? ` — ${e.label}` : ""}`)
+        }
+      }
+
+      // 후행 노드 (outEdges)
+      const outEdges = node.outEdges || []
+      if (outEdges.length > 0) {
+        lines.push("", `➡ 후행 노드 (${outEdges.length}):`)
+        for (const e of outEdges) {
+          const title = await resolveNodeTitle(e.toNodeId)
+          lines.push(`  • ${title} [${e.type}]${e.label ? ` — ${e.label}` : ""}`)
+        }
+      }
+
+      if (node.decisions && node.decisions.length > 0) {
+        lines.push("", `💡 결정 사항 (${node.decisions.length}):`)
+        node.decisions.forEach((d) => lines.push(`  • ${d.content}`))
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] }
