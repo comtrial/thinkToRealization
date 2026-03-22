@@ -1,18 +1,21 @@
 # DevFlow — AI Agent 워크플로 자동화 플랫폼
 
-> LLM이 MCP 프로토콜로 프로젝트를 직접 관리하는 시스템.
-> "챗봇"을 넘어 "행동하는 AI"를 구현합니다.
+> LLM이 MCP 프로토콜로 프로젝트의 문서와 작업 히스토리, 선후행 작업 등의 파악을 통해
+> 보다 누락없는 업무 구현과 관리를 동시에 돕는 시스템.
 
-**Live** https://think-to-realization.vercel.app
 **MCP Guide** https://think-to-realization.vercel.app/guide
 
 <!-- [전체 캔버스 뷰 — 35개 노드가 상태별 색상으로 구분되어 보이는 줌 아웃 스크린샷] -->
+<img width="1440" height="755" alt="image" src="https://github.com/user-attachments/assets/82b8cc2a-1dc7-4688-be10-89bda689f7df" />
+
 
 ---
 
 ## 이 프로젝트는 뭘 하는가
 
-AI CLI(Claude Code)로 개발할 때, **여러 CLI 세션이 동시에 작업하면서 진행 상황을 자동으로 관리**하는 문제를 해결합니다.
+CLI 를 통한 작업이 도입되면서, 더욱이 계획서와 설계 side-effect 등을 고려해야 하는 **문서** 에 중요성이 더해지는 것 같다고 느꼈습니다.
+코딩 자체의 업무는 일부 위임할 순 있지만, 무얼 계획 했고, 어떻게 설계하였는지는 놓치지 말아야 할 하네스가 된다고 느껴
+보다 우리가 작성하는 문서를 꼼꼼하게 놓치지 않고, 우리의 생각 ( 문서 )을 보다 CLI 풍부한 히스토리를 통해 파악할 수 있도록 하는 것이 목적이였습니다. 
 
 ```
 CLI 세션 A: "Step 1 끝났어, 업데이트해줘"
@@ -22,6 +25,8 @@ Claude: → ttr_update_status(#01, "done")     ← MCP 도구 자동 호출
 CLI 세션 B: "지금 진행 상황 어때?"
 Claude: → ttr_get_dashboard()
         → "35개 중 5개 완료 (14%), 3개 진행중"
+
+CLI 세션 C: "해당 작업의 상위/히위 이슈 모두 고려해서 영향도 없게 진행해야 해"
 ```
 
 <!-- [CLI 터미널에서 ttr_update_status 호출 → 대시보드에 반영되는 모습 스크린샷 (터미널 + 브라우저 나란히)] -->
@@ -73,21 +78,8 @@ ttr_add_decision(nodeId, content)         기술 결정 기록
 
 <!-- [줌 인 상태 — 노드 하나가 확대되어 설명, 세션 수, 상태 배지가 보이는 스크린샷] -->
 
-### 3. 실시간 자동 저장 (5중 안전장치)
 
-| 트리거 | 동작 |
-|--------|------|
-| 타이핑 | 500ms debounce 후 저장 |
-| 에디터 blur | 즉시 flush |
-| 노드 전환 | 이전 노드를 **저장된 nodeId로** flush |
-| 패널/탭 전환 | flush |
-| 컴포넌트 언마운트 | `fetch + keepalive:true` |
-
-저장 상태 인디케이터: `저장 중...` → `✓ 저장됨` → `✗ 저장 실패`
-
-<!-- [노드 설명 에디터 하단에 "✓ 저장됨" 인디케이터가 보이는 스크린샷] -->
-
-### 4. 권한 + 출처 추적
+### 3. 권한 + 출처 추적
 
 ```
 RBAC: owner > admin > member
@@ -100,7 +92,7 @@ RBAC: owner > admin > member
 
 ## 실전 적용: Commerce Intel Agent 관리
 
-이커머스 수급 시그널 분석 시스템(Commerce Intel Agent)의 **25개 구현 단계**를 DevFlow에서 관리하고 있습니다.
+이커머스 수급 시그널 분석 시스템(marketPulse)의 **25개 구현 단계**를 DevFlow에서 관리하고 있습니다.
 
 ```
 스크립트 1회 실행:
@@ -110,16 +102,9 @@ RBAC: owner > admin > member
 ```
 
 <!-- [대시보드 뷰 — 진행중/할일/백로그/완료 섹션으로 노드들이 분류되어 보이는 스크린샷] -->
+<img width="1440" height="754" alt="image" src="https://github.com/user-attachments/assets/08e1580b-1eee-43cd-9c63-45b1bc3f8ffc" />
 
-**Commerce Intel Agent가 보여주는 AI 기술:**
-
-| 기술 | 구현 |
-|------|------|
-| **Claude Tool Use 멀티턴** | Analyst Agent가 3~4개 도구를 턴마다 조합하여 인사이트 생성 |
-| **Structured Output** | Normalizer가 JSON Schema로 상품 정규화 (product_key 생성) |
-| **RAG** | Dense(Voyage AI) + BM25 Sparse + RRF 병합으로 카테고리 분류 |
-| **Context Engineering** | Supply-Demand Matrix로 수급 상태를 LLM에 전달 → 액션 가능한 인사이트 |
-| **Eval-Optimize Loop** | 자동 채점 → 실패 분석 → 프롬프트 수정 → 회귀 검사 |
+ 
 
 ---
 
@@ -158,29 +143,6 @@ Claude Code CLI
 | Deploy | Vercel + Supabase | 서버리스 + 관리형 PostgreSQL |
 | Validation | Zod 4 | 런타임 타입 검증, API 스키마 강제 |
 
----
-
-## 실전에서 해결한 문제들
-
-### Tiptap 테이블 roundtrip 깨짐
-마크다운 테이블 → HTML → 저장 시 turndown이 separator(`| --- |`) 누락 → 재로드 시 테이블 소멸.
-**원인**: Tiptap은 `<thead>` 없이 `<tbody>`에 `<th>`를 직접 넣음. **해결**: `<tr>` 내 `<th>` 감지 후 separator 삽입.
-
-### debounce + 노드 전환 = 잘못된 곳에 저장
-`saveDescription`이 closure로 `selectedNode.id`를 캡처 → 노드 전환 후 새 노드에 저장.
-**해결**: `pendingDescRef`에 `{nodeId, content}` 쌍으로 저장, flush 시 저장된 nodeId 사용.
-
-### Tiptap useEditor stale closure
-`useEditor`는 초기화 시 콜백 고정 → blur 시 저장 함수가 항상 null.
-**해결**: `useRef`로 콜백 래핑, Tiptap은 ref를 통해 항상 최신 함수 호출.
-
-### Vercel 빌드 6회 연속 실패
-`tsconfig.json`의 `**/*.ts`가 `mcp-server/` 포함 → MCP SDK import 실패.
-**해결**: `exclude`에 `mcp-server` 추가.
-
-### MCP 인증 순환
-iron-session 쿠키 7일 만료 → MCP 서버 장기 실행 시 모든 요청 실패.
-**해결**: 401 감지 → 자동 재로그인 → 요청 재시도.
 
 ---
 
