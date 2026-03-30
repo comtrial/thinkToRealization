@@ -21,8 +21,8 @@ if (!email || !password) {
   console.error(`Expected env file at: ${envPath}`)
   console.error("Example:")
   console.error("  TTR_BASE_URL=https://think-to-realization.vercel.app")
-  console.error("  TTR_EMAIL=admin@ttr.local")
-  console.error("  TTR_PASSWORD=devflow123")
+  console.error("  TTR_EMAIL=your-email@example.com")
+  console.error("  TTR_PASSWORD=your-password")
   process.exit(1)
 }
 

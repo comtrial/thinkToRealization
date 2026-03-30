@@ -89,7 +89,7 @@ ttr_add_decision(nodeId, content)         기술 결정 기록
 RBAC: owner > admin > member
 출처: NodeComment.source = "web" | "cli" | "system"
       NodeComment.sourceSession = "Commerce Intel CLI"
-생성자: Node.createdByName = "최승원"
+생성자: Node.createdByName = "사용자명"
 ```
 
 ---
@@ -147,6 +147,47 @@ Claude Code CLI
 | Deploy | Vercel + Supabase | 서버리스 + 관리형 PostgreSQL |
 | Validation | Zod 4 | 런타임 타입 검증, API 스키마 강제 |
 
+
+---
+
+## Roadmap — 온톨로지 기반 지식 그래프로의 진화
+
+현재의 6종 엣지 + 계층 구조를 **도메인 온톨로지**로 확장하여, 시스템 간 영향도와 의사결정 이력이 조직의 지식 자산으로 축적되는 구조를 설계 중입니다.
+
+### 해결하려는 현업 문제
+
+엔터프라이즈 시스템에서는 하나의 변경이 여러 시스템에 연쇄적으로 영향을 미칩니다.
+
+```
+예시: FedEx WMS의 booking 로직 수정
+  → OMS의 Booking 로직에 영향 → 장애 발생
+  → 이후 다른 시스템에서 FedEx 연동 시, 과거 결정 이력을 코드와 슬랙에서 수동 탐색
+```
+
+기존 작업 관리 도구(Jira, Linear)는 티켓 간 관계를 "링크"로만 표현하고, **변경의 파급 경로와 의사결정 이력을 구조적으로 추적하지 못합니다.**
+
+### 온톨로지 확장 방향
+
+```
+[System: WMS] ──uses──> [Service: FedEx Booking API]
+[System: OMS] ──uses──> [Service: FedEx Booking API]
+
+[Decision: "Booking 파라미터 X를 Y로 변경"]
+  ──affects──> [System: WMS]
+  ──affects──> [System: OMS]
+
+[Task: "다른 시스템에서 FedEx 연동"]
+  ──references──> [위 Decision 이력들]
+```
+
+| 확장 | 설명 |
+|------|------|
+| **시스템/서비스 노드 타입** | 작업 노드뿐 아니라 시스템 구성 요소를 그래프에 포함 |
+| **`affects` 엣지** | 변경이 영향을 미치는 시스템을 명시적으로 연결 |
+| **영향 범위 자동 탐색** | Agent가 과거 결정 조회 시, 영향 받은 시스템과 후속 작업까지 그래프 탐색으로 반환 |
+| **유사 작업 시 이력 추천** | "FedEx 연동" 키워드 포함 작업 생성 시, 과거 관련 결정·이슈·변경 이력을 Agent에게 자동 제공 |
+
+이를 통해 AI Agent가 단순히 "현재 작업의 상태"만 아는 것이 아니라, **조직의 기술적 의사결정 히스토리와 시스템 간 의존 관계를 이해한 상태에서** 보다 정확한 개발 어시스턴스를 제공할 수 있는 구조를 만들고자 합니다.
 
 ---
 

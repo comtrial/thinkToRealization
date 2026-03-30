@@ -32,7 +32,7 @@ async function main() {
       title: "ThinkToRealization v2",
       slug: "ttr-v2",
       description: "사고 흐름 캔버스 기반 개발 도구",
-      projectDir: "/Users/choeseung-won/personal-project/thinkToRealization",
+      projectDir: process.cwd(),
       createdById: admin.id,
     },
   });

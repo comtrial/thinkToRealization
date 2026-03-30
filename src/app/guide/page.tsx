@@ -32,15 +32,15 @@ const MCP_JSON = `{
   "mcpServers": {
     "ttr": {
       "command": "npx",
-      "args": ["tsx", "/Users/choeseung-won/personal-project/thinkToRealization/mcp-server/src/index.ts"],
-      "cwd": "/Users/choeseung-won/personal-project/thinkToRealization/mcp-server"
+      "args": ["tsx", "/path/to/thinkToRealization/mcp-server/src/index.ts"],
+      "cwd": "/path/to/thinkToRealization/mcp-server"
     }
   }
 }`
 
 const ENV_EXAMPLE = `TTR_BASE_URL=https://think-to-realization.vercel.app
-TTR_EMAIL=admin@ttr.local
-TTR_PASSWORD=devflow123`
+TTR_EMAIL=your-email@example.com
+TTR_PASSWORD=your-password`
 
 const CLAUDE_MD_SECTION = `## TTR 연동 (작업 관리 — CRITICAL)
 

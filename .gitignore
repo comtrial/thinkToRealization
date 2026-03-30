@@ -35,7 +35,11 @@ yarn-error.log*
 /playwright-report/
 /test-results/
 
-# test database
+# databases
+prisma/dev.db
+prisma/dev.db-shm
+prisma/dev.db-wal
+prisma/dev.db-journal
 prisma/test.db
 prisma/test.db-shm
 prisma/test.db-wal
@@ -59,3 +63,21 @@ next-env.d.ts
 # supabase local
 supabase/.temp/
 mcp-server/node_modules/
+
+# internal docs (interview, plans, credentials, audits)
+docs/interview-prep.md
+docs/mcp-server-plan.md
+docs/portfolio-ttr-mcp.md
+docs/portfolio-ttr.md
+docs/PRD.md
+docs/db-strategy-plan.md
+docs/test-db-isolation-plan.md
+docs/phase3-implementation-plan.md
+docs/analysis/
+CLAUDE.md
+.claude/
+PERFORMANCE_AUDIT_2026_03_06.md
+LAYOUT_RESPONSIVE_ANALYSIS.md
+MOBILE_PERFORMANCE_REPORT.md
+mcp-server/COMMERCE-INTEL-TTR-SECTION.md
+mcp-server/TTR-MCP-GUIDE.md

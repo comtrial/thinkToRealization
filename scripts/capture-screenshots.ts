@@ -29,8 +29,8 @@ async function main() {
   // Login
   await page.goto(`${BASE}/login`);
   await page.waitForSelector("#email");
-  await setReactInput(page, "#email", "admin@ttr.local");
-  await setReactInput(page, "#password", "devflow123");
+  await setReactInput(page, "#email", process.env.TTR_EMAIL ?? "");
+  await setReactInput(page, "#password", process.env.TTR_PASSWORD ?? "");
   await page.click('button[type="submit"]');
   await page.waitForURL((url: URL) => !url.pathname.includes("/login"), {
     timeout: 15000,

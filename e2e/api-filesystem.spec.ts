@@ -6,11 +6,11 @@ test.describe("API: Filesystem directories", () => {
   test("GET /api/filesystem/directories returns directory list for valid path", async () => {
     // Use a path under home directory (the allowed root)
     const res = await fetch(
-      `${API}/filesystem/directories?path=/Users/choeseung-won/personal-project`
+      `${API}/filesystem/directories?path=${process.env.HOME}/personal-project`
     );
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.data.currentPath).toBe("/Users/choeseung-won/personal-project");
+    expect(json.data.currentPath).toBe("${process.env.HOME}/personal-project");
     expect(Array.isArray(json.data.directories)).toBe(true);
   });
 
@@ -21,7 +21,7 @@ test.describe("API: Filesystem directories", () => {
 
   test("GET /api/filesystem/directories entries have expected fields", async () => {
     const res = await fetch(
-      `${API}/filesystem/directories?path=/Users/choeseung-won/personal-project`
+      `${API}/filesystem/directories?path=${process.env.HOME}/personal-project`
     );
     const json = await res.json();
     expect(res.status).toBe(200);
@@ -39,7 +39,7 @@ test.describe("API: Filesystem directories", () => {
 
   test("GET /api/filesystem/directories detects .git and CLAUDE.md", async () => {
     const res = await fetch(
-      `${API}/filesystem/directories?path=/Users/choeseung-won/personal-project`
+      `${API}/filesystem/directories?path=${process.env.HOME}/personal-project`
     );
     const json = await res.json();
     expect(res.status).toBe(200);
@@ -55,16 +55,16 @@ test.describe("API: Filesystem directories", () => {
 
   test("GET /api/filesystem/directories returns parentPath", async () => {
     const res = await fetch(
-      `${API}/filesystem/directories?path=/Users/choeseung-won/personal-project`
+      `${API}/filesystem/directories?path=${process.env.HOME}/personal-project`
     );
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.data.parentPath).toBe("/Users/choeseung-won");
+    expect(json.data.parentPath).toBe(`${process.env.HOME}`);
   });
 
   test("GET /api/filesystem/directories returns only directories", async () => {
     const res = await fetch(
-      `${API}/filesystem/directories?path=/Users/choeseung-won/personal-project`
+      `${API}/filesystem/directories?path=${process.env.HOME}/personal-project`
     );
     const json = await res.json();
     expect(res.status).toBe(200);
@@ -77,7 +77,7 @@ test.describe("API: Filesystem directories", () => {
 
   test("GET /api/filesystem/directories returns 404 for non-existent path under allowed root", async () => {
     const res = await fetch(
-      `${API}/filesystem/directories?path=/Users/choeseung-won/nonexistent-dir-${Date.now()}`
+      `${API}/filesystem/directories?path=${process.env.HOME}/nonexistent-dir-${Date.now()}`
     );
     expect(res.status).toBe(404);
   });
