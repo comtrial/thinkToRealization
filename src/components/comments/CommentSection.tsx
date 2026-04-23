@@ -52,6 +52,7 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
   const [editContent, setEditContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [focused, setFocused] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const fetchComments = useCallback(async () => {
@@ -60,8 +61,12 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
       if (res.ok) {
         const { data } = await res.json()
         setComments(data)
+      } else {
+        console.error('[CommentSection] fetch failed:', res.status, await res.text())
       }
-    } catch { /* silently fail */ }
+    } catch (err) {
+      console.error('[CommentSection] fetch threw:', err)
+    }
   }, [nodeId])
 
   useEffect(() => {
@@ -79,21 +84,36 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
   const handleSubmit = async () => {
     if (!newComment.trim() || submitting) return
     setSubmitting(true)
+    setError(null)
     try {
       const res = await fetch(`/api/nodes/${nodeId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newComment.trim() }),
+        credentials: 'same-origin',
       })
-      if (res.ok) {
-        const { data } = await res.json()
-        setComments((prev) => [...prev, data])
-        setNewComment('')
-        setFocused(false)
-        if (textareaRef.current) textareaRef.current.style.height = 'auto'
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('[CommentSection] submit failed:', res.status, text)
+        let message = `댓글 업로드 실패 (${res.status})`
+        try {
+          const parsed = JSON.parse(text)
+          if (parsed?.error?.message) message = parsed.error.message
+        } catch { /* not json */ }
+        setError(message)
+        return
       }
-    } catch { /* silently fail */ }
-    setSubmitting(false)
+      const { data } = await res.json()
+      setComments((prev) => [...prev, data])
+      setNewComment('')
+      setFocused(false)
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    } catch (err) {
+      console.error('[CommentSection] submit threw:', err)
+      setError('네트워크 오류로 댓글을 업로드하지 못했습니다')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleEdit = async (id: string) => {
@@ -103,22 +123,34 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editContent.trim() }),
+        credentials: 'same-origin',
       })
       if (res.ok) {
         const { data } = await res.json()
         setComments((prev) => prev.map((c) => (c.id === id ? data : c)))
         setEditingId(null)
+      } else {
+        console.error('[CommentSection] edit failed:', res.status, await res.text())
       }
-    } catch { /* silently fail */ }
+    } catch (err) {
+      console.error('[CommentSection] edit threw:', err)
+    }
   }
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/comments/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/comments/${id}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      })
       if (res.ok) {
         setComments((prev) => prev.filter((c) => c.id !== id))
+      } else {
+        console.error('[CommentSection] delete failed:', res.status, await res.text())
       }
-    } catch { /* silently fail */ }
+    } catch (err) {
+      console.error('[CommentSection] delete threw:', err)
+    }
   }
 
   return (
@@ -143,12 +175,14 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
                     {isOwn && !isEditing && (
                       <div className="flex items-center gap-0.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
+                          type="button"
                           onClick={() => { setEditingId(c.id); setEditContent(c.content) }}
                           className="p-1 rounded hover:bg-surface-hover text-text-tertiary"
                         >
                           <Pencil size={12} />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDelete(c.id)}
                           className="p-1 rounded hover:bg-surface-hover text-text-tertiary hover:text-red-500"
                         >
@@ -170,6 +204,7 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
                         className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-surface text-[13px] text-text-primary focus:outline-none focus:border-accent"
                       />
                       <button
+                        type="button"
                         onClick={() => handleEdit(c.id)}
                         className="px-3 py-1.5 text-[12px] text-accent hover:bg-accent/10 rounded-lg"
                       >
@@ -209,6 +244,8 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
         {(focused || newComment.trim()) && (
           <div className="flex items-center justify-end px-3 pb-2.5 gap-1.5">
             <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={handleSubmit}
               disabled={!newComment.trim() || submitting}
               className="p-1.5 rounded-md bg-accent text-white disabled:opacity-30 hover:bg-accent/90 transition-colors"
@@ -218,6 +255,9 @@ export function CommentSection({ nodeId }: CommentSectionProps) {
           </div>
         )}
       </div>
+      {error && (
+        <p className="mt-2 text-[12px] text-red-500">{error}</p>
+      )}
     </div>
   )
 }

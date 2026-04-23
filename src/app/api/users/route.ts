@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db/client";
 import { requireAuth } from "@/lib/auth/guard";
 import { successResponse, handleApiError } from "@/lib/api-response";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth(req);
