@@ -22,6 +22,21 @@ Think-to-Realization(TTR) 프로젝트를 Claude Code / Claude Desktop CLI에서
 - 인증은 TTR 웹 로그인 계정 (이메일/비밀번호) 을 그대로 사용합니다.
 - 쿠키는 `~/.ttr-mcp/session.json` 에 캐시되고 6일 후 자동 재로그인합니다.
 
+### ⚠️ 데이터는 어디로 저장되는가 — 꼭 읽어주세요
+
+MCP 서버는 **로컬 DB에 아무것도 저장하지 않습니다.** 모든 도구 호출(`ttr_create_node`, `ttr_update_status`, `ttr_add_comment` …)은 `TTR_BASE_URL` 로 HTTP 요청을 보내고, 거기 서버가 Postgres에 씁니다. 즉 `TTR_BASE_URL` 값이 **어떤 DB에 쓸지** 를 결정합니다.
+
+| `TTR_BASE_URL` | 결과 |
+|---|---|
+| `https://think-to-realization.vercel.app` (기본값) | ✅ **프로덕션 공유 DB.** 팀원 전원이 같은 데이터를 보고, CLI 변경이 웹 대시보드에 실시간(WebSocket) 반영됨. |
+| `http://localhost:3000` | 🔒 **본인 로컬 dev 서버만.** 팀과 격리됨 (로컬 개발 시에만 사용). |
+| 다른 스테이징 URL | 해당 스테이징 DB. |
+
+**규칙:**
+1. 팀 공유 작업을 할 땐 반드시 `TTR_BASE_URL=https://think-to-realization.vercel.app` — 아래 셋업 예시 그대로면 기본값이라 안전합니다.
+2. 본인이 로컬 개발 중이라면 `localhost:3000` 으로 바꾸되, 이 경우 **팀에겐 아무것도 보이지 않음**을 인지하고 사용.
+3. 실수로 섞이는 걸 막고 싶으면 `.env` 두 개를 만들고(`~/.ttr-mcp/.env.prod`, `~/.ttr-mcp/.env.local`) 필요할 때 심볼릭 링크로 바꿔 쓰는 걸 권장합니다.
+
 ---
 
 ## 사전 요구사항
@@ -169,6 +184,7 @@ ttr_login 으로 bob@example.com 계정으로 바꿔줘
 | `TTR_EMAIL and TTR_PASSWORD must be set` | `~/.ttr-mcp/.env` 경로 / 파일명 오타 확인. |
 | Claude Code 에서 `ttr` 가 `connected` 안 됨 | 1) `tsx` 글로벌 설치 불필요, `npx tsx` 로 충분. 2) 경로가 **절대 경로** 인지 확인. 3) `cd mcp-server && npm install` 했는지 확인. |
 | 쿠키가 계속 만료됨 | `rm ~/.ttr-mcp/session.json` 후 재시도. |
+| CLI로 만든 노드가 팀원 웹에 안 보임 | `TTR_BASE_URL` 이 `localhost:3000` 같은 로컬 URL로 설정되어 있지 않은지 확인. 프로덕션 공유는 `https://think-to-realization.vercel.app` 이어야 함. |
 | Claude Desktop 등록 후 아무 반응 없음 | Desktop을 **완전히** quit → 재실행. `~/Library/Logs/Claude/mcp*.log` 확인. |
 
 ---
