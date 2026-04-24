@@ -43,6 +43,8 @@ Claude: → ttr_get_node()
 
 Anthropic의 [MCP(Model Context Protocol)](https://modelcontextprotocol.io/)를 구현하여, Claude CLI가 **11개 도구**로 프로젝트를 관리합니다.
 
+> 🛠 **팀원 셋업 가이드 → [`mcp-server/README.md`](./mcp-server/README.md)** (레포 clone → `.env` 작성 → Claude Code에 등록, 5분)
+
 ```
 ttr_set_session("Commerce Intel CLI")     세션 이름 설정
 ttr_login(email, password)                계정 전환
